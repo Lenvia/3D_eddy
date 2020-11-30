@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>test</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+        <script src="../../node_modules/three/build/three.js"></script>
+        <!-- <script src="/path/to/WebGL.js"></script> -->
+		<script>
+            var renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            var camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 500);
+            camera.position.set(0, 0, 100);
+            camera.lookAt(0, 0, 0);
+
+            var scene = new THREE.Scene();
+
+            // 定义线段材质
+            var material = new THREE.LineBasicMaterial( {color: 0x0000CD});
+            // 定义形状 
+            var geometry = new THREE.Geometry();
+            geometry.vertices.push(new THREE.Vector3(-10, 0, 0));
+            geometry.vertices.push(new THREE.Vector3(0, 10, 0));
+            geometry.vertices.push(new THREE.Vector3(10, 0, 0));
+
+            var line =  new THREE.Line(geometry, material);
+
+            scene.add(line)
+            renderer.render(scene, camera);
+		</script>
+	</body>
+</html>
