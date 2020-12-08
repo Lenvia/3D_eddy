@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js webgl - geometry - terrain</title>
+		<title>3D_eddy</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
@@ -15,7 +15,6 @@
 		</style>
 	</head>
 	<body>
-
 		<div id="container"></div>
 		<script type="text/javascript" src="./node_modules/jquery/dist/jquery.min.js"></script>
 		<script type="module">
@@ -174,7 +173,6 @@
 				for( var i =0; i<indices.length; i++){
 					if(indices[i]==-1)
 						continue;
-					// console.log(indices[i]);
 
 					var site = String(days[i]) + "_0_" + String(indices[i]);
 					var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
@@ -191,14 +189,14 @@
 
 						const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
 						var linesG = new THREE.LineSegments(geometry, material);
+						linesG.name = site;
 						scene.add(linesG)
 						linesG.visible = false;
-
-						segArr.push(linesG);
+						pushObj(linesG, segArr);
 					} );
 				}
 				
-				console.log(segArr);
+				// console.log(segArr);
 
 				//载入数据
 				// const loader = new VTKLoader();
@@ -435,6 +433,10 @@
 				// 	helper.lookAt( intersects[ 0 ].face.normal );
 				// 	helper.position.copy( intersects[ 0 ].point );
 				// }
+			}
+
+			function pushObj(seg, segArr){
+				segArr.push(seg);
 			}
 		</script>
 	</body>

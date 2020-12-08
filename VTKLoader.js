@@ -330,10 +330,10 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 			geometry.setAttribute( 'position', new Float32BufferAttribute( positions, 3 ) );  //每一个position元素都是xyz三元组
 
 			// console.log(indices);
-			console.log("indices.length: ", indices.length);
-			console.log("positions.length: ", positions.length);
-			console.log("normals.length: ", normals.length);
-			console.log("colors.length: ", colors.length);
+			// console.log("indices.length: ", indices.length);
+			// console.log("positions.length: ", positions.length);
+			// console.log("normals.length: ", normals.length);
+			// console.log("colors.length: ", colors.length);
 
 			if ( normals.length === positions.length ) {  //设置每一个点的法线
 
