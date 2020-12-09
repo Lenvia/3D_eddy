@@ -21,6 +21,10 @@ let helper;  // 鼠标helper
 const raycaster = new THREE.Raycaster();  // 射线
 const mouse = new THREE.Vector2();  // 鼠标二维坐标
 
+var days = []  // 一共60天
+for (var i =0; i<=59; i++) days.push(i);
+
+
 init();
 animate();
 
@@ -131,57 +135,9 @@ function init() {
     //获取单个涡旋的n天json列表
     var start_day = 4;
     var start_index = 13;
-    var identifier = String(start_day)+'-'+String(start_index);
-    var json_path = ("./track/".concat(identifier, ".json"));
-    let json_data;
+    var indices = loadEddyForDays(start_day, start_index);
+    console.log(indices);
 
-    $.ajax({
-        url: json_path,//json文件位置
-        type: "GET",//请求方式为get
-        dataType: "json", //返回数据格式为json
-        async: false,  // 同步
-        success: function(res) {//请求成功完成后要执行的方法 
-            json_data = res;
-        }
-    })
-    
-    // 载入该涡旋所有时间内的vtk数据
-    var indices = json_data["indices"];
-    var days = json_data["days"];
-    var segArr = [];
-    for( var i =0; i<indices.length; i++){
-        if(indices[i]==-1){
-            segArr.push(null);
-            continue;
-        }
-
-        var site = String(days[i]) + "_0_" + String(indices[i]);
-        var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
-
-        const loader = new VTKLoader();
-        loader.load( vtk_path, function ( geometry ) {        
-            // geometry.center();
-            // geometry.computeVertexNormals();
-            const vertices = geometry.attributes.position.array;
-
-            geometry.translate(-0.5, -0.5, -1);
-            geometry.scale(edgeLen, edgeWid, 1000);
-
-            const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
-            var linesG = new THREE.LineSegments(geometry, material);
-            linesG.name = site;
-            scene.add(linesG)
-            // linesG.visible = false;
-            
-            // pushObj(linesG, segArr);
-        } );
-    }
-    
-    // console.log(segArr);
-
-    var currentDay = 0;
-    var lastDay = -1;
-    
     /* 
     设置gui插件
     */
@@ -190,27 +146,29 @@ function init() {
         this.currentDay = 0;  // 初始时间为第0天
     }
 
-    // 时间数组，第0~50天可选
-    var time_arr = [];
-    for (var i =0; i<=49; i++) time_arr.push(i);
-
-    console.log(indices);
-
-    gui.add(gui_controls, 'currentDay', time_arr).onChange(function(){
+    var currentDay = 0;
+    var lastDay = -1;
+    var curLine, lastLine;  // 当前显示的线，上次显示的线
+    var site, last_site;
+    gui.add(gui_controls, 'currentDay', days).onChange(function(){
+        // console.log(scene.children);
         if(lastDay!=-1){  // 清除上次的显示
-            // var last_site = String(days[lastDay]) + "_0_" + String(indices[lastDay]);
-            // var linesG = scene.getElementByName(last_site);
-            // last_site.visible = false;
+            last_site = String(days[lastDay]) + "_0_" + String(indices[lastDay]);
+            lastLine = scene.getObjectByName(last_site);
+            lastLine.visible = false;
+            // console.log(lastLine)
         }
 
         currentDay = gui_controls.currentDay;
         console.log("currentDay:", currentDay);
         if(indices[currentDay]!= -1){
-            var site = String(days[currentDay]) + "_0_" + String(indices[currentDay]);
+            site = String(days[currentDay]) + "_0_" + String(indices[currentDay]);
             console.log(site);
-            var linesG = scene.getObjectByName(site);
-            // linesG.visible = true;
-            console.log(linesG);
+            
+            curLine = scene.getObjectByName(site);
+            console.log(curLine);
+            curLine.visible = true;
+            lastDay = currentDay;
         }
         
     });
@@ -350,6 +308,55 @@ function generateTexture( data, width, height ) {
     }
     context.putImageData( image, 0, 0 );
     return canvasScaled;
+}
+
+/*
+    加载单个涡旋n天的形状
+*/
+
+function loadEddyForDays(start_day, start_index){
+    var identifier = String(start_day)+'-'+String(start_index);
+    var json_path = ("./track/".concat(identifier, ".json"));
+    let json_data;
+
+    $.ajax({
+        url: json_path,//json文件位置
+        type: "GET",//请求方式为get
+        dataType: "json", //返回数据格式为json
+        async: false,  // 同步
+        success: function(res) {//请求成功完成后要执行的方法 
+            json_data = res;
+        }
+    })
+    
+    // 载入该涡旋所有时间内的vtk数据
+    var indices = json_data["indices"];
+    var days = json_data["days"];
+    for( var i =0; i<indices.length; i++){
+        if(indices[i]==-1){
+            continue;
+        }
+
+        var site = String(days[i]) + "_0_" + String(indices[i]);
+        var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
+
+        const loader = new VTKLoader();
+        loader.load( vtk_path, function ( geometry ) {        
+            // geometry.center();
+            // geometry.computeVertexNormals();
+            const vertices = geometry.attributes.position.array;
+
+            geometry.translate(-0.5, -0.5, -1);
+            geometry.scale(edgeLen, edgeWid, 1000);
+
+            const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
+            var linesG = new THREE.LineSegments(geometry, material);
+            linesG.name = site;
+            scene.add(linesG)
+            linesG.visible = false;
+        } );
+    }
+    return indices;
 }
 
 //
