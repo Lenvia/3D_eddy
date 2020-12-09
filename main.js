@@ -21,7 +21,7 @@ let helper;  // 鼠标helper
 const raycaster = new THREE.Raycaster();  // 射线
 const mouse = new THREE.Vector2();  // 鼠标二维坐标
 
-var days = []  // 一共60天
+const days = []  // 一共60天
 for (var i =0; i<=59; i++) days.push(i);
 
 
@@ -48,85 +48,12 @@ function init() {
     controls.maxDistance = 10000;  // 最远距离
     // controls.maxPolarAngle = Math.PI / 2;  // 限制竖直方向上最大旋转角度。（y轴正向为0度）
 
-    //辅助坐标系
+    // 辅助坐标系
     var axesHelper = new THREE.AxesHelper(1500);
     scene.add(axesHelper);
 
-    /*
-        设置海底地形
-    */
-
-    // 地形顶点高度数据
-    const data = generateHeight( worldWidth, worldDepth );
-
-    // worldHalfWidth + worldHalfDepth * worldWidth 应该是最中心的点的索引
-    controls.target.z = data[ worldHalfWidth + worldHalfDepth * worldWidth ];
-    camera.position.z = controls.target.z + 500;
-    camera.position.x = edgeLen*1.5;
-    // camera.position.y = 2000*1.2;
-    controls.update();
-
-    // 创建一个平面地形，行列两个方向顶点数据分别为width，height
-    // PlaneBufferGeometry(width, height, widthSegments, heightSegments) 后两个参数是分段数
-    const geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, worldWidth - 1, worldDepth - 1 );
-
-    // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
-    const vertices = geometry.attributes.position.array;
-
-    // 改变顶点高度值（因为y轴是向上的，所以应该改每个点的y值）
-    maxH = data[0] * 10;
-    for ( let i = 0, j = 0, l = vertices.length; i < l; i ++, j += 3 ) {
-        vertices[ j + 2 ] = data[ i ] * 10;
-        if(maxH < vertices[j + 1])  // 找出最高的
-            maxH = vertices[j + 1]
-    }
-
-    // 不执行computeVertexNormals，没有顶点法向量数据
-    geometry.computeFaceNormals(); // needed for helper
-    // 设置海底！
-    var biasZ = 1.5*maxH;  // 海底山脉向下移动
-    geometry.translate(0, 0, -biasZ);
-
-    // generateTexture返回一个画布对象
-    texture = new THREE.CanvasTexture( generateTexture( data, worldWidth, worldDepth ) );
-    // wrapS/wrapT 纹理在水平和垂直方向的扩展方式
-    texture.wrapS = THREE.ClampToEdgeWrapping;  // 纹理边缘像素会被拉伸，以填满剩下的空间。
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    const material = new THREE.MeshBasicMaterial( { map: texture } );
-
-    // 纹理透明度
-    material.transparent = true;
-    material.opacity = 0.1;  
-    mesh = new THREE.Mesh( geometry, material);
-    scene.add( mesh );
-
-    /*
-        设置海水
-    */
-    // 海水箱子的长、宽
-    var boxLen = 1.1*edgeLen, boxWid = 1.1*edgeLen;
-    const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
-    const material2 = new THREE.MeshLambertMaterial({
-        color: 0x00BFFF
-    }); //材质对象Material
-    material2.transparent = true;
-    material2.opacity = 0.1;
-    geometry2.translate(0, 0, -biasZ/2);
-    var mesh2 = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
-    mesh2.position.set(0,0,0);
-    scene.add(mesh2); //网格模型添加到场景中
-
-    const vertices0 = geometry.attributes.position.array;
-    var maxz = vertices0[2];
-    var minz = vertices0[2];
-    for ( let i = 2, l = vertices0.length; i < l; i+= 3 ) {
-        if(maxz < vertices0[ i])  // 找出最大的
-            maxz = vertices0[ i]
-        if(minz > vertices[ i])  
-            minz = vertices[ i]
-    }
-    // console.log("山脉maxz:", maxz)
-    // console.log("山脉minz:", minz)
+    // 创建海底地形和海水
+    createTerrainAndSea();
 
 
     /*
@@ -136,7 +63,7 @@ function init() {
     var start_day = 4;
     var start_index = 13;
     var indices = loadEddyForDays(start_day, start_index);
-    console.log(indices);
+    // console.log(indices);
 
     /* 
     设置gui插件
@@ -163,10 +90,10 @@ function init() {
         console.log("currentDay:", currentDay);
         if(indices[currentDay]!= -1){
             site = String(days[currentDay]) + "_0_" + String(indices[currentDay]);
-            console.log(site);
+            // console.log(site);
             
             curLine = scene.getObjectByName(site);
-            console.log(curLine);
+            // console.log(curLine);
             curLine.visible = true;
             lastDay = currentDay;
         }
@@ -192,8 +119,7 @@ function init() {
     stats = new Stats();
     container.appendChild( stats.dom );
 
-    //
-
+    // 窗口缩放时触发
     window.addEventListener( 'resize', onWindowResize, false );
 
 }
@@ -311,13 +237,113 @@ function generateTexture( data, width, height ) {
 }
 
 /*
+    设置海底和海水
+*/
+function createTerrainAndSea(){
+    /*
+        设置海底地形
+    */
+
+    // 地形顶点高度数据
+    const data = generateHeight( worldWidth, worldDepth );
+
+    // worldHalfWidth + worldHalfDepth * worldWidth 应该是最中心的点的索引
+    controls.target.z = data[ worldHalfWidth + worldHalfDepth * worldWidth ];
+    camera.position.z = controls.target.z + 500;
+    camera.position.x = edgeLen*1.5;
+    // camera.position.y = 2000*1.2;
+    controls.update();
+
+    // 创建一个平面地形，行列两个方向顶点数据分别为width，height
+    // PlaneBufferGeometry(width, height, widthSegments, heightSegments) 后两个参数是分段数
+    const geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, worldWidth - 1, worldDepth - 1 );
+
+    // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
+    const vertices = geometry.attributes.position.array;
+
+    // 改变顶点高度值（因为y轴是向上的，所以应该改每个点的y值）
+    maxH = data[0] * 10;
+    for ( let i = 0, j = 0, l = vertices.length; i < l; i ++, j += 3 ) {
+        vertices[ j + 2 ] = data[ i ] * 10;
+        if(maxH < vertices[j + 1])  // 找出最高的
+            maxH = vertices[j + 1]
+    }
+
+    // 不执行computeVertexNormals，没有顶点法向量数据
+    geometry.computeFaceNormals(); // needed for helper
+    // 设置海底！
+    var biasZ = 1.5*maxH;  // 海底山脉向下移动
+    geometry.translate(0, 0, -biasZ);
+
+    // generateTexture返回一个画布对象
+    texture = new THREE.CanvasTexture( generateTexture( data, worldWidth, worldDepth ) );
+    // wrapS/wrapT 纹理在水平和垂直方向的扩展方式
+    texture.wrapS = THREE.ClampToEdgeWrapping;  // 纹理边缘像素会被拉伸，以填满剩下的空间。
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    const material = new THREE.MeshBasicMaterial( { map: texture } );
+
+    // 纹理透明度
+    material.transparent = true;
+    material.opacity = 0.1;  
+    mesh = new THREE.Mesh( geometry, material);
+    scene.add( mesh );
+
+    /*
+        设置海水
+    */
+    // 海水箱子的长、宽
+    var boxLen = 1.1*edgeLen, boxWid = 1.1*edgeLen;
+    const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
+    const material2 = new THREE.MeshLambertMaterial({
+        color: 0x00BFFF
+    }); //材质对象Material
+    material2.transparent = true;
+    material2.opacity = 0.1;
+    geometry2.translate(0, 0, -biasZ/2);
+    var mesh2 = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
+    mesh2.position.set(0,0,0);
+    scene.add(mesh2); //网格模型添加到场景中
+
+    const vertices0 = geometry.attributes.position.array;
+    var maxz = vertices0[2];
+    var minz = vertices0[2];
+    for ( let i = 2, l = vertices0.length; i < l; i+= 3 ) {
+        if(maxz < vertices0[ i])  // 找出最大的
+            maxz = vertices0[ i]
+        if(minz > vertices[ i])  
+            minz = vertices[ i]
+    }
+    // console.log("山脉maxz:", maxz)
+    // console.log("山脉minz:", minz)
+}
+
+// 加载单个涡旋一天的形状
+function loadVTK(identifier, site){
+    var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
+
+    var loader = new VTKLoader();
+    loader.load( vtk_path, function ( geometry ) {
+        console.log(site);
+        geometry.translate(-0.5, -0.5, -1);
+        geometry.scale(edgeLen, edgeWid, 1000);
+
+        var material = new THREE.LineBasicMaterial( { color: 0xffffff } );
+        var linesG = new THREE.LineSegments(geometry, material);
+        linesG.name = site;
+        scene.add(linesG);
+        linesG.visible = false;
+    });
+}
+
+/*
     加载单个涡旋n天的形状
 */
 
 function loadEddyForDays(start_day, start_index){
-    var identifier = String(start_day)+'-'+String(start_index);
+    var identifier = String(start_day)+'-'+String(start_index);  // 涡旋识别编号
     var json_path = ("./track/".concat(identifier, ".json"));
     let json_data;
+    var indices;
 
     $.ajax({
         url: json_path,//json文件位置
@@ -326,36 +352,18 @@ function loadEddyForDays(start_day, start_index){
         async: false,  // 同步
         success: function(res) {//请求成功完成后要执行的方法 
             json_data = res;
+            // 载入该涡旋所有时间内的vtk数据
+            indices = json_data["indices"];
+            for(var i = 0; i<indices.length; i++ ){
+                if(indices[i]==-1)
+                    continue;
+ 
+                var site = String(days[i]) + "_0_" + String(indices[i]);
+                // 一天一天的加载，目前还未实现同步等待加载
+                loadVTK(identifier, site);  
+            }
         }
     })
-    
-    // 载入该涡旋所有时间内的vtk数据
-    var indices = json_data["indices"];
-    var days = json_data["days"];
-    for( var i =0; i<indices.length; i++){
-        if(indices[i]==-1){
-            continue;
-        }
-
-        var site = String(days[i]) + "_0_" + String(indices[i]);
-        var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
-
-        const loader = new VTKLoader();
-        loader.load( vtk_path, function ( geometry ) {        
-            // geometry.center();
-            // geometry.computeVertexNormals();
-            const vertices = geometry.attributes.position.array;
-
-            geometry.translate(-0.5, -0.5, -1);
-            geometry.scale(edgeLen, edgeWid, 1000);
-
-            const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
-            var linesG = new THREE.LineSegments(geometry, material);
-            linesG.name = site;
-            scene.add(linesG)
-            linesG.visible = false;
-        } );
-    }
     return indices;
 }
 
