@@ -4,7 +4,9 @@ import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitC
 import { ImprovedNoise } from './node_modules/three/examples/jsm/math/ImprovedNoise.js';
 import { VTKLoader } from './VTKLoader.js';
 
-THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);
+
+THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
+
 let container, stats;  // 容器，状态监控器
 let camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 let mesh, texture;  // 山脉网格， 纹理
@@ -24,8 +26,12 @@ const mouse = new THREE.Vector2();  // 鼠标二维坐标
 const days = []  // 一共60天
 for (var i =0; i<=59; i++) days.push(i);
 
+// 进度条模块
 var progressModal, progressBar, progressLabel, progressBackground;
 var frameLabel;
+
+// 场上显示的模型
+var existModel = []
 
 
 init();
@@ -38,6 +44,8 @@ function init() {
     renderer = new THREE.WebGLRenderer( { antialias: true } );  // 抗锯齿
     renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
     renderer.setSize( window.innerWidth, window.innerHeight );  // 尺寸
+
+
     container.appendChild( renderer.domElement );
 
     scene = new THREE.Scene();
@@ -69,19 +77,6 @@ function init() {
     indices = loadEddyForDays(start_day, start_index);
     console.log(indices);
 
-    // let promise = new Promise(function(resolve, reject){
-    //     indices = loadEddyForDays(start_day, start_index);
-    //     resolve();
-    // });
-
-    // promise.then(
-    //     function(){
-    //         console.log("加载完成");
-    //     }
-    // );
-    // console.log("加载中......");
-
-
     /* 
     设置gui插件
     */
@@ -97,7 +92,7 @@ function init() {
     gui.add(gui_controls, 'currentDay', days).onChange(function(){
         // console.log(scene.children);
         if(lastDay!=-1){  // 清除上次的显示
-            last_site = String(days[lastDay]) + "_0_" + String(indices[lastDay]);
+            last_site = String(days[lastDay]) + "_" + String(indices[lastDay]);
             lastLine = scene.getObjectByName(last_site);
             lastLine.visible = false;
             // console.log(lastLine)
@@ -106,11 +101,10 @@ function init() {
         currentDay = gui_controls.currentDay;
         console.log("currentDay:", currentDay);
         if(indices[currentDay]!= -1){
-            site = String(days[currentDay]) + "_0_" + String(indices[currentDay]);
-            // console.log(site);
+            site = String(days[currentDay]) + "_" + String(indices[currentDay]);
             
             curLine = scene.getObjectByName(site);
-            // console.log(curLine);
+            console.log(curLine);
             curLine.visible = true;
             lastDay = currentDay;
         }
@@ -287,11 +281,13 @@ function createTerrainAndSea(){
     // wrapS/wrapT 纹理在水平和垂直方向的扩展方式
     texture.wrapS = THREE.ClampToEdgeWrapping;  // 纹理边缘像素会被拉伸，以填满剩下的空间。
     texture.wrapT = THREE.ClampToEdgeWrapping;
-    const material = new THREE.MeshBasicMaterial( { map: texture } );
+    const material = new THREE.MeshBasicMaterial( { 
+        map: texture,
+        transparent: true,
+        opacity: 0.1,  // 纹理透明度 
+        depthWrite: false, 
+    } );
 
-    // 纹理透明度
-    material.transparent = true;
-    material.opacity = 0.1;  
     mesh = new THREE.Mesh( geometry, material);
     scene.add( mesh );
 
@@ -302,10 +298,12 @@ function createTerrainAndSea(){
     var boxLen = 1.1*edgeLen, boxWid = 1.1*edgeLen;
     const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
     const material2 = new THREE.MeshLambertMaterial({
-        color: 0x00BFFF
+        color: 0x00BFFF,
+        transparent: true,
+        opacity: 0.1,
+        depthWrite: false, 
     }); //材质对象Material
-    material2.transparent = true;
-    material2.opacity = 0.1;
+
     geometry2.translate(0, 0, -biasZ/2);
     var mesh2 = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
     mesh2.position.set(0,0,0);
@@ -348,6 +346,9 @@ function showProgressModal(frameType){  // 假设frameType为"loadingFrames"
 	progressModal.appendChild(progressBar);
 }
 
+/*
+    隐藏等待条
+*/
 function hideProgressModal(){
     // 进度条图形填满
     progressBackground.style.width = "100%";
@@ -381,21 +382,26 @@ function loadEddyForDays(start_day, start_index){
             let arr = []; //promise返回值的数组
             for (let i = 0; i<indices.length; i++){
                 arr[i] = new Promise((resolve, reject)=>{
-                    // 一天一天的加载【异步】
                     if(indices[i] == -1){
                         resolve(i);
                     }
                     else{  // 加载单个涡旋一天的形状
-                        var site = String(days[i]) + "_0_" + String(indices[i]);
+                        var site = String(days[i]) + "_" + String(indices[i]);
                         var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
                         var loader = new VTKLoader();
                 
-                        loader.load( vtk_path, function ( geometry ) { 
+                        loader.load( vtk_path, function ( geometry ) {  //【异步加载】
                             console.log(site);
                             geometry.translate(-0.5, -0.5, -1);
                             geometry.scale(edgeLen, edgeWid, 1000);
                 
-                            var material = new THREE.LineBasicMaterial( { color: 0xffffff } );
+                            var material = new THREE.LineBasicMaterial({
+                                color: 0xffffff,
+                                vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
+                                transparent: true, // 可定义透明度
+                                opacity: 1.0,
+                                depthWrite: false, 
+                            });
                             var linesG = new THREE.LineSegments(geometry, material);
                             linesG.name = site;
                             scene.add(linesG);
@@ -405,7 +411,7 @@ function loadEddyForDays(start_day, start_index){
                     }
                 })
             }
-
+            // 当所有加载都完成之后，再隐藏“等待进度条”
             Promise.all(arr).then((res)=>{
                 console.log("加载完毕");
                 hideProgressModal();
@@ -414,8 +420,6 @@ function loadEddyForDays(start_day, start_index){
     })
     return indices;
 }
-
-//
 
 function animate() {
     requestAnimationFrame( animate );
