@@ -24,8 +24,6 @@ const mouse = new THREE.Vector2();  // 鼠标二维坐标
 const days = []  // 一共60天
 for (var i =0; i<=59; i++) days.push(i);
 
-var temp = 0;
-
 
 init();
 animate();
@@ -64,7 +62,6 @@ function init() {
     var indices;
 
     indices = loadEddyForDays(start_day, start_index);
-    console.log(indices);
 
     // let promise = new Promise(function(resolve, reject){
     //     indices = loadEddyForDays(start_day, start_index);
@@ -322,42 +319,21 @@ function createTerrainAndSea(){
 }
 
 // 加载单个涡旋一天的形状
-function loadSingleEddy(identifier, indices, i){
-    if(indices[i] == -1){
-        i++;
-        if(i<indices.length){
-            loadSingleEddy(identifier, indices, i);
-        }
-    }
-    else{
-        var site = String(days[i]) + "_0_" + String(indices[i]);
-        var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
-        var loader = new VTKLoader();
+function loadVTK(identifier, site){
+    var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
 
-        var promise = new Promise(function(resolve, reject){  // promise保证模型是一个一个加载的
-            loader.load( vtk_path, function ( geometry ) { 
-                temp++;
-                console.log(site);
-                geometry.translate(-0.5, -0.5, -1);
-                geometry.scale(edgeLen, edgeWid, 1000);
+    var loader = new VTKLoader();
+    loader.load( vtk_path, function ( geometry ) {
+        console.log(site);
+        geometry.translate(-0.5, -0.5, -1);
+        geometry.scale(edgeLen, edgeWid, 1000);
 
-                var material = new THREE.LineBasicMaterial( { color: 0xffffff } );
-                var linesG = new THREE.LineSegments(geometry, material);
-                linesG.name = site;
-                scene.add(linesG);
-                linesG.visible = false;
-                resolve(i);
-            });
-        });
-
-        promise.then(function onFulfilled(value){
-            console.log(value);
-            value++;
-            if(value<indices.length){
-                loadSingleEddy(identifier,indices, value);
-            }
-        })
-    }
+        var material = new THREE.LineBasicMaterial( { color: 0xffffff } );
+        var linesG = new THREE.LineSegments(geometry, material);
+        linesG.name = site;
+        scene.add(linesG);
+        linesG.visible = false;
+    });
 }
 
 /*
@@ -378,10 +354,14 @@ function loadEddyForDays(start_day, start_index){
             json_data = res;
             // 载入该涡旋所有时间内的vtk数据
             indices = json_data["indices"];
-
-            // 一天一天的加载【异步】
-            loadSingleEddy(identifier, indices, 0);
-
+            for(var i = 0; i<indices.length; i++ ){
+                if(indices[i]==-1)
+                    continue;
+ 
+                var site = String(days[i]) + "_0_" + String(indices[i]);
+                // 一天一天的加载，目前还未实现同步等待加载
+                loadVTK(identifier, site);
+            }
         }
     })
     return indices;
