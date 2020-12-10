@@ -90,11 +90,9 @@ def get_lat_index(lat_arr, lat1):
 def search(day1, day2, index1, flag=0):
     if day2 > up_bound:
         return
-    num1 = 0
-    num2 = 0
 
-    tarDir1 = 'result/small' + str(day1) + '_' + str(num1)
-    tarDir2 = 'result/small' + str(day2) + '_' + str(num2)
+    tarDir1 = 'result/small' + str(day1)
+    tarDir2 = 'result/small' + str(day2)
     t, lon_arr, lat_arr = load_common(tarDir1)
 
     uvel1, vvel1, vorticity1, OW1, OW_eddies1, eddie_census1, nEddies1, circulation_mask1, levels1 = load_pkl(tarDir1)

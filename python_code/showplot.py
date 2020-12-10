@@ -45,9 +45,7 @@ from sympy import *
 from math import radians, cos, sin, asin, sqrt
 
 day = sys.argv[1]
-num = sys.argv[2]
 day = int(day)
-num = int(num)
 
 
 ## Plot velocities and eddies #############################################################
@@ -91,7 +89,7 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
     st.set_y(1.02)
 
     plt.tight_layout()
-    plt.savefig('plot_file/' + str(day) + '_' + str(num) + '.png')
+    plt.savefig('plot_file/' + str(day) + '.png')
     # plt.show()
 
     return plt
@@ -151,7 +149,7 @@ if __name__ == '__main__':
 
     print("successfully detected!")
 
-    tarDir = os.path.join("result", "small"+str(day)+"_"+str(num))
+    tarDir = os.path.join("result", "small"+str(day))
 
     t = joblib.load(tarDir + '/t.pkl')
     lon = joblib.load(tarDir + '/lon.pkl')

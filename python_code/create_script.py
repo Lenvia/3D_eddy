@@ -32,7 +32,7 @@ for i in range(len(indices)):
     if index == -1:
         continue
 
-    vtkDir = os.path.join(rootDir, 'vtk_file', identifier, 'vec'+str(day)+'_0_'+str(index)+'.vtk')
+    vtkDir = os.path.join(rootDir, 'vtk_file', identifier, 'vec'+str(day)+'_'+str(index)+'.vtk')
 
     #### disable automatic camera reset on 'Show'
     paraview.simple._DisableFirstRenderCameraReset()

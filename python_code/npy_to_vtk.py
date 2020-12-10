@@ -54,7 +54,6 @@ if __name__ == '__main__':
     projDir = os.getcwd()
     subRoot = str(start_day) + '-' + str(start_index)
 
-
     npz_path = os.path.join(projDir, 'npy_file', subRoot)
 
     files = os.listdir(npz_path)

@@ -45,10 +45,8 @@ from sympy import *
 from math import radians, cos, sin, asin, sqrt
 
 day = sys.argv[1]
-num = sys.argv[2]
-index = sys.argv[3]
+index = sys.argv[2]
 day = int(day)
-num = int(num)
 index = int(index)
 
 
@@ -102,8 +100,7 @@ if __name__ == '__main__':
 
     print("successfully detected!")
 
-    # tarDir = 'result/small' + str(day) + '_' + str(num)
-    tarDir = os.path.join("result", "small"+str(day)+"_"+str(num))
+    tarDir = os.path.join("result", "small"+str(day))
 
     t = joblib.load(tarDir + '/t.pkl')
     lon = joblib.load(tarDir + '/lon.pkl')
@@ -235,7 +232,7 @@ if __name__ == '__main__':
         elif i == 2:  # W数据
             W = var_data
 
-    tarDir = os.path.join("result", "small"+str(day)+"_"+str(num))
+    tarDir = os.path.join("result", "small"+str(day))
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
 
@@ -270,8 +267,7 @@ if __name__ == '__main__':
 
     tarDir = 'npy_file/'
 
-    # file = tarDir + 'vec' + str(day) + '_' + str(num) + '_' + str(index) + '.npy'
-    file = os.path.join(tarDir, 'vec'+str(day)+'_'+str(num)+'_'+str(index)+'.npy')  # vec2_0_1.npy 表示day2第0次运行第1个涡旋
+    file = os.path.join(tarDir, 'vec'+str(day)+'_'+str(index)+'.npy')  # vec2_0_1.npy 表示day2第0次运行第1个涡旋
 
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)

@@ -45,9 +45,7 @@ from sympy import *
 from math import radians, cos, sin, asin, sqrt
 
 day = sys.argv[1]
-num = sys.argv[2]
 day = int(day)
-num = int(num)
 
 
 # Load netCDF4 data
@@ -505,7 +503,7 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
     path = 'plot_file_no_R2'
     if not os.path.exists(path):
         os.makedirs(path)
-    plt.savefig('plot_file_no_R2/' + str(day) + '_' + str(num) + '.png')
+    plt.savefig('plot_file_no_R2/' + str(day) + '.png')
     # plt.show()
     return plt
 
@@ -573,7 +571,7 @@ if __name__ == '__main__':
 
     print("successfully detected!")
 
-    tarDir = 'result_no_R2/small' + str(day) + '_' + str(num)
+    tarDir = 'result_no_R2/small' + str(day)
 
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)

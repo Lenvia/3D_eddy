@@ -45,9 +45,7 @@ from sympy import *
 from math import radians, cos, sin, asin, sqrt
 
 day = sys.argv[1]
-num = sys.argv[2]
 day = int(day)
-num = int(num)
 
 
 # Load netCDF4 data
@@ -568,7 +566,7 @@ if __name__ == '__main__':
 
     print("successfully detected!")
 
-    tarDir = os.path.join("result", "small"+str(day)+"_"+str(num))
+    tarDir = os.path.join("result", "small"+str(day))
 
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
@@ -715,7 +713,7 @@ if __name__ == '__main__':
     #     elif i == 2:
     #         W = var_data
     #
-    # tarDir = 'result/small' + str(day) + '_' + str(num)
+    # tarDir = 'result/small' + str(day)
     # if not os.path.exists(tarDir):
     #     os.makedirs(tarDir)
     #
@@ -741,7 +739,7 @@ if __name__ == '__main__':
     # dict_ = {'x': vec, 'y': 4}  # x表示数据，y表示x的维数
     #
     # tarDir = 'npy_file/'
-    # file = tarDir + 'vec' + str(day) + '_' + str(num) + '.npy'
+    # file = tarDir + 'vec' + str(day)+ '.npy'
     #
     # if not os.path.exists(tarDir):
     #     os.makedirs(tarDir)

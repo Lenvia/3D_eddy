@@ -92,8 +92,8 @@ class Get_new_gps():
         return (lonNorth, latNorth)
 
 
-def getSingleNpy(day, num, index, subRoot):
-    tarDir = os.path.join("result", "small" + str(day) + "_" + str(num))
+def getSingleNpy(day, index, subRoot):
+    tarDir = os.path.join("result", "small" + str(day))
 
     t = joblib.load(tarDir + '/t.pkl')
     lon = joblib.load(tarDir + '/lon.pkl')
@@ -206,7 +206,7 @@ def getSingleNpy(day, num, index, subRoot):
         elif i == 2:  # W数据
             W = var_data
 
-    tarDir = os.path.join("result", "small" + str(day) + "_" + str(num))
+    tarDir = os.path.join("result", "small" + str(day))
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
 
@@ -233,7 +233,7 @@ def getSingleNpy(day, num, index, subRoot):
 
     tarDir = 'npy_file/'
     file = os.path.join(tarDir, subRoot,
-                        'vec' + str(day) + '_' + str(num) + '_' + str(index) + '.npy')  # vec2_0_1.npy 表示day2第0次运行第1个涡旋
+                        'vec' + str(day) + '_' + str(index) + '.npy')  # vec2_0_1.npy 表示day2第0次运行第1个涡旋
 
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
@@ -268,4 +268,4 @@ if __name__ == '__main__':
         if indices[i] == -1:
             continue
         else:
-            getSingleNpy(days[i], 0, indices[i], subRoot)
+            getSingleNpy(days[i], indices[i], subRoot)
