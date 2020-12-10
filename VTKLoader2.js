@@ -335,11 +335,6 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 			// console.log("normals.length: ", normals.length);
 			// console.log("colors.length: ", colors.length);
 
-			// 如果未设置颜色，则将所有顶点都默认为白色
-			for (let i =0; i<positions.length; i++)
-				colors.push(1); // 换成Math.random()就是五颜六色的涡旋
-
-
 			if ( normals.length === positions.length ) {  //设置每一个点的法线
 
 				geometry.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
@@ -350,13 +345,13 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 				// stagger
 
-				if ( colors.length === positions.length ) {  // 顶点基础上的染色
+				if ( colors.length === positions.length ) {  //如果颜色个数和顶点个数相同
 
 					geometry.setAttribute( 'color', new Float32BufferAttribute( colors, 3 ) );
 
 				}
 
-			} else {  // 图形上的染色
+			} else {  //颜色个数和形状个数相同
 
 				// cell
 				geometry = geometry.toNonIndexed();
