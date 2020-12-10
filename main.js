@@ -24,7 +24,8 @@ const mouse = new THREE.Vector2();  // 鼠标二维坐标
 const days = []  // 一共60天
 for (var i =0; i<=59; i++) days.push(i);
 
-var temp = 0;
+var progressModal, progressBar, progressLabel, progressBackground;
+var frameLabel;
 
 
 init();
@@ -56,6 +57,8 @@ function init() {
 
     // 创建海底地形和海水
     createTerrainAndSea();
+
+    showProgressModal("loadingFrames");
 
     // 加载涡旋
     // 获取单个涡旋的n天json列表
@@ -321,43 +324,39 @@ function createTerrainAndSea(){
     // console.log("山脉minz:", minz)
 }
 
-// 加载单个涡旋一天的形状
-function loadSingleEddy(identifier, indices, i){
-    if(indices[i] == -1){
-        i++;
-        if(i<indices.length){
-            loadSingleEddy(identifier, indices, i);
-        }
-    }
-    else{
-        var site = String(days[i]) + "_0_" + String(indices[i]);
-        var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
-        var loader = new VTKLoader();
+/*
+    显示等待条
+*/
+function showProgressModal(frameType){  // 假设frameType为"loadingFrames"
+    progressModal = document.getElementById("progressModal");
+    frameLabel = document.getElementById("frameLabel");
+    
+	frameLabel.innerHTML = frameType.slice(0,-6);  // frameLabel = "loading"
+	progressBar = document.createElement('div');
+	progressBar.id = frameType;
+	progressBar.className = 'progressBar';
 
-        var promise = new Promise(function(resolve, reject){  // promise保证模型是一个一个加载的
-            loader.load( vtk_path, function ( geometry ) { 
-                temp++;
-                console.log(site);
-                geometry.translate(-0.5, -0.5, -1);
-                geometry.scale(edgeLen, edgeWid, 1000);
+	progressLabel = document.createElement('span');
+	progressLabel.id = 'label';
+	progressLabel.setAttribute("data-perc", "Preparing models...");
 
-                var material = new THREE.LineBasicMaterial( { color: 0xffffff } );
-                var linesG = new THREE.LineSegments(geometry, material);
-                linesG.name = site;
-                scene.add(linesG);
-                linesG.visible = false;
-                resolve(i);
-            });
-        });
+	progressBackground = document.createElement('span');
+	progressBackground.id = 'bar';
 
-        promise.then(function onFulfilled(value){
-            console.log(value);
-            value++;
-            if(value<indices.length){
-                loadSingleEddy(identifier,indices, value);
-            }
-        })
-    }
+	progressBar.appendChild(progressLabel);
+	progressBar.appendChild(progressBackground);
+	progressModal.appendChild(progressBar);
+}
+
+function hideProgressModal(){
+    // 进度条图形填满
+    progressBackground.style.width = "100%";
+    // 标题填满
+    progressLabel.setAttribute("data-perc", "100%");
+    // Remove the modal
+    progressModal.removeChild(progressBar);
+    frameLabel.style.display = 'none';
+    progressModal.style.display = 'none';
 }
 
 /*
@@ -379,9 +378,38 @@ function loadEddyForDays(start_day, start_index){
             // 载入该涡旋所有时间内的vtk数据
             indices = json_data["indices"];
 
-            // 一天一天的加载【异步】
-            loadSingleEddy(identifier, indices, 0);
+            let arr = []; //promise返回值的数组
+            for (let i = 0; i<indices.length; i++){
+                arr[i] = new Promise((resolve, reject)=>{
+                    // 一天一天的加载【异步】
+                    if(indices[i] == -1){
+                        resolve(i);
+                    }
+                    else{  // 加载单个涡旋一天的形状
+                        var site = String(days[i]) + "_0_" + String(indices[i]);
+                        var vtk_path = ("./vtk_folder/".concat(identifier, "/vtk", site, ".vtk"));
+                        var loader = new VTKLoader();
+                
+                        loader.load( vtk_path, function ( geometry ) { 
+                            console.log(site);
+                            geometry.translate(-0.5, -0.5, -1);
+                            geometry.scale(edgeLen, edgeWid, 1000);
+                
+                            var material = new THREE.LineBasicMaterial( { color: 0xffffff } );
+                            var linesG = new THREE.LineSegments(geometry, material);
+                            linesG.name = site;
+                            scene.add(linesG);
+                            linesG.visible = false;
+                            resolve(i);
+                        });
+                    }
+                })
+            }
 
+            Promise.all(arr).then((res)=>{
+                console.log("加载完毕");
+                hideProgressModal();
+            })
         }
     })
     return indices;
