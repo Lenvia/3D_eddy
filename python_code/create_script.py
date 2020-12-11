@@ -148,7 +148,7 @@ for i in range(len(indices)):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    saveDir = os.path.join(folder, 'vtk'+str(day)+'_0_'+str(index)+'.vtk')
+    saveDir = os.path.join(folder, 'vtk'+str(day)+'_'+str(index)+'.vtk')
     SaveData(saveDir, proxy=streamTracer1, FileType='Ascii')
 
     #### saving camera placements for all active views

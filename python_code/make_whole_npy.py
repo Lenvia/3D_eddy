@@ -27,7 +27,7 @@ U = np.array([], dtype=np.float64)
 V = np.array([], dtype=np.float64)
 W = np.array([], dtype=np.float64)
 
-for day in range(60):
+for day in range(2):
     # 赋值
     for i, var in enumerate(varSet):
         var_info = f.variables[var]  # 获取变量信息
@@ -40,10 +40,6 @@ for day in range(60):
             V = var_data
         elif i == 2:  # W数据
             W = var_data
-
-    tarDir = 'whole/' + str(day)
-    if not os.path.exists(tarDir):
-        os.makedirs(tarDir)
 
     # U.shape(50, 500, 500)  层数、纬度、经度
     # vec.shape = (500, 500, 50) 应该是（纬度，经度，层数），因为npy_to_vtk.py自己会调换经纬
@@ -60,11 +56,10 @@ for day in range(60):
     dict_ = {'x': vec, 'y': 4}  # x表示数据，y表示x的维数
 
     tarDir = 'whole_npy_file/'
-
-    file = tarDir + 'vec' + str(day) + '.npy'
-
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
+
+    file = tarDir + 'vec' + str(day) + '.npy'
 
     np.save(file, dict_)
     print('successfully saved!')
