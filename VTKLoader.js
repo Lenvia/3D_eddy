@@ -337,13 +337,13 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 			// 如果未设置颜色，则将所有顶点都默认为白色
 			for (let i =0; i<positions.length; i++)
-				colors.push(1); // 换成Math.random()就是五颜六色的涡旋
+				colors.push(1); 
+				// 换成Math.random()就是五颜六色的涡旋
+				// colors.push(Math.random());
 
 
 			if ( normals.length === positions.length ) {  //设置每一个点的法线
-
 				geometry.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
-
 			}
 
 			if ( colors.length !== indices.length ) {  //如果颜色个数和 形状个数 不相同

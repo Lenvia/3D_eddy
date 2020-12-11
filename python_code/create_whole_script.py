@@ -2,37 +2,14 @@ import numpy as np
 import os
 from paraview.simple import *
 
-
-start_day = 4
-start_index = 13
+day = 0
 
 rootDir = '/Users/yy/PycharmProjects/scivis2020'
-tarDir = os.path.join(rootDir, 'track')
-# if not os.path.exists(tarDir):
-#     os.makedirs(tarDir)
 
-identifier = str(start_day) + '-' + str(start_index)  # 涡旋编号
-file_name = identifier + '.npy'  # "4-13.npy"
-file = os.path.join(tarDir, file_name)  # such as "/Users/yy/Desktop/track/4-13.npy"
+for i in range(2):
+    day = i
 
-track_info = np.load(file, allow_pickle=True)
-track_info = track_info.item()
-
-days = track_info["days"]
-indices = track_info["indices"]
-points = track_info["points"]
-x_pos = track_info["x_pos"]
-y_pos = track_info["y_pos"]
-
-for i in range(len(indices)):
-    day = days[i]
-    index = indices[i]
-
-
-    if index == -1:
-        continue
-
-    vtkDir = os.path.join(rootDir, 'vtk_file', identifier, 'vec'+str(day)+'_'+str(index)+'.vtk')
+    vtkDir = os.path.join(rootDir, 'whole_vtk_file',  'vec'+str(day)+'.vtk')
 
     #### disable automatic camera reset on 'Show'
     paraview.simple._DisableFirstRenderCameraReset()
@@ -96,9 +73,9 @@ for i in range(len(indices)):
                                  SeedType='Point Source')
 
     # Properties modified on streamTracer1.SeedType
-    streamTracer1.SeedType.Center = [x_pos[i], y_pos[i], 0.5]
-    streamTracer1.SeedType.NumberOfPoints = points[i]
-    streamTracer1.SeedType.Radius = 0.5
+    streamTracer1.SeedType.Center = [0.5, 0.5, 0.5]
+    streamTracer1.SeedType.NumberOfPoints = 80000
+    streamTracer1.SeedType.Radius = 0.75
 
     # Properties modified on streamTracer1
     streamTracer1.MinimumStepLength = 0.5
@@ -147,11 +124,11 @@ for i in range(len(indices)):
     renderView1.Update()
 
     # save data
-    folder = os.path.join('/Users/yy/Desktop', 'vtk_folder', identifier)
+    folder = os.path.join('/Users/yy/Desktop', 'whole_vtk_folder')
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    saveDir = os.path.join(folder, 'vtk'+str(day)+'_'+str(index)+'.vtk')
+    saveDir = os.path.join(folder, 'vtk'+str(day)+'.vtk')
     SaveData(saveDir, proxy=streamTracer1, FileType='Ascii')
 
     #### saving camera placements for all active views
