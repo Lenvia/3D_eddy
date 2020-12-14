@@ -17,6 +17,7 @@ const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 
 const edgeLen = 3000;  // 地形（海水、山脉）长度
 const edgeWid = 3000;  // 地形宽度
+const scaleHeight = 1000; //缩放高度
 
 let helper;  // 鼠标helper
 
@@ -73,6 +74,7 @@ function init() {
 
 
     loadEddyForDays();
+    loadOWArray();
 
 
     /* 
@@ -370,7 +372,7 @@ function loadEddyForDays(){
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  //【异步加载】
                 geometry.translate(-0.5, -0.5, -1);
-                geometry.scale(edgeLen, edgeWid, 1000);
+                geometry.scale(edgeLen, edgeWid, scaleHeight);
     
                 var material = new THREE.LineBasicMaterial({
                     color: 0xffffff,
@@ -390,9 +392,96 @@ function loadEddyForDays(){
     }
     // 当所有加载都完成之后，再隐藏“等待进度条”
     Promise.all(arr).then((res)=>{
-        console.log("加载完毕");
+        console.log("模型加载完毕");
         hideProgressModal();
     })
+}
+
+/*
+    转换后的xyz到数组i,j,k的映射
+*/
+function xyz2ijk(x, y, z){
+    // console.log(x,y,z);
+    var orix = x/edgeLen + 0.5;
+    var oriy = y/edgeWid + 0.5;
+    var oriz = z/scaleHeight + 1;
+
+    // console.log(orix, oriy, oriz);
+
+    var i = Math.floor(orix/0.002);
+    var j = Math.floor(oriy/0.002);
+    var k = Math.floor(oriz/0.02);
+
+    return new Array(i, j, k);
+}
+
+/*
+    加载OW数组
+*/
+function loadOWArray(){
+    for(var i =0; i<1; i++){
+        var d = i;
+        var path = ("./OW_array/".concat("OW_", String(d), ".txt"));
+        // console.log(path);
+        var site, linesG, geometry;
+        $.get(path, function(data) {
+            // 加载OW数组
+            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+            // console.log(items);
+        
+            var arr = new Array(500);
+            for (var i = 0; i < arr.length; i++) {
+                arr[i] = new Array(500);
+                for (var j = 0; j < arr[i].length; j++) {
+                    arr[i][j] = new Array(50);
+                    for (var k = 0; k<arr[i][j].length; k++){
+                        arr[i][j][k] = items[i][j*arr[i][j].length+k];
+                    }
+                }
+            }
+
+            // console.log(arr[499][499][49]);
+
+            // 将OW值放到geometry中
+            site = "day"+String(d)
+            linesG = scene.getObjectByName(site);
+            var OW = [];
+            var x,y,z;  // 点的当前坐标（缩放后）
+            var i,j,k;  // 点对应的OW数组中的下标
+            var position = linesG.geometry.attributes.position.array;  // 看清属性
+            var temp = new Array(3);
+            console.log(position);
+
+            let flag = []; //promise返回数组
+            
+            for( var index =0; index<(position.count/3); index+=3){
+                flag[index] = new Promise((resolve, reject)=>{
+                    x = position[index];
+                    y = position[index+1];
+                    z = position[index+2];
+                    // console.log(x,y,z);
+
+                    temp = xyz2ijk(x, y, z);
+                    i = temp[0];
+                    j = temp[1];
+                    k = temp[2];
+
+                    // console.log(i,j,k);
+                    OW[index] = arr[i][j][k];
+                    resolve(index);
+                })
+            }
+            
+            Promise.all(flag).then((res)=>{
+                linesG.geometry.addAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
+                console.log("OW值设置完毕");
+            })
+            console.log(OW);
+            
+            
+        });
+    }
+    
 }
 
 function animate() {

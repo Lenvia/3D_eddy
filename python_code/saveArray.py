@@ -5,8 +5,8 @@ import sys
 
 day = 0
 
-dir = os.path.join('result', 'small'+str(day))
-OW = joblib.load(dir + '/OW.pkl')
+dir = os.path.join("whole_attributes_file", 'OW')
+OW = joblib.load(os.path.join(dir, 'OW_'+str(day)+'.pkl'))
 
 
 # reshaping the array from 3D
@@ -17,9 +17,11 @@ tarDir = 'OW_array'
 if not os.path.exists(tarDir):
     os.makedirs(tarDir)
 
-# saving reshaped array to file.
-np.savetxt(os.path.join(tarDir, "OW_"+str(day)+".txt"), arr_reshaped)
+print(OW.shape)
 
+# # saving reshaped array to file.
+# np.savetxt(os.path.join(tarDir, "OW_"+str(day)+".txt"), arr_reshaped)
+#
 # # retrieving data from file.
 # loaded_arr = np.loadtxt("OW_"+str(day)+".txt")
 #
