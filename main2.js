@@ -424,24 +424,29 @@ function loadOWArray(){
         var path = ("./OW_array/".concat("OW_", String(d), ".txt"));
         // console.log(path);
         var site, linesG, geometry;
-        $.get(path, function(data) {
-            // 加载OW数组
-            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
-            // console.log(items);
-        
-            var arr = new Array(500);
-            for (var i = 0; i < arr.length; i++) {
-                arr[i] = new Array(500);
-                for (var j = 0; j < arr[i].length; j++) {
-                    arr[i][j] = new Array(50);
-                    for (var k = 0; k<arr[i][j].length; k++){
-                        arr[i][j][k] = items[i][j*arr[i][j].length+k];
-                    }
-                }
-            }
+        var arr;
+        var promise1 = new Promise(function(resolve, reject) {
+            $.get(path, function(data) {
+                // 加载OW数组
+                var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+                // console.log(items);
+            
+                arr = new Array(500);
+                for (var i = 0; i < arr.length; i++) {
+                    arr[i] = new Array(500);
+                    for (var j = 0; j < arr[i].length; j++) {
+                        arr[i][j] = new Array(50);
+                        for (var k = 0; k<arr[i][j].length; k++){
+                            arr[i][j][k] = items[i][j*arr[i][j].length+k];
+                        }
+                    }
+                }
+                resolve();
+            });
+        });
 
-            // console.log(arr[499][499][49]);
-
+        promise1.then(()=>{
+            console.log(arr);
             // 将OW值放到geometry中
             site = "day"+String(d)
             linesG = scene.getObjectByName(site);
@@ -450,35 +455,29 @@ function loadOWArray(){
             var i,j,k;  // 点对应的OW数组中的下标
             var position = linesG.geometry.attributes.position.array;  // 看清属性
             var temp = new Array(3);
-            console.log(position);
+            // console.log(position);
 
             let flag = []; //promise返回数组
-            
-            for( var index =0; index<(position.count/3); index+=3){
-                flag[index] = new Promise((resolve, reject)=>{
-                    x = position[index];
-                    y = position[index+1];
-                    z = position[index+2];
-                    // console.log(x,y,z);
+            for( var index =0; index<(position.count/3); index++){
+                x = position[index];
+                y = position[index+1];
+                z = position[index+2];
 
+                flag[index] = new Promise((resolve, reject)=>{
                     temp = xyz2ijk(x, y, z);
                     i = temp[0];
                     j = temp[1];
                     k = temp[2];
 
-                    // console.log(i,j,k);
                     OW[index] = arr[i][j][k];
                     resolve(index);
                 })
             }
-            
             Promise.all(flag).then((res)=>{
                 linesG.geometry.addAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
                 console.log("OW值设置完毕");
             })
             console.log(OW);
-            
-            
         });
     }
     
