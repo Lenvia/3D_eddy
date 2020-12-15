@@ -371,8 +371,18 @@ function loadEddyForDays(){
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  //【异步加载】
+                
+
                 geometry.translate(-0.5, -0.5, -1);
                 geometry.scale(edgeLen, edgeWid, scaleHeight);
+
+                var position = geometry.attributes.position.array;
+                var minZ = position[2];
+                for(var i=2; i<position.length; i+=3){
+                    if(minZ>position[i])
+                        minZ = position[i];
+                }
+                console.log("minZ:" ,minZ);
     
                 var material = new THREE.LineBasicMaterial({
                     color: 0xffffff,
@@ -441,12 +451,14 @@ function loadOWArray(){
                         }
                     }
                 }
-                resolve();
+                console.log("OW数组提取完毕");
+                console.log(arr);
+                resolve(1);
             });
         });
 
+        
         promise1.then(()=>{
-            console.log(arr);
             // 将OW值放到geometry中
             site = "day"+String(d)
             linesG = scene.getObjectByName(site);
@@ -454,31 +466,40 @@ function loadOWArray(){
             var x,y,z;  // 点的当前坐标（缩放后）
             var i,j,k;  // 点对应的OW数组中的下标
             var position = linesG.geometry.attributes.position.array;  // 看清属性
+            console.log("postion数组读取完毕");
+
             var temp = new Array(3);
-            // console.log(position);
-
             let flag = []; //promise返回数组
-            for( var index =0; index<(position.count/3); index++){
-                x = position[index];
-                y = position[index+1];
-                z = position[index+2];
 
-                flag[index] = new Promise((resolve, reject)=>{
+            var minZ = position[2];
+
+            for( var q =0; q<position.length; q+=3){
+                flag[q/3] = new Promise((resolve, reject)=>{
+                    x = position[q];
+                    y = position[q+1];
+                    z = position[q+2];
+
+                    if(minZ>z)
+                        minZ = z;
+                
                     temp = xyz2ijk(x, y, z);
                     i = temp[0];
                     j = temp[1];
                     k = temp[2];
+                    // console.log(x,y,z, "-->", i, j, k);
 
-                    OW[index] = arr[i][j][k];
-                    resolve(index);
+                    OW[q/3] = arr[i][j][k];
+                    resolve(q);
                 })
             }
+            
             Promise.all(flag).then((res)=>{
-                linesG.geometry.addAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
+                linesG.geometry.setAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
                 console.log("OW值设置完毕");
+                // console.log(OW);
             })
-            console.log(OW);
         });
+
     }
     
 }
