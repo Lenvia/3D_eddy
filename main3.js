@@ -392,16 +392,24 @@ function loadEddyForDays(){
                 geometry.scale(edgeLen, edgeWid, scaleHeight);
 
     
-                var mats = [];
-                geometry = geometry.toNonIndexed();
-                var vertexNum = geometry.attributes.position.count;  
                 
+                geometry = geometry.toNonIndexed();
+                var vertexNum = geometry.attributes.position.count;
+                
+                var opa = []; // 顶点透明度，用来改变线条透明度
+                for (var i = 0; i<vertexNum; i++){
+                    opa.push(Math.random());  // 默认都是1
+                }
+                geometry.setAttribute( 'opa', new THREE.Float32BufferAttribute( opa, 1 ));
+
+                var mats = [];
                 for (var i =0; i<vertexNum; i+=2){
                     geometry.addGroup(i, 2, i/2);
                     let material = new THREE.LineBasicMaterial({
                         vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
                         transparent: true, // 可定义透明度
-                        opacity: 1,
+                        opacity: (opa[i]+opa[i+1])/2,
+                        // opacity: 1,
                         depthWrite: false, 
                     });
                     mats.push(material);
