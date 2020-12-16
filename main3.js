@@ -39,10 +39,15 @@ var existModel = []
 // gui参数
 var currentDay;
 var currentAttr;
+var upValue;
+var downValue;
+var difValue;
+var mid1, mid2, mid3, mid4;
 var currentColor0 = [];
 var currentColor1 = [];
 var currentColor2 = [];
 var currentColor3 = [];
+var currentColor4 = [];
 var currentOpacity0 = [];
 var currentOpacity1 = [];
 var currentOpacity2 = [];
@@ -365,7 +370,7 @@ function loadEddyForDays(){
                 for (var i = 0; i<vertexNum; i++){
                     opa.push(1);  // 默认都是1
                 }
-                geometry.setAttribute( 'opa', new THREE.Float32BufferAttribute( opa, 1 ));
+                geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
 
                 var mats = [];
                 for (var i =0; i<vertexNum; i+=2){
@@ -373,15 +378,15 @@ function loadEddyForDays(){
                     let material = new THREE.LineBasicMaterial({
                         vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
                         transparent: true, // 可定义透明度
-                        opacity: (geometry.attributes.opa.array[i]+geometry.attributes.opa.array[i+1])/2,
-                        // opacity: 1,
+                        opacity: 1,  // 好像这些是不能自动计算的，那就直接设成1吧
                         depthWrite: false, 
                     });
                     mats.push(material);
                 }
                 var linesG = new THREE.LineSegments(geometry, mats);
 
-                console.log(linesG)
+                console.log(linesG);
+                console.log(linesG.material[0].color);
 
 
                 linesG.name = "day"+String(d);  // day0, day1, ...
@@ -444,7 +449,7 @@ function loadOWArray(){
                     }
                 }
                 console.log("OW数组提取完毕");
-                console.log(arr);
+                // console.log(arr);
                 resolve(1);
             });
         });
@@ -462,6 +467,9 @@ function loadOWArray(){
             var temp = new Array(3);
             let flag = []; //promise返回数组
 
+            // var maxOW = -1;
+            // var minOW = 99999;
+
             for( var q =0; q<position.length; q+=3){
                 flag[q/3] = new Promise((resolve, reject)=>{
                     x = position[q];
@@ -475,6 +483,10 @@ function loadOWArray(){
                     // console.log(x,y,z, "-->", i, j, k);
 
                     OW[q/3] = arr[i][j][k];
+                    // if(maxOW<OW[q/3])
+                    //     maxOW = OW[q/3];
+                    // if(minOW>OW[q/3])
+                    //     minOW = OW[q/3];
                     resolve(q);
                 })
             }
@@ -482,6 +494,8 @@ function loadOWArray(){
             Promise.all(flag).then((res)=>{
                 linesG.geometry.setAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
                 console.log("OW值设置完毕");
+                // console.log("maxOW", maxOW);
+                // console.log("minOW", minOW);
             })
         });
 
@@ -497,10 +511,13 @@ function setGUI(){
     var gui_controls = new function(){
         this.currentDay = 0;  // 初始时间为第0天
         this.currentAttr = 'OW'; // 初始展示属性为OW
+        this.upValue = 10; // 属性的下界
+        this.downValue = -10;  // 属性的上界
         this.color0 = [255, 255, 255]; // RGB array
         this.color1 = [255, 255, 255]; // RGB array
         this.color2 = [255, 255, 255]; // RGB array
         this.color3 = [255, 255, 255]; // RGB array
+        this.color4 = [255, 255, 255]; // RGB array
         this.opacity0 = 1.0;
         this.opacity1 = 1.0;
         this.opacity2 = 1.0;
@@ -511,6 +528,12 @@ function setGUI(){
     var lastDay = -1;
     var curLine, lastLine;  // 当前显示的线，上次显示的线
     var site, last_site;
+
+    // // 默认显示
+    // site = "day"+String(currentDay);
+    // curLine = scene.getObjectByName(site);
+    // curLine.visible = true;
+
     // 切换日期
     gui.add(gui_controls, 'currentDay', days).onChange(function(){
         if(lastDay!=-1){  // 清除上次的显示
@@ -522,7 +545,7 @@ function setGUI(){
         currentDay = gui_controls.currentDay;
         console.log("currentDay:", currentDay);
 
-        site = "day"+String(currentDay)
+        site = "day"+String(currentDay);
         
         curLine = scene.getObjectByName(site);
         console.log(curLine);
@@ -530,52 +553,212 @@ function setGUI(){
         lastDay = currentDay;
     });
 
+    // 属性值上下界
+    upValue = gui_controls.upValue;
+    downValue = gui_controls.downValue;
+    difValue = upValue-downValue;
+    mid1 = downValue+0.2*difValue;
+    mid2 = downValue+0.4*difValue;
+    mid3 = downValue+0.6*difValue;
+    mid4 = downValue+0.8*difValue;
+
+
     currentAttr = 'OW';
     gui.add(gui_controls, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
         currentAttr = gui_controls.currentAttr;
         console.log("currentAttr:", currentAttr);
     });
 
+    gui.add(gui_controls, 'upValue').onChange(function(){
+        upValue = gui_controls.upValue;
+        console.log("upValue:", upValue);
+
+        // 更新中间点
+        difValue = upValue-downValue;
+        mid1 = downValue+0.2*difValue;
+        mid2 = downValue+0.4*difValue;
+        mid3 = downValue+0.6*difValue;
+        mid4 = downValue+0.8*difValue;
+    });
+
+    gui.add(gui_controls, 'downValue').onChange(function(){
+        downValue = gui_controls.downValue;
+        console.log("downValue:", downValue);
+
+        // 更新中间点
+        difValue = upValue-downValue;
+        mid1 = downValue+0.2*difValue;
+        mid2 = downValue+0.4*difValue;
+        mid3 = downValue+0.6*difValue;
+        mid4 = downValue+0.8*difValue;
+    });
+
+
     // 交互颜色
     var colorFolder = gui.addFolder('color');
-    colorFolder.addColor(gui_controls, 'color0').onChange(function(){
+    // color0
+    colorFolder.addColor(gui_controls, 'color0').onFinishChange(function(){
         currentColor0 = gui_controls.color0;
         console.log("color0:", currentColor0);
+
+        var cColor = [currentColor0[0]/255, currentColor0[1]/255, currentColor0[2]/255];
+
+        // 修改该范围内的点的颜色
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]<= mid1){
+                curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+            }
+        }
+        updateColor(curLine);  // 更新material
     });
-    colorFolder.addColor(gui_controls, 'color1').onChange(function(){
+
+    // color1
+    colorFolder.addColor(gui_controls, 'color1').onFinishChange(function(){
         currentColor1 = gui_controls.color1;
         console.log("color1:", currentColor1);
+
+        var cColor = [currentColor1[0]/255, currentColor1[1]/255, currentColor1[2]/255];
+
+        // 修改该范围内的点的颜色
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+                curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+            }
+        }
+        updateColor(curLine);  // 更新material
     });
-    colorFolder.addColor(gui_controls, 'color2').onChange(function(){
+    // color2
+    colorFolder.addColor(gui_controls, 'color2').onFinishChange(function(){
         currentColor2 = gui_controls.color2;
         console.log("color2:", currentColor2);
+
+        var cColor = [currentColor2[0]/255, currentColor2[1]/255, currentColor2[2]/255];
+
+        // 修改该范围内的点的颜色
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+                curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+            }
+        }
+        updateColor(curLine);  // 更新material
     });
-    colorFolder.addColor(gui_controls, 'color3').onChange(function(){
+    // color3
+    colorFolder.addColor(gui_controls, 'color3').onFinishChange(function(){
         currentColor3 = gui_controls.color3;
         console.log("color3:", currentColor3);
+        
+        var cColor = [currentColor3[0]/255, currentColor3[1]/255, currentColor3[2]/255];
+
+        // 修改该范围内的点的颜色
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+                curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+            }
+        }
+        updateColor(curLine);  // 更新material
     });
+
+    // color4
+    colorFolder.addColor(gui_controls, 'color4').onFinishChange(function(){
+        currentColor4 = gui_controls.color4;
+        console.log("color4:", currentColor4);
+        
+        var cColor = [currentColor4[0]/255, currentColor4[1]/255, currentColor4[2]/255];
+
+        // 修改该范围内的点的颜色
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]> mid4){
+                curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+            }
+        }
+        updateColor(curLine);  // 更新material
+    });
+
 
     //交互透明度
     var opaFolder = gui.addFolder('opacity');
-    opaFolder.add(gui_controls, 'opacity0', 0, 1, 0.05).onChange(function(){
+    opaFolder.add(gui_controls, 'opacity0', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity0 = gui_controls.opacity0;
         console.log("opacity0:", currentOpacity0);
+
+        var cOpa = currentOpacity0;
+
+        // 修改该范围内的点的透明度
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]<= downValue+0.25*difValue){
+                curLine.geometry.attributes.opacity.array[i] = cOpa;
+            }
+        }
+       
     })
-    opaFolder.add(gui_controls, 'opacity1', 0, 1, 0.05).onChange(function(){
+    opaFolder.add(gui_controls, 'opacity1', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity1 = gui_controls.opacity1;
         console.log("opacity1:", currentOpacity1);
+
+        var cOpa = currentOpacity1;
+
+        // 修改该范围内的点的透明度
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]<= downValue+0.25*difValue){
+                curLine.geometry.attributes.opacity.array[i] = cOpa;
+            }
+        }
+        
     })
-    opaFolder.add(gui_controls, 'opacity2', 0, 1, 0.05).onChange(function(){
+    opaFolder.add(gui_controls, 'opacity2', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity2 = gui_controls.opacity2;
         console.log("opacity2:", currentOpacity2);
+
+        var cOpa = currentOpacity0;
+
+        // 修改该范围内的点的透明度
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]<= downValue+0.25*difValue){
+                curLine.geometry.attributes.opacity.array[i] = cOpa;
+            }
+        }
+        
     })
-    opaFolder.add(gui_controls, 'opacity3', 0, 1, 0.05).onChange(function(){
+    opaFolder.add(gui_controls, 'opacity3', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity3 = gui_controls.opacity3;
         console.log("opacity3:", currentOpacity3);
+
+        var cOpa = currentOpacity3;
+
+        // 修改该范围内的点的透明度
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]<= downValue+0.25*difValue){
+                curLine.geometry.attributes.opacity.array[i] = cOpa;
+            }
+        }
+        
     })
 
 
 }
+
+/*
+    更新material的属性
+*/
+function updateColor(curLine){
+    for(var i=0; i<curLine.material.length; i++){
+        let r = (curLine.geometry.attributes.color.array[6*i] + curLine.geometry.attributes.color.array[6*i+3])/2;
+        let g = (curLine.geometry.attributes.color.array[6*i+1] + curLine.geometry.attributes.color.array[6*i+4])/2;
+        let b = (curLine.geometry.attributes.color.array[6*i+2] + curLine.geometry.attributes.color.array[6*i+5])/2;
+        curLine.material[i].color = new THREE.Color(r, g, b);
+    }
+}
+
 
 function animate() {
     requestAnimationFrame( animate );
