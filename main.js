@@ -396,7 +396,7 @@ function loadEddyForDays(start_day, start_index){
                             geometry.scale(edgeLen, edgeWid, 1000);
                 
                             var material = new THREE.LineBasicMaterial({
-                                color: 0xffffff,
+                                // color: 0xffffff,
                                 vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
                                 transparent: true, // 可定义透明度
                                 opacity: 1.0,

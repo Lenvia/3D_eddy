@@ -18,23 +18,28 @@
 // });
 
 
-var path = ("./OW_array/".concat("OW_", String(0), ".txt"));
+// var path = ("./OW_array/".concat("OW_", String(0), ".txt"));
 
-$.get(path, function(data) {
-    // 加载OW数组
-    var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
-    console.log(items);
+// $.get(path, function(data) {
+//     // 加载OW数组
+//     var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+//     console.log(items);
 
-    var arr = new Array(500);
-    for (var i = 0; i < arr.length; i++) {
-        arr[i] = new Array(500);
-        for (var j = 0; j < arr[i].length; j++) {
-            arr[i][j] = new Array(50);
-            for (var k = 0; k<arr[i][j].length; k++){
-                arr[i][j][k] = items[i][j*arr[i][j].length+k];
-            }
-        }
-    }
+//     var arr = new Array(500);
+//     for (var i = 0; i < arr.length; i++) {
+//         arr[i] = new Array(500);
+//         for (var j = 0; j < arr[i].length; j++) {
+//             arr[i][j] = new Array(50);
+//             for (var k = 0; k<arr[i][j].length; k++){
+//                 arr[i][j][k] = items[i][j*arr[i][j].length+k];
+//             }
+//         }
+//     }
 
-    console.log(arr);
-});
+//     console.log(arr);
+// });
+
+
+var x1 = [3, 4, 5];
+var x2 = [x1[0]/255, x1[1]/255, x1[2]/255];
+console.log(x2);

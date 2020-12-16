@@ -24,8 +24,12 @@ let helper;  // 鼠标helper
 const raycaster = new THREE.Raycaster();  // 射线
 const mouse = new THREE.Vector2();  // 鼠标二维坐标
 
-const days = []  // 一共60天
-for (var i =0; i<=59; i++) days.push(i);
+const days = [];  // 一共60天
+const exDays = [-1]; // 扩展天数，第一个是-1
+for (var i =0; i<=59; i++){
+    days.push(i);
+    exDays.push(i);
+}
 
 // 进度条模块
 var progressModal, progressBar, progressLabel, progressBackground;
@@ -48,10 +52,11 @@ var currentColor1 = [];
 var currentColor2 = [];
 var currentColor3 = [];
 var currentColor4 = [];
-var currentOpacity0 = [];
-var currentOpacity1 = [];
-var currentOpacity2 = [];
-var currentOpacity3 = [];
+var currentOpacity0
+var currentOpacity1;
+var currentOpacity2;
+var currentOpacity3;
+var currentOpacity4;
 
 
 
@@ -430,7 +435,7 @@ function loadOWArray(){
         var d = i;
         var path = ("./OW_array/".concat("OW_", String(d), ".txt"));
         // console.log(path);
-        var site, linesG, geometry;
+        var site, linesG;
         var arr;
         var promise1 = new Promise(function(resolve, reject) {
             $.get(path, function(data) {
@@ -467,9 +472,6 @@ function loadOWArray(){
             var temp = new Array(3);
             let flag = []; //promise返回数组
 
-            // var maxOW = -1;
-            // var minOW = 99999;
-
             for( var q =0; q<position.length; q+=3){
                 flag[q/3] = new Promise((resolve, reject)=>{
                     x = position[q];
@@ -483,10 +485,6 @@ function loadOWArray(){
                     // console.log(x,y,z, "-->", i, j, k);
 
                     OW[q/3] = arr[i][j][k];
-                    // if(maxOW<OW[q/3])
-                    //     maxOW = OW[q/3];
-                    // if(minOW>OW[q/3])
-                    //     minOW = OW[q/3];
                     resolve(q);
                 })
             }
@@ -500,7 +498,6 @@ function loadOWArray(){
         });
 
     }
-    
 }
 
 /*
@@ -509,7 +506,7 @@ function loadOWArray(){
 function setGUI(){
     var gui = new dat.GUI();
     var gui_controls = new function(){
-        this.currentDay = 0;  // 初始时间为第0天
+        this.currentDay = -1;  // 初始时间为第0天
         this.currentAttr = 'OW'; // 初始展示属性为OW
         this.upValue = 10; // 属性的下界
         this.downValue = -10;  // 属性的上界
@@ -522,20 +519,34 @@ function setGUI(){
         this.opacity1 = 1.0;
         this.opacity2 = 1.0;
         this.opacity3 = 1.0;
+        this.opacity4 = 1.0;
     }
 
-    currentDay = 0;
+    /* 
+        一些默认的属性
+    */
+
+    // 日期相关
+    currentDay = -1;
     var lastDay = -1;
     var curLine, lastLine;  // 当前显示的线，上次显示的线
     var site, last_site;
 
-    // // 默认显示
-    // site = "day"+String(currentDay);
-    // curLine = scene.getObjectByName(site);
-    // curLine.visible = true;
+    // 默认属性值
+    currentAttr = 'OW';
+
+    // 属性值上下界
+    upValue = gui_controls.upValue;
+    downValue = gui_controls.downValue;
+    difValue = upValue-downValue;
+    mid1 = downValue+0.2*difValue;
+    mid2 = downValue+0.4*difValue;
+    mid3 = downValue+0.6*difValue;
+    mid4 = downValue+0.8*difValue;
+
 
     // 切换日期
-    gui.add(gui_controls, 'currentDay', days).onChange(function(){
+    gui.add(gui_controls, 'currentDay', exDays).onChange(function(){
         if(lastDay!=-1){  // 清除上次的显示
             last_site = "day"+String(lastDay);
             lastLine = scene.getObjectByName(last_site);
@@ -553,17 +564,10 @@ function setGUI(){
         lastDay = currentDay;
     });
 
-    // 属性值上下界
-    upValue = gui_controls.upValue;
-    downValue = gui_controls.downValue;
-    difValue = upValue-downValue;
-    mid1 = downValue+0.2*difValue;
-    mid2 = downValue+0.4*difValue;
-    mid3 = downValue+0.6*difValue;
-    mid4 = downValue+0.8*difValue;
 
 
-    currentAttr = 'OW';
+
+    
     gui.add(gui_controls, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
         currentAttr = gui_controls.currentAttr;
         console.log("currentAttr:", currentAttr);
@@ -594,7 +598,9 @@ function setGUI(){
     });
 
 
-    // 交互颜色
+    /*
+        交互颜色
+    */
     var colorFolder = gui.addFolder('color');
     // color0
     colorFolder.addColor(gui_controls, 'color0').onFinishChange(function(){
@@ -685,8 +691,12 @@ function setGUI(){
     });
 
 
-    //交互透明度
+    /*
+        交互透明度
+    */
     var opaFolder = gui.addFolder('opacity');
+    
+    // opacity0
     opaFolder.add(gui_controls, 'opacity0', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity0 = gui_controls.opacity0;
         console.log("opacity0:", currentOpacity0);
@@ -695,12 +705,13 @@ function setGUI(){
 
         // 修改该范围内的点的透明度
         for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-            if(curLine.geometry.attributes.OW.array[i]<= downValue+0.25*difValue){
+            if(curLine.geometry.attributes.OW.array[i]<= mid1){
                 curLine.geometry.attributes.opacity.array[i] = cOpa;
             }
         }
-       
+        updateOpacity(curLine);
     })
+    // opacity1
     opaFolder.add(gui_controls, 'opacity1', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity1 = gui_controls.opacity1;
         console.log("opacity1:", currentOpacity1);
@@ -709,26 +720,28 @@ function setGUI(){
 
         // 修改该范围内的点的透明度
         for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-            if(curLine.geometry.attributes.OW.array[i]<= downValue+0.25*difValue){
+            if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
                 curLine.geometry.attributes.opacity.array[i] = cOpa;
             }
         }
-        
+        updateOpacity(curLine);
     })
+    // opacity2
     opaFolder.add(gui_controls, 'opacity2', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity2 = gui_controls.opacity2;
         console.log("opacity2:", currentOpacity2);
 
-        var cOpa = currentOpacity0;
+        var cOpa = currentOpacity2;
 
         // 修改该范围内的点的透明度
         for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-            if(curLine.geometry.attributes.OW.array[i]<= downValue+0.25*difValue){
+            if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
                 curLine.geometry.attributes.opacity.array[i] = cOpa;
             }
         }
-        
+        updateOpacity(curLine);
     })
+    // opacity3
     opaFolder.add(gui_controls, 'opacity3', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity3 = gui_controls.opacity3;
         console.log("opacity3:", currentOpacity3);
@@ -737,11 +750,27 @@ function setGUI(){
 
         // 修改该范围内的点的透明度
         for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-            if(curLine.geometry.attributes.OW.array[i]<= downValue+0.25*difValue){
+            if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
                 curLine.geometry.attributes.opacity.array[i] = cOpa;
             }
         }
-        
+        updateOpacity(curLine);
+    })
+
+    // opacity4
+    opaFolder.add(gui_controls, 'opacity4', 0, 1, 0.05).onFinishChange(function(){
+        currentOpacity4 = gui_controls.opacity4;
+        console.log("opacity4:", currentOpacity4);
+
+        var cOpa = currentOpacity4;
+
+        // 修改该范围内的点的透明度
+        for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+            if(curLine.geometry.attributes.OW.array[i]> mid4){
+                curLine.geometry.attributes.opacity.array[i] = cOpa;
+            }
+        }
+        updateOpacity(curLine);
     })
 
 
@@ -756,6 +785,12 @@ function updateColor(curLine){
         let g = (curLine.geometry.attributes.color.array[6*i+1] + curLine.geometry.attributes.color.array[6*i+4])/2;
         let b = (curLine.geometry.attributes.color.array[6*i+2] + curLine.geometry.attributes.color.array[6*i+5])/2;
         curLine.material[i].color = new THREE.Color(r, g, b);
+    }
+}
+
+function updateOpacity(curLine){
+    for(var i=0; i<curLine.material.length; i++){
+        curLine.material[i].opacity = (curLine.geometry.attributes.opacity.array[2*i] + curLine.geometry.attributes.opacity.array[2*i+1])/2;
     }
 }
 
