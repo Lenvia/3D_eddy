@@ -31,16 +31,23 @@ for (var i =0; i<=59; i++) days.push(i);
 var progressModal, progressBar, progressLabel, progressBackground;
 var frameLabel;
 
-// 交互面板模块
-var colorUI;
 
 // 场上显示的模型
 var existModel = []
 
-/*
-    gui上当前的日期
-*/
+
+// gui参数
 var currentDay;
+var currentAttr;
+var currentColor0 = [];
+var currentColor1 = [];
+var currentColor2 = [];
+var currentColor3 = [];
+var currentOpacity0 = [];
+var currentOpacity1 = [];
+var currentOpacity2 = [];
+var currentOpacity3 = [];
+
 
 
 init();
@@ -74,48 +81,14 @@ function init() {
 
     // 创建海底地形和海水
     createTerrainAndSea();
-
+    // 显示等待条
     showProgressModal("loadingFrames");
-
-    // 加载涡旋
-    // 获取单个涡旋的n天json列表
-
-
+    // 加载涡旋模型
     loadEddyForDays();
+    // 设置OW属性
     loadOWArray();
-
-    // showInterUI();
-
-
-    /* 
-    设置gui插件
-    */
-    var gui = new dat.GUI();
-    var gui_controls = new function(){
-        this.currentDay = 0;  // 初始时间为第0天
-    }
-
-    currentDay = 0;
-    var lastDay = -1;
-    var curLine, lastLine;  // 当前显示的线，上次显示的线
-    var site, last_site;
-    gui.add(gui_controls, 'currentDay', days).onChange(function(){
-        if(lastDay!=-1){  // 清除上次的显示
-            last_site = "day"+String(lastDay);
-            lastLine = scene.getObjectByName(last_site);
-            lastLine.visible = false;
-        }
-
-        currentDay = gui_controls.currentDay;
-        console.log("currentDay:", currentDay);
-
-        site = "day"+String(currentDay)
-        
-        curLine = scene.getObjectByName(site);
-        console.log(curLine);
-        curLine.visible = true;
-        lastDay = currentDay;
-    });
+    // 设置交互面板
+    setGUI();
 
     //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
     var ambient = new THREE.AmbientLight(0x666666);
@@ -367,13 +340,6 @@ function hideProgressModal(){
 }
 
 /*
-    设置交互面板
-*/
-// function showInterUI(){
-//     colorUI = document.getElementById("colorUI");
-// }
-
-/*
     加载涡旋n天的形状
 */
 function loadEddyForDays(){
@@ -385,45 +351,35 @@ function loadEddyForDays(){
             var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, ".vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
-            loader.load( vtk_path, function ( geometry ) {  //【异步加载】
+            loader.load( vtk_path, function ( geometry ) {  // 异步加载
                 
 
                 geometry.translate(-0.5, -0.5, -1);
                 geometry.scale(edgeLen, edgeWid, scaleHeight);
 
-    
-                
+                // 转化为无索引格式，用来分组
                 geometry = geometry.toNonIndexed();
                 var vertexNum = geometry.attributes.position.count;
                 
                 var opa = []; // 顶点透明度，用来改变线条透明度
                 for (var i = 0; i<vertexNum; i++){
-                    opa.push(Math.random());  // 默认都是1
+                    opa.push(1);  // 默认都是1
                 }
                 geometry.setAttribute( 'opa', new THREE.Float32BufferAttribute( opa, 1 ));
 
                 var mats = [];
                 for (var i =0; i<vertexNum; i+=2){
-                    geometry.addGroup(i, 2, i/2);
+                    geometry.addGroup(i, 2, i/2);  // 无索引形式(startIndex, count, groupId)
                     let material = new THREE.LineBasicMaterial({
                         vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
                         transparent: true, // 可定义透明度
-                        opacity: (opa[i]+opa[i+1])/2,
+                        opacity: (geometry.attributes.opa.array[i]+geometry.attributes.opa.array[i+1])/2,
                         // opacity: 1,
                         depthWrite: false, 
                     });
                     mats.push(material);
                 }
                 var linesG = new THREE.LineSegments(geometry, mats);
-
-                // let material = new THREE.LineBasicMaterial({
-                //     // color: 0xffffff,
-                //     vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
-                //     transparent: true, // 可定义透明度
-                //     opacity: 1.0,
-                //     depthWrite: false, 
-                // });
-                // var linesG = new THREE.LineSegments(geometry, material);
 
                 console.log(linesG)
 
@@ -531,6 +487,94 @@ function loadOWArray(){
 
     }
     
+}
+
+/*
+    设置交互GUI
+*/
+function setGUI(){
+    var gui = new dat.GUI();
+    var gui_controls = new function(){
+        this.currentDay = 0;  // 初始时间为第0天
+        this.currentAttr = 'OW'; // 初始展示属性为OW
+        this.color0 = [255, 255, 255]; // RGB array
+        this.color1 = [255, 255, 255]; // RGB array
+        this.color2 = [255, 255, 255]; // RGB array
+        this.color3 = [255, 255, 255]; // RGB array
+        this.opacity0 = 1.0;
+        this.opacity1 = 1.0;
+        this.opacity2 = 1.0;
+        this.opacity3 = 1.0;
+    }
+
+    currentDay = 0;
+    var lastDay = -1;
+    var curLine, lastLine;  // 当前显示的线，上次显示的线
+    var site, last_site;
+    // 切换日期
+    gui.add(gui_controls, 'currentDay', days).onChange(function(){
+        if(lastDay!=-1){  // 清除上次的显示
+            last_site = "day"+String(lastDay);
+            lastLine = scene.getObjectByName(last_site);
+            lastLine.visible = false;
+        }
+
+        currentDay = gui_controls.currentDay;
+        console.log("currentDay:", currentDay);
+
+        site = "day"+String(currentDay)
+        
+        curLine = scene.getObjectByName(site);
+        console.log(curLine);
+        curLine.visible = true;
+        lastDay = currentDay;
+    });
+
+    currentAttr = 'OW';
+    gui.add(gui_controls, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
+        currentAttr = gui_controls.currentAttr;
+        console.log("currentAttr:", currentAttr);
+    });
+
+    // 交互颜色
+    var colorFolder = gui.addFolder('color');
+    colorFolder.addColor(gui_controls, 'color0').onChange(function(){
+        currentColor0 = gui_controls.color0;
+        console.log("color0:", currentColor0);
+    });
+    colorFolder.addColor(gui_controls, 'color1').onChange(function(){
+        currentColor1 = gui_controls.color1;
+        console.log("color1:", currentColor1);
+    });
+    colorFolder.addColor(gui_controls, 'color2').onChange(function(){
+        currentColor2 = gui_controls.color2;
+        console.log("color2:", currentColor2);
+    });
+    colorFolder.addColor(gui_controls, 'color3').onChange(function(){
+        currentColor3 = gui_controls.color3;
+        console.log("color3:", currentColor3);
+    });
+
+    //交互透明度
+    var opaFolder = gui.addFolder('opacity');
+    opaFolder.add(gui_controls, 'opacity0', 0, 1, 0.05).onChange(function(){
+        currentOpacity0 = gui_controls.opacity0;
+        console.log("opacity0:", currentOpacity0);
+    })
+    opaFolder.add(gui_controls, 'opacity1', 0, 1, 0.05).onChange(function(){
+        currentOpacity1 = gui_controls.opacity1;
+        console.log("opacity1:", currentOpacity1);
+    })
+    opaFolder.add(gui_controls, 'opacity2', 0, 1, 0.05).onChange(function(){
+        currentOpacity2 = gui_controls.opacity2;
+        console.log("opacity2:", currentOpacity2);
+    })
+    opaFolder.add(gui_controls, 'opacity3', 0, 1, 0.05).onChange(function(){
+        currentOpacity3 = gui_controls.opacity3;
+        console.log("opacity3:", currentOpacity3);
+    })
+
+
 }
 
 function animate() {
