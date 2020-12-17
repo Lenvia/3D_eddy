@@ -95,8 +95,7 @@ function init() {
     showProgressModal("loadingFrames");
     // 加载涡旋模型
     loadEddyForDays();
-    // 设置OW属性
-    loadOWArray();
+    
     // 设置交互面板
     setGUI();
 
@@ -354,7 +353,7 @@ function hideProgressModal(){
 */
 function loadEddyForDays(){
     let arr = []; //promise返回值的数组
-    for (let i = 0; i<1; i++){
+    for (let i = 0; i<2; i++){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
@@ -363,7 +362,6 @@ function loadEddyForDays(){
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
                 
-
                 geometry.translate(-0.5, -0.5, -1);
                 geometry.scale(edgeLen, edgeWid, scaleHeight);
 
@@ -391,7 +389,6 @@ function loadEddyForDays(){
                 var linesG = new THREE.LineSegments(geometry, mats);
 
                 console.log(linesG);
-                console.log(linesG.material[0].color);
 
 
                 linesG.name = "day"+String(d);  // day0, day1, ...
@@ -405,7 +402,8 @@ function loadEddyForDays(){
     // 当所有加载都完成之后，再隐藏“等待进度条”
     Promise.all(arr).then((res)=>{
         console.log("模型加载完毕");
-        hideProgressModal();
+        // 设置OW属性
+        loadOWArray();
     })
 }
 
@@ -430,74 +428,83 @@ function xyz2ijk(x, y, z){
 /*
     加载OW数组
 */
-function loadOWArray(){
-    for(var i =0; i<1; i++){
-        var d = i;
-        var path = ("./OW_array/".concat("OW_", String(d), ".txt"));
-        // console.log(path);
-        var site, linesG;
-        var arr;
-        var promise1 = new Promise(function(resolve, reject) {
-            $.get(path, function(data) {
-                // 加载OW数组
-                var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
-                // console.log(items);
-            
-                arr = new Array(500);
-                for (var i = 0; i < arr.length; i++) {
-                    arr[i] = new Array(500);
-                    for (var j = 0; j < arr[i].length; j++) {
-                        arr[i][j] = new Array(50);
-                        for (var k = 0; k<arr[i][j].length; k++){
-                            arr[i][j][k] = items[i][j*arr[i][j].length+k];
-                        }
-                    }
-                }
-                console.log("OW数组提取完毕");
-                // console.log(arr);
-                resolve(1);
-            });
-        });
-
-        promise1.then(()=>{
-            // 将OW值放到geometry中
-            site = "day"+String(d)
-            linesG = scene.getObjectByName(site);
-            var OW = [];
-            var x,y,z;  // 点的当前坐标（缩放后）
-            var i,j,k;  // 点对应的OW数组中的下标
-            var position = linesG.geometry.attributes.position.array;  // 看清属性
-            console.log("postion数组读取完毕");
-
-            var temp = new Array(3);
-            let flag = []; //promise返回数组
-
-            for( var q =0; q<position.length; q+=3){
-                flag[q/3] = new Promise((resolve, reject)=>{
-                    x = position[q];
-                    y = position[q+1];
-                    z = position[q+2];
-                
-                    temp = xyz2ijk(x, y, z);
-                    i = temp[0];
-                    j = temp[1];
-                    k = temp[2];
-                    // console.log(x,y,z, "-->", i, j, k);
-
-                    OW[q/3] = arr[i][j][k];
-                    resolve(q);
-                })
+//  单个加载函数
+function loadOneOWArray(path, d){
+    var site, linesG;
+    var arr;
+    var promise1 = new Promise(function(resolve, reject) {
+        $.get(path, function(data) {
+            // 加载OW数组
+            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+            // console.log(items);
+        
+            arr = new Array(500);
+            for (var i = 0; i < arr.length; i++) {
+                arr[i] = new Array(500);
+                for (var j = 0; j < arr[i].length; j++) {
+                    arr[i][j] = new Array(50);
+                    for (var k = 0; k<arr[i][j].length; k++){
+                        arr[i][j][k] = items[i][j*arr[i][j].length+k];
+                    }
+                }
             }
-            
-            Promise.all(flag).then((res)=>{
-                linesG.geometry.setAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
-                console.log("OW值设置完毕");
-                // console.log("maxOW", maxOW);
-                // console.log("minOW", minOW);
-            })
+            console.log(d, "OW数组提取完毕");
+            // console.log(arr);
+            resolve(1);
         });
+    });
 
+    promise1.then(()=>{
+        // 将OW值放到geometry中
+        site = "day"+String(d)
+        linesG = scene.getObjectByName(site);
+        var OW = [];
+        var x,y,z;  // 点的当前坐标（缩放后）
+        var i,j,k;  // 点对应的OW数组中的下标
+        var position = linesG.geometry.attributes.position.array;  // 看清属性
+        console.log("postion数组读取完毕");
+
+        var temp = new Array(3);
+        let flag1 = []; //promise返回数组
+
+        for( var q =0; q<position.length; q+=3){
+            flag1[q/3] = new Promise((resolve, reject)=>{
+                x = position[q];
+                y = position[q+1];
+                z = position[q+2];
+            
+                temp = xyz2ijk(x, y, z);
+                i = temp[0];
+                j = temp[1];
+                k = temp[2];
+                // console.log(x,y,z, "-->", i, j, k);
+
+                OW[q/3] = arr[i][j][k];
+                resolve(q);
+            })
+        }
+        
+        Promise.all(flag1).then((res)=>{
+            linesG.geometry.setAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
+            console.log(site, "OW值设置完毕");
+        })
+    });
+}
+
+function loadOWArray(){
+    let flag0 = []; //promise数组
+    for(var i =0; i<2; i++){
+        flag0[i] = new Promise((resolve, reject)=>{
+            var d = i;
+            var path = ("./OW_array/".concat("OW_", String(d), ".txt"));
+            loadOneOWArray(path,d);
+            resolve(i);
+        });
     }
+    Promise.all(flag0).then((res)=>{
+        hideProgressModal();
+    })
+    
 }
 
 /*
@@ -564,15 +571,13 @@ function setGUI(){
         lastDay = currentDay;
     });
 
-
-
-
-    
+    // 切换属性
     gui.add(gui_controls, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
         currentAttr = gui_controls.currentAttr;
         console.log("currentAttr:", currentAttr);
     });
 
+    // 设置上界
     gui.add(gui_controls, 'upValue').onChange(function(){
         upValue = gui_controls.upValue;
         console.log("upValue:", upValue);
@@ -585,6 +590,7 @@ function setGUI(){
         mid4 = downValue+0.8*difValue;
     });
 
+    // 设置下界
     gui.add(gui_controls, 'downValue').onChange(function(){
         downValue = gui_controls.downValue;
         console.log("downValue:", downValue);
