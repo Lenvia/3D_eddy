@@ -94,7 +94,7 @@ function init() {
     // 显示等待条
     showProgressModal("loadingFrames");
     // 加载涡旋模型
-    loadEddyForDays();
+    loadEddiesForDays();
     
     // 设置交互面板
     setGUI();
@@ -351,7 +351,7 @@ function hideProgressModal(){
 /*
     加载涡旋n天的形状
 */
-function loadEddyForDays(){
+function loadEddiesForDays(){
     let arr = []; //promise返回值的数组
     for (let i = 0; i<2; i++){
         arr[i] = new Promise((resolve, reject)=>{
@@ -534,7 +534,7 @@ function setGUI(){
     */
 
     // 日期相关
-    currentDay = -1;
+    currentDay = gui_controls.currentDay;
     var lastDay = -1;
     var curLine, lastLine;  // 当前显示的线，上次显示的线
     var site, last_site;

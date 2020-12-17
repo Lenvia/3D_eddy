@@ -23,8 +23,20 @@ let helper;  // 鼠标helper
 const raycaster = new THREE.Raycaster();  // 射线
 const mouse = new THREE.Vector2();  // 鼠标二维坐标
 
-const days = []  // 一共60天
-for (var i =0; i<=59; i++) days.push(i);
+const days = [];  // 一共60天
+const exDays = [-1]; // 扩展天数，第一个是-1
+for (var i =0; i<=59; i++){
+    days.push(i);
+    exDays.push(i);
+}
+
+// emmm 还没想好怎么表示，先用个数组吧
+const eddyList = ["0-9", "4-13"];
+const exEddyList = ["?-?", "0-9", "4-13"];
+
+// GUI参数
+var currentDay;
+var currentEddy = [];
 
 // 进度条模块
 var progressModal, progressBar, progressLabel, progressBackground;
@@ -68,48 +80,12 @@ function init() {
 
     showProgressModal("loadingFrames");
 
-    // 加载涡旋
-    // 获取单个涡旋的n天json列表
-    var start_day = 4;
-    var start_index = 13;
-    var indices;
+    // 加载涡旋模型
+    loadEddiesForDays();
 
-    indices = loadEddyForDays(start_day, start_index);
-    console.log(indices);
+    // 设置交互面板
+    setGUI();
 
-    /* 
-    设置gui插件
-    */
-    var gui = new dat.GUI();
-    var gui_controls = new function(){
-        this.currentDay = 0;  // 初始时间为第0天
-    }
-
-    var currentDay = 0;
-    var lastDay = -1;
-    var curLine, lastLine;  // 当前显示的线，上次显示的线
-    var site, last_site;
-    gui.add(gui_controls, 'currentDay', days).onChange(function(){
-        // console.log(scene.children);
-        if(lastDay!=-1){  // 清除上次的显示
-            last_site = String(days[lastDay]) + "_" + String(indices[lastDay]);
-            lastLine = scene.getObjectByName(last_site);
-            lastLine.visible = false;
-            // console.log(lastLine)
-        }
-
-        currentDay = gui_controls.currentDay;
-        console.log("currentDay:", currentDay);
-        if(indices[currentDay]!= -1){
-            site = String(days[currentDay]) + "_" + String(indices[currentDay]);
-            
-            curLine = scene.getObjectByName(site);
-            console.log(curLine);
-            curLine.visible = true;
-            lastDay = currentDay;
-        }
-        
-    });
 
     //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
     var ambient = new THREE.AmbientLight(0x666666);
@@ -363,7 +339,7 @@ function hideProgressModal(){
 /*
     加载单个涡旋n天的形状
 */
-function loadEddyForDays(start_day, start_index){
+function loadOneEddyForDays(start_day, start_index){
     var identifier = String(start_day)+'-'+String(start_index);  // 涡旋识别编号
     var json_path = ("./track/".concat(identifier, ".json"));
     let json_data;
@@ -396,7 +372,6 @@ function loadEddyForDays(start_day, start_index){
                             geometry.scale(edgeLen, edgeWid, 1000);
                 
                             var material = new THREE.LineBasicMaterial({
-                                // color: 0xffffff,
                                 vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
                                 transparent: true, // 可定义透明度
                                 opacity: 1.0,
@@ -413,13 +388,133 @@ function loadEddyForDays(start_day, start_index){
             }
             // 当所有加载都完成之后，再隐藏“等待进度条”
             Promise.all(arr).then((res)=>{
-                console.log("加载完毕");
-                hideProgressModal();
+                console.log(identifier, "模型加载完毕");
             })
         }
     })
-    return indices;
 }
+/*
+    加载所有涡旋
+*/
+function loadEddiesForDays(){
+    let flag = [];  // promise数组 
+    for(let i =0; i<eddyList.length; i++){
+        flag[i] = new Promise((resolve, reject)=>{
+            var temp = eddyList[i].split('-');
+
+            var start_day = parseInt(temp[0]);
+            var start_index = parseInt(temp[1]);
+
+            loadOneEddyForDays(start_day, start_index);
+            resolve(i);
+        })
+    }
+    Promise.all(flag).then((res)=>{
+        console.log("所有模型加载完毕");
+        hideProgressModal();
+    })
+}
+
+/*
+    设置GUI
+*/
+function setGUI(){
+    var gui = new dat.GUI();
+    var gui_controls = new function(){
+        this.currentDay = -1;  // 初始时间为-1
+        this.currentEddy = "?-?";  // 初始涡旋编号为?-?
+    }
+
+    /* 
+        一些默认的属性
+    */
+    currentDay = gui_controls.currentDay;
+    currentEddy = gui_controls.currentDay;
+    
+    var site;  // 当天的某个涡旋
+    var json_path;
+    var json_data;
+    var curLine, lastLine;
+    var lastDay = -1;
+    var last_site;
+    var lastEddy = "?-?";
+
+    // 切换日期
+    gui.add(gui_controls, 'currentDay', exDays).onChange(function(){
+        if(lastDay!=-1){  // 清除上次的显示      
+            lastLine = scene.getObjectByName(last_site);
+            lastLine.visible = false;
+        }
+
+        currentDay = gui_controls.currentDay;
+        console.log("currentDay:", currentDay);
+        currentEddy = gui_controls.currentEddy;
+        console.log("currentEddy:", currentEddy);
+
+
+        // 根据涡旋识别号访问json，通过currentDay来获得涡旋编号site
+        json_path = ("./track/".concat(currentEddy, ".json"));
+
+        $.ajax({
+            url: json_path,//json文件位置
+            type: "GET",//请求方式为get
+            dataType: "json", //返回数据格式为json
+            async: false,  // 设置成同步
+            success: function(res) {//请求成功完成后要执行的方法 
+                json_data = res;
+                site = String(currentDay) +"_"+ String(json_data["indices"][currentDay]);
+            }
+        })
+
+        curLine = scene.getObjectByName(site);
+        console.log(curLine);
+        curLine.visible = true;
+
+        // 为消失作准备
+        lastDay = currentDay;
+        lastEddy = currentEddy;
+        last_site = site;
+    });
+
+    // 切换涡旋
+    gui.add(gui_controls, 'currentEddy', exEddyList).onChange(function(){
+        if(lastDay!=-1){  // 清除上次的显示      
+            lastLine = scene.getObjectByName(last_site);
+            lastLine.visible = false;
+        }
+
+        currentDay = gui_controls.currentDay;
+        console.log("currentDay:", currentDay);
+        currentEddy = gui_controls.currentEddy;
+        console.log("currentEddy:", currentEddy);
+
+
+        // 根据涡旋识别号访问json，通过currentDay来获得涡旋编号site
+        json_path = ("./track/".concat(currentEddy, ".json"));
+
+        $.ajax({
+            url: json_path,//json文件位置
+            type: "GET",//请求方式为get
+            dataType: "json", //返回数据格式为json
+            async: false,  // 设置成同步
+            success: function(res) {//请求成功完成后要执行的方法 
+                json_data = res;
+                site = String(currentDay) +"_"+ String(json_data["indices"][currentDay]);
+            }
+        })
+
+        curLine = scene.getObjectByName(site);
+        console.log(curLine);
+        curLine.visible = true;
+
+        // 为消失作准备
+        lastDay = currentDay;
+        lastEddy = currentEddy;
+        last_site = site;
+    });
+   
+}
+
 
 function animate() {
     requestAnimationFrame( animate );
