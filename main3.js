@@ -96,12 +96,13 @@ function init() {
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0xbfd1e5 );  // 浅蓝色
+    // scene.background = new THREE.Color(0x000000);
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
     camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 10, 20000 );
 
     controls = new OrbitControls( camera, renderer.domElement );
-    controls.minDistance = 1000;   // 最近距离
+    controls.minDistance = 50;   // 最近距离
     controls.maxDistance = 10000;  // 最远距离
     // controls.maxPolarAngle = Math.PI / 2;  // 限制竖直方向上最大旋转角度。（y轴正向为0度）
 
@@ -145,8 +146,7 @@ function onWindowResize() {
 function generateHeight( width, height ) {
     // 总的顶点数据量width * height
     const size = width * height, data = new Uint8Array( size );
-    // ImprovedNoise来实现地形高度数据的随机生成。
-    // perlin —— 柏林噪声
+    // ImprovedNoise来实现地形高度数据的随机生成。perlin —— 柏林噪声
     const perlin = new ImprovedNoise();
 
     // const z = Math.random() * 100; // z值不同 每次执行随机出来的地形效果不同
@@ -161,7 +161,7 @@ function generateHeight( width, height ) {
             // x的值0 1 2 3 4 5 6...
             const x = i % width, y = ~ ~ ( i / width );  //~表示按位取反 两个~就是按位取反后再取反。 ~~相当于Math.floor(),效率高一点
             // 通过噪声生成数据
-            data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z ) * quality * 1.75 );
+            data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z ) * quality * 2.25 );
         }
         // 循环执行的时候，quality累乘  乘的系数是1  显示效果平面
         quality *= 5;
@@ -211,10 +211,6 @@ function generateTexture( data, width, height ) {
         imageData[ i + 1 ] = ( 32 + shade * 96 ) * ( 0.5 + data[ j ] * 0.007 ) * 0.3;
         imageData[ i + 2 ] = ( shade * 96 ) * ( 0.5 + data[ j ] * 0.007 ) * 0.7;
 
-        // imageData[ i ] = 0;
-        // imageData[ i+1 ] = 150;
-        // imageData[ i+2 ] = 225;
-
     }
 
     // 用于将ImagaData对象的数据填写到canvas中，起到覆盖canvas中
@@ -257,29 +253,32 @@ function createTerrainAndSea(){
     const data = generateHeight( worldWidth, worldDepth );
 
     // worldHalfWidth + worldHalfDepth * worldWidth 应该是最中心的点的索引
-    controls.target.z = data[ worldHalfWidth + worldHalfDepth * worldWidth ];
-    camera.position.z = controls.target.z + 500;
-    camera.position.x = edgeLen*1.5;
-    // camera.position.y = 2000*1.2;
+    // controls.target.z = data[ worldHalfWidth + worldHalfDepth * worldWidth ];
+    controls.target.z = 0;
+    camera.position.z = controls.target.z+500;
+    camera.position.x = edgeLen;
+    camera.position.y = edgeWid;
     controls.update();
 
     // 创建一个平面地形，行列两个方向顶点数据分别为width，height
     // PlaneBufferGeometry(width, height, widthSegments, heightSegments) 后两个参数是分段数
-    const geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, worldWidth - 1, worldDepth - 1 );
+    const geometry = new THREE.PlaneBufferGeometry( 2*edgeLen, 2*edgeWid, worldWidth - 1, worldDepth - 1 );
 
     // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
     const vertices = geometry.attributes.position.array;
 
-    // 改变顶点高度值（因为y轴是向上的，所以应该改每个点的y值）
+    // 改变顶点高度值
     maxH = data[0] * 10;
     for ( let i = 0, j = 0, l = vertices.length; i < l; i ++, j += 3 ) {
         vertices[ j + 2 ] = data[ i ] * 10;
-        if(maxH < vertices[j + 1])  // 找出最高的
-            maxH = vertices[j + 1]
+        if(maxH < vertices[j + 2])  // 找出最高的
+            maxH = vertices[j + 2]
     }
+    // console.log("maxH:", maxH);
 
     // 不执行computeVertexNormals，没有顶点法向量数据
     geometry.computeFaceNormals(); // needed for helper
+
     // 设置海底！
     var biasZ = 1.5*maxH;  // 海底山脉向下移动
     geometry.translate(0, 0, -biasZ);
@@ -303,12 +302,12 @@ function createTerrainAndSea(){
         设置海水
     */
     // 海水箱子的长、宽
-    var boxLen = 1.1*edgeLen, boxWid = 1.1*edgeLen;
+    var boxLen = 5*edgeLen, boxWid = 5*edgeLen;
     const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
     const material2 = new THREE.MeshLambertMaterial({
         color: 0x00BFFF,
         transparent: true,
-        opacity: 0.1,
+        opacity: 0.4,
         depthWrite: false, 
     }); //材质对象Material
 
@@ -317,17 +316,15 @@ function createTerrainAndSea(){
     mesh2.position.set(0,0,0);
     scene.add(mesh2); //网格模型添加到场景中
 
-    const vertices0 = geometry.attributes.position.array;
-    var maxz = vertices0[2];
-    var minz = vertices0[2];
-    for ( let i = 2, l = vertices0.length; i < l; i+= 3 ) {
-        if(maxz < vertices0[ i])  // 找出最大的
-            maxz = vertices0[ i]
-        if(minz > vertices[ i])  
-            minz = vertices[ i]
-    }
-    // console.log("山脉maxz:", maxz)
-    // console.log("山脉minz:", minz)
+    // const vertices0 = geometry.attributes.position.array;
+    // var maxz = vertices0[2];
+    // var minz = vertices0[2];
+    // for ( let i = 2, l = vertices0.length; i < l; i+= 3 ) {
+    //     if(maxz < vertices0[ i])  // 找出最大的
+    //         maxz = vertices0[ i]
+    //     if(minz > vertices[ i])  
+    //         minz = vertices[ i]
+    // }
 }
 
 /*
