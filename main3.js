@@ -41,22 +41,42 @@ var existModel = []
 
 
 // gui参数
-var currentDay;
-var currentAttr;
-var upValue;
-var downValue;
-var difValue;
-var mid1, mid2, mid3, mid4;
+var gui;
+var gui_controls;
+
+var currentDay;  // 当前日期
+var currentAttr;  // 当前属性
+var upValue;  // 属性上界
+var downValue;  // 属性下界
+var difValue;  // 上下界差值
+var mid1, mid2, mid3, mid4;  // 中间点
+
+// 当前gui颜色面板值
 var currentColor0 = [];
 var currentColor1 = [];
 var currentColor2 = [];
 var currentColor3 = [];
 var currentColor4 = [];
+//当前gui透明度面板值
 var currentOpacity0
 var currentOpacity1;
 var currentOpacity2;
 var currentOpacity3;
 var currentOpacity4;
+
+// 实现双向绑定（重置面板）
+var color0_ctrl;
+var color1_ctrl;
+var color2_ctrl;
+var color3_ctrl;
+var color4_ctrl;
+
+var opa0_ctrl;
+var opa1_ctrl;
+var opa2_ctrl;
+var opa3_ctrl;
+var opa4_ctrl;
+
 
 
 
@@ -511,8 +531,8 @@ function loadOWArray(){
     设置交互GUI
 */
 function setGUI(){
-    var gui = new dat.GUI();
-    var gui_controls = new function(){
+    gui = new dat.GUI();
+    gui_controls = new function(){
         this.currentDay = -1;  // 初始时间为第0天
         this.currentAttr = 'OW'; // 初始展示属性为OW
         this.upValue = 10; // 属性的下界
@@ -569,12 +589,17 @@ function setGUI(){
         console.log(curLine);
         curLine.visible = true;
         lastDay = currentDay;
+
+        resetCtrl();
     });
 
     // 切换属性
     gui.add(gui_controls, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
         currentAttr = gui_controls.currentAttr;
         console.log("currentAttr:", currentAttr);
+
+        resetCtrl();
+        resetMaterial(curLine);
     });
 
     // 设置上界
@@ -588,6 +613,9 @@ function setGUI(){
         mid2 = downValue+0.4*difValue;
         mid3 = downValue+0.6*difValue;
         mid4 = downValue+0.8*difValue;
+
+        resetCtrl();
+        resetMaterial(curLine);
     });
 
     // 设置下界
@@ -601,6 +629,9 @@ function setGUI(){
         mid2 = downValue+0.4*difValue;
         mid3 = downValue+0.6*difValue;
         mid4 = downValue+0.8*difValue;
+
+        resetCtrl();
+        resetMaterial(curLine);
     });
 
 
@@ -609,7 +640,7 @@ function setGUI(){
     */
     var colorFolder = gui.addFolder('color');
     // color0
-    colorFolder.addColor(gui_controls, 'color0').onFinishChange(function(){
+    color0_ctrl = colorFolder.addColor(gui_controls, 'color0').onFinishChange(function(){
         currentColor0 = gui_controls.color0;
         console.log("color0:", currentColor0);
 
@@ -627,7 +658,7 @@ function setGUI(){
     });
 
     // color1
-    colorFolder.addColor(gui_controls, 'color1').onFinishChange(function(){
+    color1_ctrl = colorFolder.addColor(gui_controls, 'color1').onFinishChange(function(){
         currentColor1 = gui_controls.color1;
         console.log("color1:", currentColor1);
 
@@ -644,7 +675,7 @@ function setGUI(){
         updateColor(curLine);  // 更新material
     });
     // color2
-    colorFolder.addColor(gui_controls, 'color2').onFinishChange(function(){
+    color2_ctrl = colorFolder.addColor(gui_controls, 'color2').onFinishChange(function(){
         currentColor2 = gui_controls.color2;
         console.log("color2:", currentColor2);
 
@@ -661,7 +692,7 @@ function setGUI(){
         updateColor(curLine);  // 更新material
     });
     // color3
-    colorFolder.addColor(gui_controls, 'color3').onFinishChange(function(){
+    color3_ctrl = colorFolder.addColor(gui_controls, 'color3').onFinishChange(function(){
         currentColor3 = gui_controls.color3;
         console.log("color3:", currentColor3);
         
@@ -679,7 +710,7 @@ function setGUI(){
     });
 
     // color4
-    colorFolder.addColor(gui_controls, 'color4').onFinishChange(function(){
+    color4_ctrl = colorFolder.addColor(gui_controls, 'color4').onFinishChange(function(){
         currentColor4 = gui_controls.color4;
         console.log("color4:", currentColor4);
         
@@ -703,7 +734,7 @@ function setGUI(){
     var opaFolder = gui.addFolder('opacity');
     
     // opacity0
-    opaFolder.add(gui_controls, 'opacity0', 0, 1, 0.05).onFinishChange(function(){
+    opa0_ctrl = opaFolder.add(gui_controls, 'opacity0', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity0 = gui_controls.opacity0;
         console.log("opacity0:", currentOpacity0);
 
@@ -718,7 +749,7 @@ function setGUI(){
         updateOpacity(curLine);
     })
     // opacity1
-    opaFolder.add(gui_controls, 'opacity1', 0, 1, 0.05).onFinishChange(function(){
+    opa1_ctrl= opaFolder.add(gui_controls, 'opacity1', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity1 = gui_controls.opacity1;
         console.log("opacity1:", currentOpacity1);
 
@@ -733,7 +764,7 @@ function setGUI(){
         updateOpacity(curLine);
     })
     // opacity2
-    opaFolder.add(gui_controls, 'opacity2', 0, 1, 0.05).onFinishChange(function(){
+    opa2_ctrl = opaFolder.add(gui_controls, 'opacity2', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity2 = gui_controls.opacity2;
         console.log("opacity2:", currentOpacity2);
 
@@ -748,7 +779,7 @@ function setGUI(){
         updateOpacity(curLine);
     })
     // opacity3
-    opaFolder.add(gui_controls, 'opacity3', 0, 1, 0.05).onFinishChange(function(){
+    opa3_ctrl = opaFolder.add(gui_controls, 'opacity3', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity3 = gui_controls.opacity3;
         console.log("opacity3:", currentOpacity3);
 
@@ -764,7 +795,7 @@ function setGUI(){
     })
 
     // opacity4
-    opaFolder.add(gui_controls, 'opacity4', 0, 1, 0.05).onFinishChange(function(){
+    opa4_ctrl = opaFolder.add(gui_controls, 'opacity4', 0, 1, 0.05).onFinishChange(function(){
         currentOpacity4 = gui_controls.opacity4;
         console.log("opacity4:", currentOpacity4);
 
@@ -800,6 +831,36 @@ function updateOpacity(curLine){
     }
 }
 
+// 交互界面颜色和透明度复位
+function resetCtrl(){
+    color0_ctrl.setValue([255, 255, 255]);
+    color1_ctrl.setValue([255, 255, 255]);
+    color2_ctrl.setValue([255, 255, 255]);
+    color3_ctrl.setValue([255, 255, 255]);
+    color4_ctrl.setValue([255, 255, 255]);
+
+    opa0_ctrl.setValue(1.0);
+    opa1_ctrl.setValue(1.0);
+    opa2_ctrl.setValue(1.0);
+    opa3_ctrl.setValue(1.0);
+    opa4_ctrl.setValue(1.0);
+}
+
+// 把所有哦线条颜色都变成白色，透明度变为1
+function resetMaterial(curLine){
+    for(var i=0; i<curLine.material.length; i++){
+        curLine.material[i].color = new THREE.Color(1, 1, 1);
+        curLine.material[i].opacity = 1.0;
+    }
+}
+
+function printColor(){
+    console.log(gui_controls.color0);
+    console.log(gui_controls.color1);
+    console.log(gui_controls.color2);
+    console.log(gui_controls.color3);
+    console.log(gui_controls.color4);
+}
 
 function animate() {
     requestAnimationFrame( animate );
