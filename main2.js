@@ -376,7 +376,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, ".vtk"));
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_1000.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -506,6 +506,10 @@ function loadOneOWArray(path, d){
         Promise.all(flag1).then((res)=>{
             linesG.geometry.setAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
             console.log(site, "OW值设置完毕");
+
+            if(d==1){
+                hideProgressModal();
+            }
         })
     });
 }
@@ -521,7 +525,7 @@ function loadOWArray(){
         });
     }
     Promise.all(flag0).then((res)=>{
-        hideProgressModal();
+       
     })
     
 }
