@@ -376,7 +376,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_1000.vtk"));
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, ".vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -547,23 +547,25 @@ function setGUI(){
         this.opacity2 = 1.0;
         this.opacity3 = 1.0;
         this.opacity4 = 1.0;
-    }
+    };
 
-    custom_opt = new function(){
-        this.upValue = 10; // 属性的下界
-        this.downValue = -10;  // 属性的上界
-        this.keepValue = true; // 保持设置
-        this.color0 = [255, 255, 255]; // RGB array
-        this.color1 = [238, 22, 22]; // RGB array
-        this.color2 = [109, 69, 238]; // RGB array
-        this.color3 = [13, 213, 240]; // RGB array
-        this.color4 = [131, 233, 17]; // RGB array
-        this.opacity0 = 1.0;
-        this.opacity1 = 1.0;
-        this.opacity2 = 1.0;
-        this.opacity3 = 1.0;
-        this.opacity4 = 1.0;
-    }
+    
+
+    // custom_opt = new function(){
+    //     this.upValue = 10; // 属性的下界
+    //     this.downValue = -10;  // 属性的上界
+    //     this.keepValue = true; // 保持设置
+    //     this.color0 = [255, 255, 255]; // RGB array
+    //     this.color1 = [238, 22, 22]; // RGB array
+    //     this.color2 = [109, 69, 238]; // RGB array
+    //     this.color3 = [13, 213, 240]; // RGB array
+    //     this.color4 = [131, 233, 17]; // RGB array
+    //     this.opacity0 = 1.0;
+    //     this.opacity1 = 1.0;
+    //     this.opacity2 = 1.0;
+    //     this.opacity3 = 1.0;
+    //     this.opacity4 = 1.0;
+    // }
 
     // gui.remember(default_opt);
     // gui.remember(custom_opt);
@@ -573,11 +575,10 @@ function setGUI(){
     */
 
     // 日期相关
-    currentDay = default_opt.currentDay;
+    currentDay = -1;
     var lastDay = -1;
     var curLine, lastLine;  // 当前显示的线，上次显示的线
     var site, last_site;
-
     // 默认属性值
     currentAttr = 'OW';
 
@@ -744,6 +745,20 @@ function setGUI(){
         assignOpacity(curLine, default_opt.opacity4, 4);
         updateOpacity(curLine);
     })
+
+    var func_opt = new function(){
+        this.play = function(){
+            alert("------------");
+        };
+        this.reset = function(){
+            resetCtrl();
+            resetMaterial(curLine);
+        };
+    };
+
+    // 播放
+    gui.add(func_opt, 'play');
+    gui.add(func_opt, 'reset');
 }
 
 /*
@@ -905,6 +920,7 @@ function resetMaterial(curLine){
     }
 }
 
+// 保持交互面板属性不变，按照当前属性渲染新的线条
 function keepValue_update(curLine){
     currentColor0 = color0_ctrl.getValue();
     currentColor1 = color1_ctrl.getValue();
