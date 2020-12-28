@@ -2,7 +2,7 @@ import * as THREE from './node_modules/three/build/three.module.js';
 import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 import { ImprovedNoise } from './node_modules/three/examples/jsm/math/ImprovedNoise.js';
-import { VTKLoader } from './VTKLoader.js';
+import { VTKLoader } from './VTKLoader2.js';
 
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
@@ -376,7 +376,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, ".vtk"));
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_1000.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -384,8 +384,15 @@ function loadEddiesForDays(){
                 geometry.translate(-0.5, -0.5, -1);
                 geometry.scale(edgeLen, edgeWid, scaleHeight);
 
+                var sectionNums = geometry.attributes.sectionNum.array;
+                var startNums = geometry.attributes.startNum.array;
+
                 // 转化为无索引格式，用来分组
                 geometry = geometry.toNonIndexed();
+
+                geometry.attributes.sectionNum.array = sectionNums;
+                geometry.attributes.startNum.array = startNums;
+
                 var vertexNum = geometry.attributes.position.count;
                 
                 var opa = []; // 顶点透明度，用来改变线条透明度
@@ -394,13 +401,25 @@ function loadEddiesForDays(){
                 }
                 geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
 
+                
+                var groupId;  // 组号
+                var longId = 0;  // 所属长线条编号
+
                 var mats = [];
+
                 for (var i =0; i<vertexNum; i+=2){
-                    geometry.addGroup(i, 2, i/2);  // 无索引形式(startIndex, count, groupId)
+                    groupId = i/2;
+
+                    // 判断是否进入下一长线条的范围
+                    if(longId<sectionNums.length-1 && groupId>=startNums[longId+1]){
+                        longId++;
+                    }
+
+                    geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
                     let material = new THREE.LineBasicMaterial({
                         vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
                         transparent: true, // 可定义透明度
-                        opacity: 1,  // 好像这些是不能自动计算的，那就直接设成1吧
+                        opacity: 1-(groupId-startNums[longId])/(sectionNums[longId]-1+0.000001),  // 渐变
                         depthWrite: false, 
                     });
                     mats.push(material);

@@ -73,7 +73,7 @@ camera.position.x = 10;
  */
 var renderer = new THREE.WebGLRenderer();
 renderer.setSize(width, height);//设置渲染区域尺寸
-renderer.setClearColor(0xb9d3ff, 1); //设置背景颜色
+// renderer.setClearColor(0xb9d3ff, 1); //设置背景颜色
 document.body.appendChild(renderer.domElement); //body元素中插入canvas对象
 
 var controls = new OrbitControls( camera, renderer.domElement );
@@ -104,13 +104,24 @@ function loadVTK(){
 
         var vertexNum = geometry.attributes.position.count;
 
+        var groupId;  // 组号
+        var longId = 0;  // 所属长线条编号
+
         var mats = [];
         for (var i =0; i<vertexNum; i++){
-            geometry.addGroup(i, 2, i/2);  // 无索引形式(startIndex, count, groupId)
+            groupId = i/2;
+
+            // 判断是否进入下一长线条的范围
+            if(longId<sectionNums.length-1 && groupId>=startNums[longId+1]){
+                longId++;
+            }
+
+            geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
             let material = new THREE.LineBasicMaterial({
                 vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
                 transparent: true, // 可定义透明度
-                opacity: 1,  // 好像这些是不能自动计算的，那就直接设成1吧
+                opacity: 1-(groupId-startNums[longId])/(sectionNums[longId]-1+0.000001),  // 渐变
+                // opacity: 1,
                 depthWrite: false, 
             });
             mats.push(material);
