@@ -1,5 +1,5 @@
 import * as THREE from './node_modules/three/build/three.module.js';
-import { VTKLoader } from './VTKLoader.js';
+import { VTKLoader } from './VTKLoader2.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
@@ -35,11 +35,13 @@ var materiral = new THREE.LineBasicMaterial({
     opacity: 1,
 });
 
-console.log(geometry);
-
-
+// console.log(geometry);
 var line = new THREE.Line(geometry, materiral);
 scene.add(line);
+line.visible = false;
+
+
+loadVTK();
 
 
 //辅助坐标系
@@ -91,13 +93,30 @@ function loadVTK(){
 
         geometry.translate(-0.5, -0.5, -1);
     
-        let material = new THREE.LineBasicMaterial({
-            vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
-            transparent: true, // 可定义透明度
-            opacity: 1,  // 好像这些是不能自动计算的，那就直接设成1吧
-            depthWrite: false, 
-        });
-        var linesG = new THREE.LineSegments(geometry, material);
+        // 这里要备份一下，因为toNonIndexed()也会改变sectionNums和startNums，但我们不希望这俩变！
+        var sectionNums = geometry.attributes.sectionNum.array;
+        var startNums = geometry.attributes.startNum.array;
+
+        geometry = geometry.toNonIndexed();
+
+        geometry.attributes.sectionNum.array = sectionNums;
+        geometry.attributes.startNum.array = startNums;
+
+        var vertexNum = geometry.attributes.position.count;
+
+        var mats = [];
+        for (var i =0; i<vertexNum; i++){
+            geometry.addGroup(i, 2, i/2);  // 无索引形式(startIndex, count, groupId)
+            let material = new THREE.LineBasicMaterial({
+                vertexColors: true,  // 线条各部分的颜色根据顶点的颜色来进行插值
+                transparent: true, // 可定义透明度
+                opacity: 1,  // 好像这些是不能自动计算的，那就直接设成1吧
+                depthWrite: false, 
+            });
+            mats.push(material);
+        }
+        var linesG = new THREE.LineSegments(geometry, mats);
+
 
         console.log(linesG);    
         scene.add(linesG);

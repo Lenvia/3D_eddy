@@ -69,6 +69,12 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 			// normal vector, one per vertex
 			var normals = [];
 
+			// ## Custom supplement ##
+			
+			var sectionNums = [];  // 一条长线段的分段数
+			var startNums = [];  // 每一个group起始下标
+			var sFlag = true;  // 仅在这里使用！为true时表示首部
+
 			var result;
 
 			// pattern for detecting the end of a number sequence
@@ -174,6 +180,16 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 						// numVertices i0 i1 i2 ...
 						var numVertices = parseInt( result[ 1 ] );
+						sectionNums.push(numVertices - 1);  // 最小线段数
+
+						if(sFlag){
+							startNums.push(0);
+							sFlag = false;
+						}
+						else
+							startNums.push(startNums[startNums.length-1]+sectionNums[startNums.length-1]);
+
+
 						var inds = result[ 2 ].split( /\s+/ );
 
 						var i1, i2;
@@ -340,6 +356,11 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 				colors.push(1); 
 				// 换成Math.random()就是五颜六色的涡旋
 				// colors.push(Math.random());
+
+			if (sectionNums.length != 0){
+				geometry.setAttribute( 'sectionNum', new Float32BufferAttribute( sectionNums, 1 ) );
+				geometry.setAttribute( 'startNum', new Float32BufferAttribute( startNums, 1 ) );
+			}
 
 
 			if ( normals.length === positions.length ) {  //设置每一个点的法线
