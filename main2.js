@@ -611,11 +611,7 @@ function setGUI(){
     // 属性值上下界
     upValue = default_opt.upValue;
     downValue = default_opt.downValue;
-    difValue = upValue-downValue;
-    mid1 = downValue+0.2*difValue;
-    mid2 = downValue+0.4*difValue;
-    mid3 = downValue+0.6*difValue;
-    mid4 = downValue+0.8*difValue;
+    updateMid();
 
 
     // 切换日期
@@ -662,11 +658,7 @@ function setGUI(){
         console.log("upValue:", upValue);
 
         // 更新中间点
-        difValue = upValue-downValue;
-        mid1 = downValue+0.2*difValue;
-        mid2 = downValue+0.4*difValue;
-        mid3 = downValue+0.6*difValue;
-        mid4 = downValue+0.8*difValue;
+        updateMid();
 
         resetCtrl();
         resetMaterial(curLine);
@@ -678,11 +670,7 @@ function setGUI(){
         console.log("downValue:", downValue);
 
         // 更新中间点
-        difValue = upValue-downValue;
-        mid1 = downValue+0.2*difValue;
-        mid2 = downValue+0.4*difValue;
-        mid3 = downValue+0.6*difValue;
-        mid4 = downValue+0.8*difValue;
+        updateMid();
 
         resetCtrl();
         resetMaterial(curLine);
@@ -782,8 +770,18 @@ function setGUI(){
     };
 
     // 播放
-    gui.add(func_opt, 'play');
+    // gui.add(func_opt, 'play');
     gui.add(func_opt, 'reset');
+}
+
+
+// 根据上下界改变mid中间点
+function updateMid(){
+    difValue = upValue-downValue;
+    mid1 = downValue+0.2*difValue;
+    mid2 = downValue+0.4*difValue;
+    mid3 = downValue+0.6*difValue;
+    mid4 = downValue+0.8*difValue;
 }
 
 /*
@@ -940,6 +938,32 @@ function assignAllColor(curLine){
     }
 }
 
+function assignAllOpacity(curLine){
+    var cOpa0 = currentOpacity0;
+    var cOpa1 = currentOpacity1;
+    var cOpa2 = currentOpacity2;
+    var cOpa3 = currentOpacity3;
+    var cOpa4 = currentOpacity4;
+
+    for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+        if(curLine.geometry.attributes.OW.array[i]<= mid1){
+            curLine.geometry.attributes.opacity.array[i] = cOpa0;
+        }
+        else if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+            curLine.geometry.attributes.opacity.array[i] = cOpa1;
+        }
+        else if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+            curLine.geometry.attributes.opacity.array[i] = cOpa2;
+        }
+        else if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+            curLine.geometry.attributes.opacity.array[i] = cOpa3;
+        }
+        else{
+            curLine.geometry.attributes.opacity.array[i] = cOpa4;
+        }
+    }
+}
+
 /*
     更新material的属性
 */
@@ -1003,17 +1027,10 @@ function getCurrentValue(){
 function keepValue_update(curLine){
     // resetMaterial(curLine);
 
-    getCurrentValue();    
+    getCurrentValue();  // 更新current
 
     assignAllColor(curLine);
-
-    assignOpacity(curLine, currentOpacity0, 0);
-    assignOpacity(curLine, currentOpacity1, 1);
-    assignOpacity(curLine, currentOpacity2, 2);
-    assignOpacity(curLine, currentOpacity3, 3);
-    assignOpacity(curLine, currentOpacity4, 4);
-
-    // console.log(curLine.geometry.attributes.color.array);  // 几何体颜色没问题
+    assignAllOpacity(curLine);
 
     updateColor(curLine);
     updateOpacity(curLine);
