@@ -3,8 +3,8 @@ import os
 from paraview.simple import *
 
 
-start_day = 4
-start_index = 13
+start_day = 0
+start_index = 9
 
 rootDir = '/Users/yy/PycharmProjects/scivis2020'
 tarDir = os.path.join(rootDir, 'track')

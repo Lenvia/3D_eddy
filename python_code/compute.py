@@ -194,9 +194,12 @@ def search(day1, day2, index1, flag=0):
         search(day1, day2+1, index1)
 
 
+'''
+    【2】追踪
+'''
 if __name__ == '__main__':
-    start_day = 4
-    start_index = 13
+    start_day = 0
+    start_index = 9
     up_bound = 34
 
     for i in range(start_day):

@@ -48,9 +48,12 @@ def write_vtk(vec,file_name):
     print("Write done!\n", file_name, "\n")
 
 
+'''
+    【4】生成vtk
+'''
 if __name__ == '__main__':
-    start_day = 4
-    start_index = 13
+    start_day = 0
+    start_index = 9
     projDir = os.getcwd()
     subRoot = str(start_day) + '-' + str(start_index)
 

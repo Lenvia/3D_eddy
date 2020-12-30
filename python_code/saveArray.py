@@ -3,7 +3,7 @@ import joblib
 import os
 import sys
 
-day = 0
+day = 1
 
 dir = os.path.join("whole_attributes_file", 'OW')
 OW = joblib.load(os.path.join(dir, 'OW_'+str(day)+'.pkl'))
@@ -17,15 +17,6 @@ tarDir = 'OW_array'
 if not os.path.exists(tarDir):
     os.makedirs(tarDir)
 
-print(OW.shape)
 
-# # saving reshaped array to file.
-# np.savetxt(os.path.join(tarDir, "OW_"+str(day)+".txt"), arr_reshaped)
-#
-# # retrieving data from file.
-# loaded_arr = np.loadtxt("OW_"+str(day)+".txt")
-#
-# # This loadedArr is a 2D array, therefore we need to convert it to the original
-# # array shape.reshaping to get original matrice with original shape.
-# load_original_arr = loaded_arr.reshape(
-#     loaded_arr.shape[0], loaded_arr.shape[1] // OW.shape[2], OW.shape[2])
+# saving reshaped array to file.
+np.savetxt(os.path.join(tarDir, "OW_"+str(day)+".txt"), arr_reshaped)

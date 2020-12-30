@@ -68,7 +68,7 @@ for i, var in enumerate(varSet):
 # print(YC[55:66])
 # print(YG)
 
-print(XC)
-print(YC)
+# print(XC)
+# print(YC)
 
 # f.close()  # 关闭文件。如果文件关闭后，再使用f.variabels.items()等操作是行不通的。

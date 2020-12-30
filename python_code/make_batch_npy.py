@@ -231,8 +231,8 @@ def getSingleNpy(day, index, subRoot):
 
     dict_ = {'x': vec, 'y': 4}  # x表示数据，y表示x的维数
 
-    tarDir = 'npy_file/'
-    file = os.path.join(tarDir, subRoot,
+    tarDir = os.path.join('npy_file/', subRoot)
+    file = os.path.join(tarDir,
                         'vec' + str(day) + '_' + str(index) + '.npy')  # vec2_0_1.npy 表示day2第0次运行第1个涡旋
 
     if not os.path.exists(tarDir):
@@ -245,9 +245,12 @@ def getSingleNpy(day, index, subRoot):
     # print(dict_load)
 
 
+'''
+    【3】通过追踪数据生成单个涡旋多天npy
+'''
 if __name__ == '__main__':
-    start_day = 4
-    start_index = 13
+    start_day = 0
+    start_index = 9
 
     subRoot = str(start_day) + '-' + str(start_index)
 
