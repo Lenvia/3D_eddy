@@ -45,6 +45,8 @@ var gui;
 var default_opt;  // 默认设置
 var custom_opt; // 定制设置
 
+var curLine;
+
 var currentDay;  // 当前日期
 var currentAttr;  // 当前属性
 var upValue;  // 属性上界
@@ -83,7 +85,7 @@ var opa4_ctrl;
 
 
 init();
-animate();
+
 
 function init() {
     container = document.getElementById( 'container' );
@@ -393,6 +395,13 @@ function loadEddiesForDays(){
 
                 geometry.attributes.sectionNum.array = sectionNums;
                 geometry.attributes.startNum.array = startNums;
+                // 这个count具体我不知道是啥，对于position.count可以理解为点的个数，且position.length正好是count的三倍
+                geometry.attributes.sectionNum.count = geometry.attributes.sectionNum.array.length;
+                geometry.attributes.startNum.count = geometry.attributes.startNum.array.length;
+                
+                 // 默认初始透明度最大的下标在开头
+                geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( startNums, 1 ));
+
 
                 var vertexNum = geometry.attributes.position.count;
                 
@@ -404,34 +413,29 @@ function loadEddiesForDays(){
 
                 
                 var groupId;  // 组号
-                var longId = 0;  // 所属长线条编号
 
                 var mats = [];
 
                 for (var i =0; i<vertexNum; i+=2){
                     groupId = i/2;
-
-                    // 判断是否进入下一长线条的范围
-                    if(longId<sectionNums.length-1 && groupId>=startNums[longId+1]){
-                        longId++;
-                    }
-
                     geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
+
                     let material = new THREE.LineBasicMaterial({
                         // vertexColors: false,  // 千万不能设置为true！！！！血的教训
                         transparent: true, // 可定义透明度
-                        opacity: 0.5,
+                        opacity: 0,
                         depthWrite: false, 
                     });
                     mats.push(material);
                 }
                 var linesG = new THREE.LineSegments(geometry, mats);
+
                 //need update 我不知道有没有用，感觉没用
                 linesG.geometry.colorsNeedUpdate = true;
                 linesG.geometry.groupsNeedUpdate = true;
                 linesG.material.needsUpdate = true;
                 
-
+                initLineOpacity(linesG, 0.5);  // 初始化透明度
                 linesG.name = "day"+String(d);  // day0, day1, ...
                 scene.add(linesG);
                 linesG.visible = false;
@@ -447,6 +451,30 @@ function loadEddiesForDays(){
         loadOWArray();
     })
 }
+
+// 初始化透明度
+function initLineOpacity(curLine, k){
+    // k为轨迹段数和长线总段数只比
+    var attributes = curLine.geometry.attributes;
+    var mats = curLine.material;
+
+    
+    for(var i=0; i<attributes.sectionNum.count; i++){  // 对于每一组长线i
+        
+        var L = attributes.sectionNum.array[i];  // 长线包含的线段数
+        
+        var l = parseInt(k*L);  // 轨迹段数
+
+        var diff = 1/l;  // 透明度变化单位
+        var startIndex = attributes.startNum.array[i];
+
+        for(var j=0; j<l; j++){ // 轨迹段数
+            var curIndex = (-j+L)%L + startIndex;
+            mats[curIndex].opacity = 1 - diff*j;
+        }
+    }
+}
+
 
 /*
     转换后的xyz到数组i,j,k的映射
@@ -531,6 +559,7 @@ function loadOneOWArray(path, d){
             if(d==1){
                 hideProgressModal();
                 console.log("OW值设置完毕");
+                animate();
             }
         })
     });
@@ -603,7 +632,7 @@ function setGUI(){
     // 日期相关
     currentDay = -1;
     var lastDay = -1;
-    var curLine, lastLine;  // 当前显示的线，上次显示的线
+    var lastLine;  // 当前显示的线，上次显示的线
     var site, last_site;
     // 默认属性值
     currentAttr = 'OW';
@@ -1054,12 +1083,37 @@ function printColor(){
 function animate() {
     requestAnimationFrame( animate );
     render();
+    DyChange(0.5);
     stats.update();
 }
 
 function render() {
     renderer.render( scene, camera );
 }
+
+// 动态变化透明度
+function DyChange(k){
+    if(curLine != undefined){
+        var attributes = curLine.geometry.attributes;
+        var mats = curLine.material;
+
+        for(var i=0; i<attributes.sectionNum.count; i++){  // 对于每一组长线i
+            var L = attributes.sectionNum.array[i];  // 长线包含的线段数
+            var l = parseInt(k*L);  // 轨迹段数
+            var diff = 1/l;  // 透明度变化单位
+
+            var startIndex = attributes.startNum.array[i];
+            for(var j=startIndex; j<startIndex+L; j++){  // 对于每个小线段
+                mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
+            }
+            // 赋值为1的
+            var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex+1)%L+startIndex;
+            mats[next_mOpaIndex].opacity = 1;
+            attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
+        }
+    }
+}
+
 
 function onMouseMove( event ) {
     // 将鼠标位置归一化为设备坐标。x 和 y 方向的取值范围是 (-1 to +1)
