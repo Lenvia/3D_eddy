@@ -3,6 +3,10 @@ import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
 import { VTKLoader } from './VTKLoader2.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 
+// import { Line2 } from './node_modules/three/examples/jsm/lines/Line2.js'
+// import { LineGeometry } from './node_modules/three/examples/jsm/lines/LineGeometry.js'
+// import { LineMaterial } from './node_modules/three/examples/jsm/lines/LineMaterial.js'
+
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 var scene = new THREE.Scene();
 
@@ -136,7 +140,7 @@ function render() {
 
 
 function loadVTK(){
-    var vtk_path = './whole_vtk_folder/vtk0_1000.vtk'
+    var vtk_path = './whole_vtk_folder/vtk0_100.vtk'
     var loader = new VTKLoader();
     console.log("loading", vtk_path);
 
@@ -181,7 +185,7 @@ function loadVTK(){
                 mats.push(material);
             }
             var linesG = new THREE.LineSegments(geometry, mats);
-            // var linesG = new THREE.Line2(geometry, mats);
+            // var linesG = new Line2(geometry, mats);
             linesG.name = "test";
 
             console.log(linesG);

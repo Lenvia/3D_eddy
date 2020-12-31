@@ -7,6 +7,7 @@ import {
 	LoaderUtils
 } from "./node_modules/three/build/three.module.js";
 import { Inflate } from "./node_modules/three/examples/jsm/libs/inflate.module.min.js";
+import { LineSegmentsGeometry } from './node_modules/three/examples/jsm/lines/LineSegmentsGeometry.js'
 
 var VTKLoader = function ( manager ) {
 
@@ -68,6 +69,12 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 			// normal vector, one per vertex
 			var normals = [];
+
+			// ## Custom supplement ##
+			
+			var sectionNums = [];  // 一条长线段的分段数
+			var startNums = [];  // 每一个group起始下标
+			var sFlag = true;  // 仅在这里使用！为true时表示首部
 
 			var result;
 
@@ -174,6 +181,16 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 						// numVertices i0 i1 i2 ...
 						var numVertices = parseInt( result[ 1 ] );
+						sectionNums.push(numVertices - 1);  // 最小线段数
+
+						if(sFlag){
+							startNums.push(0);
+							sFlag = false;
+						}
+						else
+							startNums.push(startNums[startNums.length-1]+sectionNums[startNums.length-1]);
+
+
 						var inds = result[ 2 ].split( /\s+/ );
 
 						var i1, i2;
@@ -325,7 +342,8 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 			}
 
-			var geometry = new BufferGeometry();
+			var geometry = new LineSegmentsGeometry();
+			
 			geometry.setIndex( indices );
 			geometry.setAttribute( 'position', new Float32BufferAttribute( positions, 3 ) );  //每一个position元素都是xyz三元组
 
@@ -335,23 +353,33 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 			// console.log("normals.length: ", normals.length);
 			// console.log("colors.length: ", colors.length);
 
+			// 如果未设置颜色，则将所有顶点都默认为白色
+			for (let i =0; i<positions.length; i++)
+				colors.push(1); 
+				// 换成Math.random()就是五颜六色的涡旋
+				// colors.push(Math.random());
+
+			if (sectionNums.length != 0){
+				geometry.setAttribute( 'sectionNum', new Float32BufferAttribute( sectionNums, 1 ) );
+				geometry.setAttribute( 'startNum', new Float32BufferAttribute( startNums, 1 ) );
+			}
+
+
 			if ( normals.length === positions.length ) {  //设置每一个点的法线
-
 				geometry.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
-
 			}
 
 			if ( colors.length !== indices.length ) {  //如果颜色个数和 形状个数 不相同
 
 				// stagger
 
-				if ( colors.length === positions.length ) {  //如果颜色个数和顶点个数相同
+				if ( colors.length === positions.length ) {  // 顶点基础上的染色
 
 					geometry.setAttribute( 'color', new Float32BufferAttribute( colors, 3 ) );
 
 				}
 
-			} else {  //颜色个数和形状个数相同
+			} else {  // 图形上的染色
 
 				// cell
 				geometry = geometry.toNonIndexed();
