@@ -65,8 +65,7 @@ function init(){
     container.appendChild( stats.dom );
 }
 
-function initLineOpacity(){
-    var curLine = scene.getObjectByName("test");
+function initLineOpacity(curLine){
     var k = 0.5; // 轨迹段数和长线总段数只比
     var attributes = curLine.geometry.attributes;
     var mats = curLine.material;
@@ -82,7 +81,7 @@ function initLineOpacity(){
         var startIndex = attributes.startNum.array[i];
 
         for(var j=0; j<l; j++){ // 轨迹段数
-            var curIndex = (-j+L)%L + startIndex;
+            var curIndex = (j)%L + startIndex;
             mats[curIndex].opacity = 1 - diff*j;
         }
     }
@@ -104,7 +103,7 @@ function DyChange(){
             mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
         }
         // 赋值为1的
-        var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex+1)%L+startIndex;
+        var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex-1+L)%L+startIndex;
         mats[next_mOpaIndex].opacity = 1;
         attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
     }
@@ -144,6 +143,8 @@ function loadVTK(){
     var loader = new VTKLoader();
     console.log("loading", vtk_path);
 
+    var linesG;
+    
     var promise = new Promise((resolve, reject)=>{
         loader.load( vtk_path, function ( geometry ) {  // 异步加载
 
@@ -184,7 +185,7 @@ function loadVTK(){
 
                 mats.push(material);
             }
-            var linesG = new THREE.LineSegments(geometry, mats);
+            linesG = new THREE.LineSegments(geometry, mats);
             // var linesG = new Line2(geometry, mats);
             linesG.name = "test";
 
@@ -196,7 +197,7 @@ function loadVTK(){
     });
 
     promise.then(()=>{
-        initLineOpacity();
+        initLineOpacity(linesG)
         // tick();
         animate();
     });

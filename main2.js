@@ -310,9 +310,9 @@ function createTerrainAndSea(){
     var boxLen = 5*edgeLen, boxWid = 5*edgeLen;
     const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
     const material2 = new THREE.MeshLambertMaterial({
-        color: 0x00BFFF,
+        color: 0x1E90FF,
         transparent: true,
-        opacity: 0.4,
+        opacity: 0.5,
         depthWrite: false, 
     }); //材质对象Material
 
@@ -379,7 +379,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_1000.vtk"));
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, ".vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -469,7 +469,7 @@ function initLineOpacity(curLine, k){
         var startIndex = attributes.startNum.array[i];
 
         for(var j=0; j<l; j++){ // 轨迹段数
-            var curIndex = (-j+L)%L + startIndex;
+            var curIndex = (j)%L + startIndex;
             mats[curIndex].opacity = 1 - diff*j;
         }
     }
@@ -1107,7 +1107,7 @@ function DyChange(k){
                 mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
             }
             // 赋值为1的
-            var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex+1)%L+startIndex;
+            var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex-1 + L)%L+startIndex;
             mats[next_mOpaIndex].opacity = 1;
             attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
         }
