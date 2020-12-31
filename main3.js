@@ -1,11 +1,12 @@
 import * as THREE from './node_modules/three/build/three.module.js';
+import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
 import { VTKLoader } from './VTKLoader2.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 var scene = new THREE.Scene();
 
-var camera, renderer, controls;
+var container, camera, renderer, controls, stats;
 
 
 loadVTK();
@@ -15,7 +16,7 @@ var axesHelper = new THREE.AxesHelper(150);
 scene.add(axesHelper);
 
 //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
-var ambient = new THREE.AmbientLight(0x444444);
+var ambient = new THREE.AmbientLight(0xffffff);
 scene.add(ambient);
 
 
@@ -25,6 +26,9 @@ init();
 
 
 function init(){
+    container = document.getElementById( 'container' );
+    container.innerHTML = "";
+
     /**
      * 相机设置
      */
@@ -51,8 +55,11 @@ function init(){
 
     controls = new OrbitControls( camera, renderer.domElement );
     controls.addEventListener('change', render);//监听鼠标、键盘事件
-}
 
+    container.appendChild( renderer.domElement );
+    stats = new Stats();
+    container.appendChild( stats.dom );
+}
 
 function initLineOpacity(){
     var curLine = scene.getObjectByName("test");
@@ -76,6 +83,7 @@ function initLineOpacity(){
         }
     }
 }
+
 function DyChange(){
     var curLine = scene.getObjectByName("test");
     var k = 0.5; // 轨迹段数和长线总段数只比
@@ -99,10 +107,28 @@ function DyChange(){
 }
 
 function animate(){
-    DyChange();
     requestAnimationFrame( animate );
+    DyChange();
     render();
+    stats.update();
 }
+
+// var fps = 50;
+// var now;
+// var then = Date.now();
+// var interval = 1000/fps;
+// var delta;
+
+// function tick(){
+// 　　requestAnimationFrame(tick);
+// 　　now = Date.now();
+// 　　delta = now - then;
+// 　　if (delta > interval) {
+// 　　　　// 这里不能简单then=now，否则还会出现上边简单做法的细微时间差问题。
+// 　　　　then = now - (delta % interval);
+// 　　　　animate(); // ... Code for Drawing the Frame ...
+// 　　}
+// }
 
 function render() {
     renderer.render( scene, camera );
@@ -147,10 +173,15 @@ function loadVTK(){
                     transparent: true, // 可定义透明度
                     opacity: 0,
                     depthWrite: false, 
+                    linewidth: 3,  // 无效
                 });
+
+                // material.resolution.set(window.innerWidth,window.innerHeight);
+
                 mats.push(material);
             }
             var linesG = new THREE.LineSegments(geometry, mats);
+            // var linesG = new THREE.Line2(geometry, mats);
             linesG.name = "test";
 
             console.log(linesG);
@@ -162,6 +193,7 @@ function loadVTK(){
 
     promise.then(()=>{
         initLineOpacity();
+        // tick();
         animate();
     });
 }
