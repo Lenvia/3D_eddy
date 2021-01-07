@@ -220,7 +220,7 @@ if __name__ == '__main__':
 
     print("successfully detected!")
 
-    tarDir = os.path.join("whole_attributes_file", 'OW')
+    tarDir = os.path.join("whole_attributes_pkl_file", 'whole_attributes_txt_file/OW')
 
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)

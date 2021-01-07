@@ -5,7 +5,7 @@ import sys
 
 day = 1
 
-dir = os.path.join("whole_attributes_file", 'OW')
+dir = os.path.join("whole_attributes_pkl_file", 'OW')
 OW = joblib.load(os.path.join(dir, 'OW_'+str(day)+'.pkl'))
 
 
@@ -13,7 +13,7 @@ OW = joblib.load(os.path.join(dir, 'OW_'+str(day)+'.pkl'))
 # matrice to 2D matrice.
 arr_reshaped = OW.reshape(OW.shape[0], -1)
 
-tarDir = 'OW_array'
+tarDir = os.path.join("whole_attributes_txt_file", 'OW')
 if not os.path.exists(tarDir):
     os.makedirs(tarDir)
 

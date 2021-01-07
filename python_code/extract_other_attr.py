@@ -44,16 +44,27 @@ for day in range(2):
     salt = salt.transpose((2, 1, 0))
     print(temp.shape)
 
-    tarDir1 = os.path.join("whole_attributes_file", 'TEMP')
-    tarDir2 = os.path.join("whole_attributes_file", 'SALT')
+    tarDir1 = os.path.join("whole_attributes_pkl_file", 'TEMP')
+    tarDir2 = os.path.join("whole_attributes_pkl_file", 'SALT')
 
     if not os.path.exists(tarDir1):
         os.makedirs(tarDir1)
     if not os.path.exists(tarDir2):
         os.makedirs(tarDir2)
 
-    joblib.dump(temp, os.path.join(tarDir1, 'SALT_' + str(day) + '.pkl'))
-    joblib.dump(salt, os.path.join(tarDir2, 'TEMP_' + str(day) + '.pkl'))
+    # joblib.dump(temp, os.path.join(tarDir1, 'TEMP_' + str(day) + '.pkl'))
+    # joblib.dump(salt, os.path.join(tarDir2, 'SALT_' + str(day) + '.pkl'))
 
+    temp_arr_reshaped = temp.reshape(temp.shape[0], -1)
+    salt_arr_reshaped = salt.reshape(salt.shape[0], -1)
 
+    tarDir1 = os.path.join("whole_attributes_txt_file", 'TEMP')
+    tarDir2 = os.path.join("whole_attributes_txt_file", 'SALT')
 
+    if not os.path.exists(tarDir1):
+        os.makedirs(tarDir1)
+    if not os.path.exists(tarDir2):
+        os.makedirs(tarDir2)
+
+    np.savetxt(os.path.join(tarDir1, "TEMP_" + str(day) + ".txt"), temp_arr_reshaped)
+    np.savetxt(os.path.join(tarDir2, "SALT_" + str(day) + ".txt"), salt_arr_reshaped)
