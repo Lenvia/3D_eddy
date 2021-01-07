@@ -384,8 +384,8 @@ function loadEddiesForDays(){
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
                 
-                geometry.translate(-0.5, -0.5, -1);
-                geometry.scale(edgeLen, edgeWid, scaleHeight);
+                geometry.translate(-0.5, -0.5, 0);
+                geometry.rotateX(Math.PI);  // 把图形翻下去，因为数组原三维数组索引越大，越靠近海底
 
                 var sectionNums = geometry.attributes.sectionNum.array;
                 var startNums = geometry.attributes.startNum.array;
@@ -481,9 +481,10 @@ function initLineOpacity(curLine, k){
 */
 function xyz2ijk(x, y, z){
     // console.log(x,y,z);
+    z = -z; // 把z翻上去
     var orix = x/edgeLen + 0.5;
     var oriy = y/edgeWid + 0.5;
-    var oriz = z/scaleHeight + 1;
+    var oriz = z/scaleHeight;
 
     // console.log(orix, oriy, oriz);
 

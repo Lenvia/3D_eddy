@@ -261,10 +261,6 @@ function generateTexture( data, width, height ) {
 */
 
 function createTerrain(){
-    /*
-        设置海底地形
-    */
-
     // 地形顶点高度数据
     const data = generateHeight( worldWidth, worldDepth );
 
@@ -314,6 +310,31 @@ function createSea(){
     /*
         设置海水
     */
+    // var path = ("./whole_attributes_txt_file/SALT/".concat("SALT_0.txt"));  // 默认盐都为0的地方都是陆地
+    // var arr = [];
+    // var promise1 = new Promise(function(resolve, reject) {
+    //     $.get(path, function(data) {
+    //         // 加载SALT数组
+    //         var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+    //         arr = new Array(500);
+    //         for (var i = 0; i < arr.length; i++) {
+    //             arr[i] = new Array(500);
+    //             for (var j = 0; j < arr[i].length; j++) {
+    //                 arr[i][j] = new Array(50);
+    //                 for (var k = 0; k<arr[i][j].length; k++){
+    //                     arr[i][j][k] = items[i][j*arr[i][j].length+k];
+    //                 }
+    //             }
+    //         }
+    //         resolve(1);
+    //     });
+    // });
+
+    // promise1.then(()=>{
+
+    // });
+    
+    
     // 海水箱子的长、宽
     var boxLen = edgeLen, boxWid = edgeLen;
     const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
@@ -322,12 +343,13 @@ function createSea(){
         transparent: true,
         opacity: 0.5,
         depthWrite: false, 
+        vertexColors: true,
     }); //材质对象Material
 
     geometry2.translate(0, 0, -biasZ/2);
     var mesh2 = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
     mesh2.position.set(0,0,0);
-    console.log(geometry2);
+    console.log(mesh2);
     scene.add(mesh2); //网格模型添加到场景中
 }
 
@@ -378,12 +400,14 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_100.vtk"));
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_1000.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
                 
-                geometry.translate(-0.5, -0.5, -1);
+                geometry.translate(-0.5, -0.5, 0);
+                geometry.rotateX(Math.PI);  // 把图形翻下去，因为数组原三维数组索引越大，越靠近海底
+
                 geometry.scale(edgeLen, edgeWid, scaleHeight);
 
                 var sectionNums = geometry.attributes.sectionNum.array;
@@ -480,9 +504,10 @@ function initLineOpacity(curLine, k){
 */
 function xyz2ijk(x, y, z){
     // console.log(x,y,z);
+    z = -z; // 把z翻上去
     var orix = x/edgeLen + 0.5;
     var oriy = y/edgeWid + 0.5;
-    var oriz = z/scaleHeight + 1;
+    var oriz = z/scaleHeight;
 
     // console.log(orix, oriy, oriz);
 
