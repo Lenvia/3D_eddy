@@ -18,6 +18,7 @@ const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 const edgeLen = 3000;  // 地形（海水、山脉）长度
 const edgeWid = 3000;  // 地形宽度
 const scaleHeight = 1000; //缩放高度
+var biasZ = 2000;  // 海底山脉向下移动（默认为2000，如果生成地形这个值会更新）
 
 let helper;  // 鼠标helper
 
@@ -121,7 +122,9 @@ function init() {
     scene.add(axesHelper);
 
     // 创建海底地形和海水
-    createTerrainAndSea();
+    createTerrain();
+    createSea();
+    createLand();
 
  
 
@@ -156,7 +159,7 @@ function onWindowResize() {
 /*
     生成地形顶点高度数据
 */
-function generateHeight( width, height ) {
+function generateMountainHeight( width, height ) {
     // 总的顶点数据量width * height
     const size = width * height, data = new Uint8Array( size );
     // ImprovedNoise来实现地形高度数据的随机生成。perlin —— 柏林噪声
@@ -174,7 +177,7 @@ function generateHeight( width, height ) {
             // x的值0 1 2 3 4 5 6...
             const x = i % width, y = ~ ~ ( i / width );  //~表示按位取反 两个~就是按位取反后再取反。 ~~相当于Math.floor(),效率高一点
             // 通过噪声生成数据
-            data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z ) * quality * 2.25 );
+            data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z ) * quality * 1.25 );
         }
         // 循环执行的时候，quality累乘  乘的系数是1  显示效果平面
         quality *= 5;
@@ -187,7 +190,7 @@ function generateHeight( width, height ) {
 /*
     生成地形顶点纹理数据？？
 */
-function generateTexture( data, width, height ) {
+function generateMountainTexture( data, width, height ) {
     // bake lighting into texture
     let context, image, imageData, shade;
 
@@ -255,81 +258,117 @@ function generateTexture( data, width, height ) {
 }
 
 /*
-    设置海底和海水
+    设置海底、海水、陆地
 */
-function createTerrainAndSea(){
-    /*
-        设置海底地形
-    */
 
+function createTerrain(){
     // 地形顶点高度数据
-    const data = generateHeight( worldWidth, worldDepth );
+    const data = generateMountainHeight( worldWidth, worldDepth );
 
     // 创建一个平面地形，行列两个方向顶点数据分别为width，height
     // PlaneBufferGeometry(width, height, widthSegments, heightSegments) 后两个参数是分段数
-    const geometry = new THREE.PlaneBufferGeometry( 2*edgeLen, 2*edgeWid, worldWidth - 1, worldDepth - 1 );
+    const geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, worldWidth - 1, worldDepth - 1 );
 
     // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
-    const vertices = geometry.attributes.position.array;
+    const positions = geometry.attributes.position.array;
+    // console.log(positions);
 
     // 改变顶点高度值
     maxH = data[0] * 10;
-    for ( let i = 0, j = 0, l = vertices.length; i < l; i ++, j += 3 ) {
-        vertices[ j + 2 ] = data[ i ] * 10;
-        if(maxH < vertices[j + 2])  // 找出最高的
-            maxH = vertices[j + 2]
+    for ( let i = 0, j = 0, l = positions.length; i < l; i ++, j += 3 ) {
+        positions[ j + 2 ] = data[ i ] * 10;
+        if(maxH < positions[j + 2])  // 找出最高的
+            maxH = positions[j + 2]
     }
-    // console.log("maxH:", maxH);
+
+    biasZ = 1.5*maxH;
+    console.log("maxH:", maxH);
 
     // 不执行computeVertexNormals，没有顶点法向量数据
     geometry.computeFaceNormals(); // needed for helper
 
     // 设置海底！
-    var biasZ = 1.5*maxH;  // 海底山脉向下移动
+    
     geometry.translate(0, 0, -biasZ);
 
-    // generateTexture返回一个画布对象
-    texture = new THREE.CanvasTexture( generateTexture( data, worldWidth, worldDepth ) );
+    // generateMountainTexture返回一个画布对象
+    texture = new THREE.CanvasTexture( generateMountainTexture( data, worldWidth, worldDepth ) );
     // wrapS/wrapT 纹理在水平和垂直方向的扩展方式
     texture.wrapS = THREE.ClampToEdgeWrapping;  // 纹理边缘像素会被拉伸，以填满剩下的空间。
     texture.wrapT = THREE.ClampToEdgeWrapping;
     const material = new THREE.MeshBasicMaterial( { 
         map: texture,
         transparent: true,
-        opacity: 0.1,  // 纹理透明度 
+        opacity: 0.3,  // 纹理透明度 
         depthWrite: false, 
     } );
 
     mesh = new THREE.Mesh( geometry, material);
     scene.add( mesh );
+}
 
-    /*
-        设置海水
-    */
+function createSea(){
     // 海水箱子的长、宽
-    var boxLen = 5*edgeLen, boxWid = 5*edgeLen;
+    var boxLen = edgeLen, boxWid = edgeLen;
     const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
     const material2 = new THREE.MeshLambertMaterial({
         color: 0x1E90FF,
         transparent: true,
         opacity: 0.5,
         depthWrite: false, 
+        vertexColors: true,
     }); //材质对象Material
 
     geometry2.translate(0, 0, -biasZ/2);
     var mesh2 = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
     mesh2.position.set(0,0,0);
+    // console.log(mesh2);
     scene.add(mesh2); //网格模型添加到场景中
+}
 
-    // const vertices0 = geometry.attributes.position.array;
-    // var maxz = vertices0[2];
-    // var minz = vertices0[2];
-    // for ( let i = 2, l = vertices0.length; i < l; i+= 3 ) {
-    //     if(maxz < vertices0[ i])  // 找出最大的
-    //         maxz = vertices0[ i]
-    //     if(minz > vertices[ i])  
-    //         minz = vertices[ i]
-    // }
+function createLand(){
+    // 生成陆地高度数据
+    var path = ("./whole_attributes_txt_file/".concat("depth.txt"));  // 默认盐都为0的地方都是陆地
+    var arr = [];
+    var promise1 = new Promise(function(resolve, reject) {
+        $.get(path, function(data) {
+            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+            arr = items.flat();  // 二维数组转一维数组，500*500
+            resolve(1);
+        });
+    });
+
+    promise1.then(()=>{
+        const geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, 500-1, 500-1);
+
+        // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
+        const positions = geometry.attributes.position.array;
+        // console.log(positions.length);
+
+        // 改变顶点高度值
+        
+        for ( let i = 0, j = 0, l = positions.length; i < l; i ++, j += 3 ) {
+            // positions[ j + 2 ] = arr[i]/50*scaleHeight;
+            positions[j+2] = arr[i]/50*biasZ;
+        }
+
+        // 不执行computeVertexNormals，没有顶点法向量数据
+        geometry.computeFaceNormals(); // needed for helper
+        geometry.rotateX(Math.PI);
+        geometry.rotateZ(-Math.PI/2);
+
+        const material = new THREE.MeshBasicMaterial( { 
+            // map: texture,
+            color: 0x191970,
+            transparent: true,
+            opacity: 1,  // 纹理透明度 
+            depthWrite: false, 
+        } );
+    
+        mesh = new THREE.Mesh( geometry, material);
+        scene.add( mesh );
+        console.log(mesh);
+    });
 }
 
 /*
@@ -379,13 +418,15 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, ".vtk"));
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_1000.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
                 
                 geometry.translate(-0.5, -0.5, 0);
                 geometry.rotateX(Math.PI);  // 把图形翻下去，因为数组原三维数组索引越大，越靠近海底
+
+                geometry.scale(edgeLen, edgeWid, scaleHeight);
 
                 var sectionNums = geometry.attributes.sectionNum.array;
                 var startNums = geometry.attributes.startNum.array;
