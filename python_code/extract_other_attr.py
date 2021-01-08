@@ -52,8 +52,8 @@ for day in range(2):
     if not os.path.exists(tarDir2):
         os.makedirs(tarDir2)
 
-    # joblib.dump(temp, os.path.join(tarDir1, 'TEMP_' + str(day) + '.pkl'))
-    # joblib.dump(salt, os.path.join(tarDir2, 'SALT_' + str(day) + '.pkl'))
+    joblib.dump(temp, os.path.join(tarDir1, 'TEMP_' + str(day) + '.pkl'))
+    joblib.dump(salt, os.path.join(tarDir2, 'SALT_' + str(day) + '.pkl'))
 
     temp_arr_reshaped = temp.reshape(temp.shape[0], -1)
     salt_arr_reshaped = salt.reshape(salt.shape[0], -1)

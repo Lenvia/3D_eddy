@@ -144,83 +144,129 @@ class Get_new_gps():
         return (lonNorth, latNorth)
 
 
+## Plot velocities and eddies #############################################################
+def plot_eddies2(day_julian_hours,lon,lat,OW,k_plot):
+    #k_plot: z-level to plot.  Usually set to 0 for the surface.
+
+    fig,axes = plt.subplots(nrows=3, ncols=2,figsize=(10,8))
+
+    pos4 = axes[1,1].imshow(OW[:,:,k_plot].T, extent=[lon[0],lon[-1],lat[0],lat[-1]],aspect='auto',origin="lower",cmap='jet')
+    axes[1,1].set_title('Okubo-Weiss')
+
+    fig.colorbar(pos4, ax=axes[1,1])
+
+    origin = datetime.date(1950, 1, 1)
+    st =fig.suptitle('Eddy data for the ' + str(julianh2gregorian(day_julian_hours,origin)), fontsize="x-large")
+    st.set_y(1.02)
+
+    plt.tight_layout()
+    plt.savefig('plot_file/' + str(day) + '.png')
+    plt.show()
+
+    return plt
+
+# Load netCDF4 data
+def load_netcdf4(filename):  # name of the netCDF data file
+    f = nc4.Dataset(filename,'r', format='NETCDF4')  # 'r' stands for read
+    # lon = f.variables['longitude'][:]
+    # lat = f.variables['latitude'][:]
+    # depth = f.variables['depth'][:]
+    # # Load zonal and meridional velocity, in m/s
+    # uvel = f.variables['uo'][:]
+    # vvel = f.variables['vo'][:]
+    # # Load time in hours from 1950-01-01
+    # t = f.variables['time'][:]
+
+    # 根据本数据内容提取
+    lon = f.variables['XC']  # 经度
+    lat = f.variables['YC']  # 纬度
+    depth = f.variables['Z_MIT40'][:]  # 层数
+
+    # Load time in hours from 1950-01-01
+    t = f.variables['T_AX'][:]  # 时间数组
+
+    return (f,lon,lat,depth,t)
+    f.close()
+
+
 if __name__ == '__main__':
-    k_plot = 0
+    k_plot = 10
 
-    print("successfully detected!")
 
-    tarDir = os.path.join("result", "small"+str(day))
+    # tarDir = os.path.join("result", "small"+str(day))
 
-    t = joblib.load(tarDir + '/t.pkl')
-    lon = joblib.load(tarDir + '/lon.pkl')
-    lat = joblib.load(tarDir + '/lat.pkl')
-    uvel = joblib.load(tarDir + '/uvel.pkl')
-    vvel = joblib.load(tarDir + '/vvel.pkl')
-    vorticity = joblib.load(tarDir + '/vorticity.pkl')
-    OW = joblib.load(tarDir + '/OW.pkl')
-    OW_eddies = joblib.load(tarDir + '/OW_eddies.pkl')
-    eddie_census = joblib.load(tarDir + '/eddie_census.pkl')
-    nEddies = joblib.load(tarDir + '/nEddies.pkl')
-    circulation_mask = joblib.load(tarDir + '/circulation_mask.pkl')
-    levels = joblib.load(tarDir + '/levels.pkl')
+    (f, lon, lat, depth, t) = load_netcdf4('COMBINED_2011013100.nc')
+
+    # t = joblib.load(tarDir + '/t.pkl')
+    # lon = joblib.load(tarDir + '/lon.pkl')
+    # lat = joblib.load(tarDir + '/lat.pkl')
+    # uvel = joblib.load(tarDir + '/uvel.pkl')
+    # vvel = joblib.load(tarDir + '/vvel.pkl')
+    # vorticity = joblib.load(tarDir + '/vorticity.pkl')
+    OW = joblib.load('whole_attributes_pkl_file/OW/OW_0.pkl')
+    # OW_eddies = joblib.load(tarDir + '/OW_eddies.pkl')
+    # eddie_census = joblib.load(tarDir + '/eddie_census.pkl')
+    # nEddies = joblib.load(tarDir + '/nEddies.pkl')
+    # circulation_mask = joblib.load(tarDir + '/circulation_mask.pkl')
+    # levels = joblib.load(tarDir + '/levels.pkl')
 
     # print("start plot")
     # plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
-
-    '''
-    characteristics of the detected eddies -->
-    minOW, circ(m^2/s), lon(º), lat(º), cells, diameter(km)
-    '''
-
-    # print("all lon")
-    # print(lon)
-    # print("all lat")
-    # print(lat)
-
-    size = len(levels)
-
-    print("lon:")
-    print(eddie_census[2][:size])
-    print("lat:")
-    print(eddie_census[3][:size])
-    print("cells:")
-    print(eddie_census[4][:size])
-    print("diam:")
-    print(eddie_census[-1][:size])
-    print("levels:")
-    print(levels)
-    print("circulation_mask:")
-    print(circulation_mask.shape)
-    pos = 0
-    neg = 0
-    for i in range(circulation_mask.shape[0]):
-        for j in range(circulation_mask.shape[1]):
-            for k in range(circulation_mask.shape[2]):
-                if circulation_mask[i][j][k] > 0:
-                    pos += 1
-                elif circulation_mask[i][j][k] < 2e-10:
-                    neg += 1
-    print(pos)
-    print(neg)
-
-
-    functions = Get_new_gps()
-    index = 0
-    lonC, latC = [eddie_census[2][index], eddie_census[3][index]]
-    r = eddie_census[-1][index]/2 * 1e3  # 半径
-    level = levels[index]  # 层数
-
-    # 计算正南的点
-    lonSouth, latSouth = functions.get_sou(lonC, latC, r)
-    # 计算正西的点
-    lonWest, latWest = functions.get_west(lonC, latC, r)
-    # 计算正北的点
-    lonNorth, latNorth = functions.get_nor(lonC, latC, r)
-    # 计算正东的点
-    lonEast, latEast = functions.get_east(lonC, latC, r)
-
-    print("原始点的经纬度坐标", lonC, latC)
-    print("正南%f米坐标点为%f,%f" % (r, lonSouth, latSouth))
-    print("正西%f米坐标点为%f,%f" % (r, lonWest, latWest))
-    print("正北%f米坐标点为%f,%f" % (r, lonNorth, latNorth))
-    print("正东%f米坐标点为%f,%f" % (r, lonEast, latEast))
+    plt = plot_eddies2(t[day], lon, lat, OW, k_plot)
+    # '''
+    # characteristics of the detected eddies -->
+    # minOW, circ(m^2/s), lon(º), lat(º), cells, diameter(km)
+    # '''
+    #
+    # # print("all lon")
+    # # print(lon)
+    # # print("all lat")
+    # # print(lat)
+    #
+    # size = len(levels)
+    #
+    # print("lon:")
+    # print(eddie_census[2][:size])
+    # print("lat:")
+    # print(eddie_census[3][:size])
+    # print("cells:")
+    # print(eddie_census[4][:size])
+    # print("diam:")
+    # print(eddie_census[-1][:size])
+    # print("levels:")
+    # print(levels)
+    # print("circulation_mask:")
+    # print(circulation_mask.shape)
+    # pos = 0
+    # neg = 0
+    # for i in range(circulation_mask.shape[0]):
+    #     for j in range(circulation_mask.shape[1]):
+    #         for k in range(circulation_mask.shape[2]):
+    #             if circulation_mask[i][j][k] > 0:
+    #                 pos += 1
+    #             elif circulation_mask[i][j][k] < 2e-10:
+    #                 neg += 1
+    # print(pos)
+    # print(neg)
+    #
+    #
+    # functions = Get_new_gps()
+    # index = 0
+    # lonC, latC = [eddie_census[2][index], eddie_census[3][index]]
+    # r = eddie_census[-1][index]/2 * 1e3  # 半径
+    # level = levels[index]  # 层数
+    #
+    # # 计算正南的点
+    # lonSouth, latSouth = functions.get_sou(lonC, latC, r)
+    # # 计算正西的点
+    # lonWest, latWest = functions.get_west(lonC, latC, r)
+    # # 计算正北的点
+    # lonNorth, latNorth = functions.get_nor(lonC, latC, r)
+    # # 计算正东的点
+    # lonEast, latEast = functions.get_east(lonC, latC, r)
+    #
+    # print("原始点的经纬度坐标", lonC, latC)
+    # print("正南%f米坐标点为%f,%f" % (r, lonSouth, latSouth))
+    # print("正西%f米坐标点为%f,%f" % (r, lonWest, latWest))
+    # print("正北%f米坐标点为%f,%f" % (r, lonNorth, latNorth))
+    # print("正东%f米坐标点为%f,%f" % (r, lonEast, latEast))
