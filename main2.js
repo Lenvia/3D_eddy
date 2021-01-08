@@ -122,7 +122,7 @@ function init() {
     scene.add(axesHelper);
 
     // 创建海底地形和海水
-    createTerrain();
+    // createTerrain();
     createSea();
     createLand();
 
@@ -333,7 +333,9 @@ function createLand(){
     var promise1 = new Promise(function(resolve, reject) {
         $.get(path, function(data) {
             var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
-            arr = items.flat();  // 二维数组转一维数组，500*500
+            // console.log(items);
+
+            arr = items.flat();
             resolve(1);
         });
     });
@@ -343,25 +345,30 @@ function createLand(){
 
         // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
         const positions = geometry.attributes.position.array;
-        // console.log(positions.length);
 
         // 改变顶点高度值
         
-        for ( let i = 0, j = 0, l = positions.length; i < l; i ++, j += 3 ) {
+        /*
+            PlaneBufferGeometry 的顶点排列是 先动x再动y，x从小到大，y从大到小！！！！！！！！！
+            画个图就知道了，先正常赋值，再逆时针旋转PI/2就行了
+        */
+        
+        for ( let i = 0, j = 0; i < arr.length; i ++, j += 3 ) {
             // positions[ j + 2 ] = arr[i]/50*scaleHeight;
             positions[j+2] = arr[i]/50*biasZ;
         }
 
         // 不执行computeVertexNormals，没有顶点法向量数据
         geometry.computeFaceNormals(); // needed for helper
-        geometry.rotateX(Math.PI);
-        geometry.rotateZ(-Math.PI/2);
+        // 逆时针旋转PI/2
+        geometry.rotateZ(Math.PI/2);
+        geometry.translate(0, 0, -biasZ);
 
         const material = new THREE.MeshBasicMaterial( { 
             // map: texture,
             color: 0x191970,
             transparent: true,
-            opacity: 1,  // 纹理透明度 
+            opacity: 0.5,  // 纹理透明度 
             depthWrite: false, 
         } );
     
@@ -424,7 +431,15 @@ function loadEddiesForDays(){
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
                 
                 geometry.translate(-0.5, -0.5, 0);
-                geometry.rotateX(Math.PI);  // 把图形翻下去，因为数组原三维数组索引越大，越靠近海底
+
+                // 不应该翻下去！！！！！！！！！！ 而是z值变负
+                var positions = geometry.attributes.position.array;
+                // 改变顶点高度值
+                
+                for ( let j = 0;  j < positions.length; j += 3 ) {
+                    // positions[ j + 2 ] = arr[i]/50*scaleHeight;
+                    positions[j+2] = -positions[j+2];
+                }
 
                 geometry.scale(edgeLen, edgeWid, scaleHeight);
 
@@ -589,6 +604,7 @@ function loadOneOWArray(path, d){
                 j = temp[1];
                 k = temp[2];
                 // console.log(x,y,z, "-->", i, j, k);
+                // console.log(arr[i][j][k]);
 
                 OW[q/3] = arr[i][j][k];
                 resolve(q);
@@ -597,7 +613,7 @@ function loadOneOWArray(path, d){
         
         Promise.all(flag1).then((res)=>{
             linesG.geometry.setAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
-
+            // console.log(OW);
             if(d==1){
                 hideProgressModal();
                 console.log("OW值设置完毕");

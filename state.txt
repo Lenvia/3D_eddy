@@ -6,10 +6,10 @@ ocean.html
 VTKLoader.js  // 在后面将会抛弃
 
 // 全局流线（当前主要）
-main2.js  // VTK载入部分函数已更新，透明度动态变化已更新
+main2.js  // VTK载入部分函数已更新，透明度动态变化已更新，坐标映射已纠正！！！ 地形已经添加
 ocean2.html
 VTKLoader2.js  // 当前最新、无错的VTKLoader
 
 // 测试
 ocean3.html
-main.js  // 已经实现了透明度动态变化，正在探索调节线条宽度
+main3.js  // 已经实现了透明度动态变化，正在探索调节线条宽度

@@ -13,13 +13,15 @@ var scene = new THREE.Scene();
 var container, camera, renderer, controls, stats;
 
 
+loadVTK();
+
 //辅助坐标系
 var axesHelper = new THREE.AxesHelper(150);
 scene.add(axesHelper);
 
 //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
-// var ambient = new THREE.AmbientLight(0xffffff);
-// scene.add(ambient);
+var ambient = new THREE.AmbientLight(0xffffff);
+scene.add(ambient);
 
 
 init();
@@ -30,33 +32,6 @@ init();
 function init(){
     container = document.getElementById( 'container' );
     container.innerHTML = "";
-
-    const geometry = new THREE.PlaneBufferGeometry( 30, 20, 30-1, 20-1);
-    const positions = geometry.attributes.position.array;
-
-    // PlaneBufferGeometry 的顶点排列是 先动x再动y，x从小到大，y从大到小！！！！！！！！！
-    // 改变顶点高度值
-    for ( let i = 0, j = 0, l = positions.length; i < l; i ++, j += 3 ) {
-        positions[j+2] = 10;
-    }
-
-    // 不执行computeVertexNormals，没有顶点法向量数据
-    geometry.computeFaceNormals(); // needed for helper
-    // geometry.rotateX(Math.PI);
-    // geometry.rotateZ(Math.PI);
-    // geometry.translate(0, 0, -biasZ);
-
-    const material = new THREE.MeshBasicMaterial( { 
-        // map: texture,
-        // color: 0x000000,
-        transparent: true,
-        opacity: 0.5,  // 纹理透明度 
-        depthWrite: false, 
-    } );
-
-    var mesh = new THREE.Mesh( geometry, material);
-    scene.add( mesh );
-    console.log(mesh);
 
     /**
      * 相机设置
