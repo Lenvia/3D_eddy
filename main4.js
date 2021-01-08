@@ -124,6 +124,7 @@ function init() {
     // 创建海底地形和海水
     createTerrain();
     createSea();
+    createLand();
 
  
 
@@ -158,7 +159,7 @@ function onWindowResize() {
 /*
     生成地形顶点高度数据
 */
-function generateHeight( width, height ) {
+function generateMountainHeight( width, height ) {
     // 总的顶点数据量width * height
     const size = width * height, data = new Uint8Array( size );
     // ImprovedNoise来实现地形高度数据的随机生成。perlin —— 柏林噪声
@@ -189,7 +190,7 @@ function generateHeight( width, height ) {
 /*
     生成地形顶点纹理数据？？
 */
-function generateTexture( data, width, height ) {
+function generateMountainTexture( data, width, height ) {
     // bake lighting into texture
     let context, image, imageData, shade;
 
@@ -257,12 +258,12 @@ function generateTexture( data, width, height ) {
 }
 
 /*
-    设置海底和海水
+    设置海底、海水、陆地
 */
 
 function createTerrain(){
     // 地形顶点高度数据
-    const data = generateHeight( worldWidth, worldDepth );
+    const data = generateMountainHeight( worldWidth, worldDepth );
 
     // 创建一个平面地形，行列两个方向顶点数据分别为width，height
     // PlaneBufferGeometry(width, height, widthSegments, heightSegments) 后两个参数是分段数
@@ -290,15 +291,15 @@ function createTerrain(){
     
     geometry.translate(0, 0, -biasZ);
 
-    // generateTexture返回一个画布对象
-    texture = new THREE.CanvasTexture( generateTexture( data, worldWidth, worldDepth ) );
+    // generateMountainTexture返回一个画布对象
+    texture = new THREE.CanvasTexture( generateMountainTexture( data, worldWidth, worldDepth ) );
     // wrapS/wrapT 纹理在水平和垂直方向的扩展方式
     texture.wrapS = THREE.ClampToEdgeWrapping;  // 纹理边缘像素会被拉伸，以填满剩下的空间。
     texture.wrapT = THREE.ClampToEdgeWrapping;
     const material = new THREE.MeshBasicMaterial( { 
         map: texture,
         transparent: true,
-        opacity: 0.1,  // 纹理透明度 
+        opacity: 0.3,  // 纹理透明度 
         depthWrite: false, 
     } );
 
@@ -307,34 +308,6 @@ function createTerrain(){
 }
 
 function createSea(){
-    /*
-        设置海水
-    */
-    // var path = ("./whole_attributes_txt_file/SALT/".concat("SALT_0.txt"));  // 默认盐都为0的地方都是陆地
-    // var arr = [];
-    // var promise1 = new Promise(function(resolve, reject) {
-    //     $.get(path, function(data) {
-    //         // 加载SALT数组
-    //         var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
-    //         arr = new Array(500);
-    //         for (var i = 0; i < arr.length; i++) {
-    //             arr[i] = new Array(500);
-    //             for (var j = 0; j < arr[i].length; j++) {
-    //                 arr[i][j] = new Array(50);
-    //                 for (var k = 0; k<arr[i][j].length; k++){
-    //                     arr[i][j][k] = items[i][j*arr[i][j].length+k];
-    //                 }
-    //             }
-    //         }
-    //         resolve(1);
-    //     });
-    // });
-
-    // promise1.then(()=>{
-
-    // });
-    
-    
     // 海水箱子的长、宽
     var boxLen = edgeLen, boxWid = edgeLen;
     const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
@@ -349,8 +322,53 @@ function createSea(){
     geometry2.translate(0, 0, -biasZ/2);
     var mesh2 = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
     mesh2.position.set(0,0,0);
-    console.log(mesh2);
+    // console.log(mesh2);
     scene.add(mesh2); //网格模型添加到场景中
+}
+
+function createLand(){
+    // 生成陆地高度数据
+    var path = ("./whole_attributes_txt_file/".concat("depth.txt"));  // 默认盐都为0的地方都是陆地
+    var arr = [];
+    var promise1 = new Promise(function(resolve, reject) {
+        $.get(path, function(data) {
+            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+            arr = items.flat();  // 二维数组转一维数组，500*500
+            resolve(1);
+        });
+    });
+
+    promise1.then(()=>{
+        const geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, 500-1, 500-1);
+
+        // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
+        const positions = geometry.attributes.position.array;
+        // console.log(positions.length);
+
+        // 改变顶点高度值
+        
+        for ( let i = 0, j = 0, l = positions.length; i < l; i ++, j += 3 ) {
+            // positions[ j + 2 ] = arr[i]/50*scaleHeight;
+            positions[j+2] = arr[i]/50*biasZ;
+        }
+
+        // 不执行computeVertexNormals，没有顶点法向量数据
+        geometry.computeFaceNormals(); // needed for helper
+        geometry.rotateX(Math.PI);
+        geometry.rotateZ(-Math.PI/2);
+
+        const material = new THREE.MeshBasicMaterial( { 
+            // map: texture,
+            color: 0x191970,
+            transparent: true,
+            opacity: 1,  // 纹理透明度 
+            depthWrite: false, 
+        } );
+    
+        mesh = new THREE.Mesh( geometry, material);
+        scene.add( mesh );
+        console.log(mesh);
+    });
 }
 
 /*
