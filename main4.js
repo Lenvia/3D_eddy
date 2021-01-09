@@ -335,47 +335,59 @@ function createLand(){
             var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
             // console.log(items);
 
-            arr = items.flat();
+            arr = items;
             resolve(1);
         });
     });
 
     promise1.then(()=>{
-        const geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, 500-1, 500-1);
+        var geometry = new THREE.BufferGeometry();
+        var indices = [];
+        var positions = [];
 
-        // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
-        const positions = geometry.attributes.position.array;
+        var rowNum, colNum;
+        rowNum = arr.length; colNum = arr[0].length;
 
-        // 改变顶点高度值
-        
-        /*
-            PlaneBufferGeometry 的顶点排列是 先动x再动y，x从小到大，y从大到小！！！！！！！！！
-            画个图就知道了，先正常赋值，再逆时针旋转PI/2就行了
-        */
-        
-        for ( let i = 0, j = 0; i < arr.length; i ++, j += 3 ) {
-            // positions[ j + 2 ] = arr[i]/50*scaleHeight;
-            positions[j+2] = arr[i]/50*biasZ;
+        for(let i=0; i<rowNum; i++){
+            for(let j=0; j<colNum; j++){
+                positions.push(i/500,j/500,0);  // 先都变成0～1之间
+
+                if(arr[i][j]>0){
+                    if(i+1<rowNum && j+1<colNum && arr[i+1][j]!=0 && arr[i][j+1]!=0){
+                        // 与下边和右边顶点形成三角形
+                        indices.push(i*rowNum+j, (i+1)*rowNum+j, i*rowNum+j+1);
+                    }
+
+                    if(i-1>=0 && j-1>=0 && arr[i-1][j]!=0 && arr[i][j-1]!=0){
+                        // 与上边和左边顶点形成三角形
+                        indices.push(i*rowNum+j, (i-1)*rowNum+j, i*rowNum+j-1);
+                    }
+                }
+            }
         }
 
-        // 不执行computeVertexNormals，没有顶点法向量数据
-        geometry.computeFaceNormals(); // needed for helper
-        // 逆时针旋转PI/2
-        geometry.rotateZ(Math.PI/2);
-        geometry.translate(0, 0, -biasZ);
+        geometry.setIndex( indices );
 
-        const material = new THREE.MeshBasicMaterial( { 
-            // map: texture,
-            color: 0x191970,
-            transparent: true,
-            opacity: 0.5,  // 纹理透明度 
-            depthWrite: false, 
-            // side: THREE.BackSide,
+		geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+        // 与模型保持同等长宽缩放，高度可以不变
+        geometry.translate(-0.5, -0.5, 0);
+        geometry.scale(edgeLen, edgeWid, 1);
+        geometry.translate(0,0,1);  // 稍微高于海面
+
+        var material = new THREE.MeshBasicMaterial( {
+             color: 0x8B4513,
+             side: THREE.DoubleSide,
         } );
     
-        mesh = new THREE.Mesh( geometry, material);
+        var mesh = new THREE.Mesh( geometry, material);
         scene.add( mesh );
-        console.log(mesh);
+        // console.log(mesh);
+
+        var geometry2 = geometry.clone();
+        geometry.translate(0,0, -biasZ-2);
+        var mesh2 = new THREE.Mesh( geometry2, material);
+        scene.add(mesh2);
+        // console.log(mesh2);
     });
 }
 
