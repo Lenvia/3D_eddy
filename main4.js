@@ -55,6 +55,7 @@ var downValue;  // 属性下界
 var difValue;  // 上下界差值
 var mid1, mid2, mid3, mid4;  // 中间点
 var keepValue = true;  // 保持设置
+var hideChannel = false; // 隐藏地形
 
 // 当前gui颜色面板值
 var currentColor0 = [];
@@ -328,12 +329,13 @@ function createSea(){
 }
 
 function createLand(){
-    // 生成陆地高度数据
-    var path = ("./whole_attributes_txt_file/".concat("depth.txt"));  // 默认盐都为0的地方都是陆地
+    // 生成第0层平面
+    var path = ("./whole_attributes_txt_file/".concat("surface.txt"));  // 默认盐都为0的地方都是陆地
     var arr = [];
     var promise1 = new Promise(function(resolve, reject) {
         $.get(path, function(data) {
             var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+            items.pop();
             // console.log(items);
 
             arr = items;
@@ -344,135 +346,205 @@ function createLand(){
     promise1.then(()=>{
         var planeGeometry = new THREE.BufferGeometry();
         var indices = [];
-        var positions = [];
-        var positions2 = [];
+        var positions = [];  // 上平面
+        // var positions2 = [];  // 内部竖直
+        // var positions3 = [];  // 外部竖直
 
-        var rowNum, colNum;
+        var rowNum, colNum;  // 行、列数量
         rowNum = arr.length; colNum = arr[0].length;
         var halfNum = rowNum*colNum;  // 一半顶点数
 
-        // 上下平面三角形
-        // 这里之所以再来个二层for循环，是为了把上下平面的三角形分开来算。
+        // console.log(arr);
+        /*
+            上平面三角形
+        */
+
         for(let i=0; i<rowNum; i++){
             for(let j=0; j<colNum; j++){
                 // 上平面500*500个点
-                positions.push(i/500,j/500,0);  // 先把长和宽变成0～1之间
-                if(arr[i][j]>0){
-                    if(i+1<rowNum && j+1<colNum && arr[i+1][j]!=0 && arr[i][j+1]!=0){
+                positions.push(i/rowNum,j/colNum,0);  // 先把长和宽变成0～1之间
+                if(arr[i][j]==0){
+                    if(i+1<rowNum && j+1<colNum && arr[i+1][j]==0 && arr[i][j+1]==0){
                         // 与下边和右边顶点形成三角形（上平面）
-                        indices.push(i*rowNum+j, (i+1)*rowNum+j, i*rowNum+j+1);
+                        indices.push(i*colNum+j, (i+1)*colNum+j, i*colNum+j+1);
                     }
 
-                    if(i-1>=0 && j-1>=0 && arr[i-1][j]!=0 && arr[i][j-1]!=0){
+                    if(i-1>=0 && j-1>=0 && arr[i-1][j]==0 && arr[i][j-1]==0){
                         // 与上边和左边顶点形成三角形（上平面）
-                        indices.push(i*rowNum+j, (i-1)*rowNum+j, i*rowNum+j-1);
+                        indices.push(i*colNum+j, (i-1)*colNum+j, i*colNum+j-1);
                     }
                 }
             }
         }
-        for(let i=0; i<rowNum; i++){
-            for(let j=0; j<colNum; j++){
-                // 下平面
-                positions.push(i/500,j/500,-biasZ-2);
-                if(arr[i][j]>0){
-                    if(i+1<rowNum && j+1<colNum && arr[i+1][j]!=0 && arr[i][j+1]!=0){
-                        // 与下边和右边顶点形成三角形（下平面）
-                        indices.push(halfNum+i*rowNum+j, halfNum+(i+1)*rowNum+j, halfNum+i*rowNum+j+1);
-                    }
-
-                    if(i-1>=0 && j-1>=0 && arr[i-1][j]!=0 && arr[i][j-1]!=0){
-                        // 与上边和左边顶点形成三角形（下平面）
-                        indices.push(halfNum+i*rowNum+j, halfNum+(i-1)*rowNum+j, halfNum+i*rowNum+j-1);
-                    }
-                }
-            }
-        }
-
-        positions2 = positions.concat();  // 深拷贝一下
+        // console.log(indices);
 
         planeGeometry.setIndex( indices );
-
 		planeGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
         // 与模型保持同等长宽缩放，高度可以不变
         planeGeometry.translate(-0.5, -0.5, 1);
         planeGeometry.scale(edgeLen, edgeWid, 1);
 
         var material = new THREE.MeshBasicMaterial( {
-             color: 0xA0522D,
-             side: THREE.DoubleSide,
+            color: 0xA0522D,
+            side: THREE.DoubleSide,
+            transparent: true, // 可定义透明度
+            opacity: 0.9,
         } );
     
         var mesh = new THREE.Mesh( planeGeometry, material);
+        mesh.name = "surface";
         scene.add( mesh );
 
 
+        createChannel();
+        
+    });
+}
+
+// 根据盐度数据建立峡谷
+function createChannel(){
+    var path = ("./whole_attributes_txt_file/SALT/".concat("SALT_0.txt"));  // 默认盐都为0的地方都是陆地
+    var arr;
+    var promise1 = new Promise(function(resolve, reject) {
+        $.get(path, function(data) {
+            // 加载盐度数组
+            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+            items.pop(); // 去除结尾空格
+            // console.log(items);
+        
+            // (经度, 纬度, 层)
+            arr = new Array(500);
+            for (var i = 0; i < arr.length; i++) {
+                arr[i] = new Array(500);
+                for (var j = 0; j < arr[i].length; j++) {
+                    arr[i][j] = new Array(50);
+                    for (var k = 0; k<arr[i][j].length; k++){
+                        arr[i][j][k] = items[i][j*arr[i][j].length+k];
+                    }
+                }
+            }
+            resolve(1);
+        });
+    });
+
+    promise1.then(()=>{
         // 设置竖直高度，用同样的顶点，所以positions可以不变
         var heightGeometry = new THREE.BufferGeometry();
-        var indices2 = [];
-
-        var leftBound = [];
-        var rightBound = [];
-        var curLB, curRB;
-        // 寻找0之前最后一个1
-        for(let i=0; i<rowNum; i++){
-            curLB = -1;
-            for(let j=0; j<colNum; j++){
-                if(arr[i][j]!=0 && j+1<colNum && arr[i][j+1]==0){
-                    curLB = j;
-                    break;
-                }
-            }
-            leftBound.push(curLB);
-        }
+        var indices = [];
+        var positions = [];
         
-        // 寻找0之后第一个1
-        for(let i=0; i<rowNum; i++){
-            curRB = -1;
-            for(let j=colNum-1; j>=0; j--){
-                if(arr[i][j]!=0 && j-1>=0 && arr[i][j-1]==0){
-                    curRB = j;
-                    break;
+
+        var rowNum, colNum, layerNum;
+        rowNum = arr.length; colNum = arr[0].length;
+        layerNum = arr[0][0].length;
+
+        var leftBound = new Array(layerNum);  // leftBound[k][i] 表示第k层第i行的左边界下标
+        var rightBound = new Array(layerNum);
+
+        var layerVertexNum = rowNum*colNum;
+
+        // console.log(rowNum, colNum, layerNum);
+
+        var curLB, curRB;
+        // 寻找第一个盐度非0值
+        for(let k =0; k<layerNum; k++){
+            leftBound[k] = new Array(rowNum);
+            // 对于第k层
+            for(let i=0; i<rowNum; i++){
+                curLB = -1;
+                for(let j=0; j<colNum; j++){
+                    if(arr[i][j][k]!=0){
+                        curLB = j;
+                        break;
+                    }
                 }
+                leftBound[k][i] = (curLB);
             }
-            rightBound.push(curRB);
         }
 
-        console.log(leftBound);
-        console.log(rightBound);
+        // 寻找从后面数第一个盐度非0值
+        for(let k =0; k<layerNum; k++){
+            rightBound[k] = new Array(rowNum);
+            // 对于第k层
+            for(let i=0; i<rowNum; i++){
+                curRB = -1;
+                for(let j=colNum-1; j>=0; j--){
+                    if(arr[i][j][k]!=0){
+                        curRB = j;
+                        break;
+                    }
+                }
+                rightBound[k][i] = (curRB);
+            }
+        }
+
+        // console.log(leftBound);
+        // console.log(rightBound);
+
+        for(let k =0; k<layerNum; k++){
+            for(let i=0; i<rowNum; i++){
+                for(let j=0; j<colNum; j++){
+                    positions.push(i/rowNum,j/colNum,-k/layerNum);  // 把长和宽变成0～1之间，高变成0~-1之间
+                }
+            }
+        }
+        // console.log(positions);
 
         // 左边界
-        for(let i =0; i<rowNum; i++){
-            if(i+1<rowNum && leftBound[i]!=-1 && leftBound[i+1]!=-1){
-                indices2.push(i*colNum+leftBound[i], (i+1)*colNum+leftBound[i+1], halfNum+i*colNum+leftBound[i]);
-                indices2.push((i+1)*colNum+leftBound[i+1], halfNum+i*colNum+leftBound[i], halfNum+(i+1)*colNum+leftBound[i+1]);
+        for(let k = 0; k<layerNum; k++){
+            for(let i =0; i<rowNum; i++){
+                if(k+1<layerNum && i+1<rowNum){  // 层和行不越界
+                    // 第一个三角形，第k层的两个和第k+1层的一个
+                    if(leftBound[k][i]!=-1 && leftBound[k][i+1]!=-1 && leftBound[k+1][i]!=-1){
+                        indices.push(k*layerVertexNum+i*colNum+leftBound[k][i], k*layerVertexNum+(i+1)*colNum+leftBound[k][i+1], (k+1)*layerVertexNum+i*colNum+leftBound[k+1][i]);
+                    }
+                    // 第二个三角形，第k层的一个和第k+1层的两个
+                    if(leftBound[k][i+1]!=-1 && leftBound[k+1][i]!=-1 && leftBound[k+1][i+1]!=-1){
+                        indices.push(k*layerVertexNum+(i+1)*colNum+leftBound[k][i+1], (k+1)*layerVertexNum+i*colNum+leftBound[k+1][i], (k+1)*layerVertexNum+(i+1)*colNum+leftBound[k+1][i+1]);
+                    }
+                }
             }
         }
+        
+
         // 右边界
-        for(let i = 0; i<rowNum; i++){
-            if(i+1<rowNum && rightBound[i]!=-1 && rightBound[i+1]!=-1){
-                indices2.push(i*colNum+rightBound[i], (i+1)*colNum+rightBound[i+1], halfNum+i*colNum+rightBound[i]);
-                indices2.push((i+1)*colNum+rightBound[i+1], halfNum+i*colNum+rightBound[i], halfNum+(i+1)*colNum+rightBound[i+1]);
+        for(let k = 0; k<layerNum; k++){
+            for(let i =0; i<rowNum; i++){
+                if(k+1<layerNum && i+1<rowNum){  // 层和行不越界
+                    // 第一个三角形，第k层的两个和第k+1层的一个
+                    if(rightBound[k][i]!=-1 && rightBound[k][i+1]!=-1 && rightBound[k+1][i]!=-1){
+                        indices.push(k*layerVertexNum+i*colNum+rightBound[k][i], k*layerVertexNum+(i+1)*colNum+rightBound[k][i+1], (k+1)*layerVertexNum+i*colNum+rightBound[k+1][i]);
+                    }
+                    // 第二个三角形，第k层的一个和第k+1层的两个
+                    if(rightBound[k][i+1]!=-1 && rightBound[k+1][i]!=-1 && rightBound[k+1][i+1]!=-1){
+                        indices.push(k*layerVertexNum+(i+1)*colNum+rightBound[k][i+1], (k+1)*layerVertexNum+i*colNum+rightBound[k+1][i], (k+1)*layerVertexNum+(i+1)*colNum+rightBound[k+1][i+1]);
+                    }
+                }
             }
         }
 
-        heightGeometry.setIndex( indices2 );
+        // console.log(indices);
 
-		heightGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions2, 3 ) );
-        // 与模型保持同等长宽缩放，高度可以不变
-        heightGeometry.translate(-0.5, -0.5, 1);
-        heightGeometry.scale(edgeLen, edgeWid, 1);
+        heightGeometry.setIndex( indices);
 
-        var material2 = new THREE.MeshBasicMaterial( {
-             color: 0xA0522D,
-             side: THREE.DoubleSide,
-             transparent: true, // 可定义透明度
-             opacity: 0.1,
-             depthWrite: false,
+		heightGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+        // 与模型保持同等长宽高缩放
+        heightGeometry.translate(-0.5, -0.5, 0);
+        heightGeometry.scale(edgeLen, edgeWid, scaleHeight);
+
+        var material = new THREE.MeshBasicMaterial( {
+            color: 0xA9A9A9,
+            side: THREE.DoubleSide,
+            transparent: true, // 可定义透明度
+            opacity: 0.3,
+            depthWrite: false,
         } );
     
-        var mesh2 = new THREE.Mesh( heightGeometry, material2);
-        scene.add( mesh2 );
-    });
+        var mesh = new THREE.Mesh( heightGeometry, material);
+        mesh.name = "channel";
+        scene.add( mesh );
+        // mesh.visible = false;
+    })
 }
 
 /*
@@ -522,7 +594,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_100.vtk"));
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_5000.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -744,9 +816,10 @@ function setGUI(){
     default_opt = new function(){
         this.currentDay = -1;  // 初始时间为第0天
         this.currentAttr = 'OW'; // 初始展示属性为OW
-        this.upValue = 10; // 属性的下界
-        this.downValue = -10;  // 属性的上界
+        this.upValue = 1; // 属性的下界
+        this.downValue = -1;  // 属性的上界
         this.keepValue = true; // 保持设置
+        this.hideChannel = false;  // 是否隐藏海峡地形
         this.color0 = [255, 255, 255]; // RGB array
         this.color1 = [255, 255, 255]; // RGB array
         this.color2 = [255, 255, 255]; // RGB array
@@ -758,27 +831,6 @@ function setGUI(){
         this.opacity3 = 1.0;
         this.opacity4 = 1.0;
     };
-
-    
-
-    // custom_opt = new function(){
-    //     this.upValue = 10; // 属性的下界
-    //     this.downValue = -10;  // 属性的上界
-    //     this.keepValue = true; // 保持设置
-    //     this.color0 = [255, 255, 255]; // RGB array
-    //     this.color1 = [238, 22, 22]; // RGB array
-    //     this.color2 = [109, 69, 238]; // RGB array
-    //     this.color3 = [13, 213, 240]; // RGB array
-    //     this.color4 = [131, 233, 17]; // RGB array
-    //     this.opacity0 = 1.0;
-    //     this.opacity1 = 1.0;
-    //     this.opacity2 = 1.0;
-    //     this.opacity3 = 1.0;
-    //     this.opacity4 = 1.0;
-    // }
-
-    // gui.remember(default_opt);
-    // gui.remember(custom_opt);
 
     /* 
         一些默认的属性
@@ -865,6 +917,23 @@ function setGUI(){
         keepValue = default_opt.keepValue;
     })
 
+    // 是否隐藏地形
+    gui.add(default_opt, 'hideChannel').onChange(function(){
+        hideChannel = default_opt.hideChannel;
+
+        var channel = scene.getObjectByName("channel");
+        var surface = scene.getObjectByName("surface");
+
+        // 不隐藏
+        if(hideChannel==false){
+            surface.visible = true;
+            channel.visible = true;
+        }
+        else{
+            surface.visible = false;
+            channel.visible = false;
+        }
+    })
 
     /*
         交互颜色
