@@ -312,7 +312,8 @@ function createSea(){
     var boxLen = edgeLen, boxWid = edgeLen;
     const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
     const material2 = new THREE.MeshLambertMaterial({
-        color: 0x1E90FF,
+        // color: 0x1E90FF,
+        color: 0x191970,
         transparent: true,
         opacity: 0.5,
         depthWrite: false, 
@@ -341,53 +342,136 @@ function createLand(){
     });
 
     promise1.then(()=>{
-        var geometry = new THREE.BufferGeometry();
+        var planeGeometry = new THREE.BufferGeometry();
         var indices = [];
         var positions = [];
+        var positions2 = [];
 
         var rowNum, colNum;
         rowNum = arr.length; colNum = arr[0].length;
+        var halfNum = rowNum*colNum;  // 一半顶点数
 
+        // 上下平面三角形
+        // 这里之所以再来个二层for循环，是为了把上下平面的三角形分开来算。
         for(let i=0; i<rowNum; i++){
             for(let j=0; j<colNum; j++){
-                positions.push(i/500,j/500,0);  // 先都变成0～1之间
-
+                // 上平面500*500个点
+                positions.push(i/500,j/500,0);  // 先把长和宽变成0～1之间
                 if(arr[i][j]>0){
                     if(i+1<rowNum && j+1<colNum && arr[i+1][j]!=0 && arr[i][j+1]!=0){
-                        // 与下边和右边顶点形成三角形
+                        // 与下边和右边顶点形成三角形（上平面）
                         indices.push(i*rowNum+j, (i+1)*rowNum+j, i*rowNum+j+1);
                     }
 
                     if(i-1>=0 && j-1>=0 && arr[i-1][j]!=0 && arr[i][j-1]!=0){
-                        // 与上边和左边顶点形成三角形
+                        // 与上边和左边顶点形成三角形（上平面）
                         indices.push(i*rowNum+j, (i-1)*rowNum+j, i*rowNum+j-1);
                     }
                 }
             }
         }
+        for(let i=0; i<rowNum; i++){
+            for(let j=0; j<colNum; j++){
+                // 下平面
+                positions.push(i/500,j/500,-biasZ-2);
+                if(arr[i][j]>0){
+                    if(i+1<rowNum && j+1<colNum && arr[i+1][j]!=0 && arr[i][j+1]!=0){
+                        // 与下边和右边顶点形成三角形（下平面）
+                        indices.push(halfNum+i*rowNum+j, halfNum+(i+1)*rowNum+j, halfNum+i*rowNum+j+1);
+                    }
 
-        geometry.setIndex( indices );
+                    if(i-1>=0 && j-1>=0 && arr[i-1][j]!=0 && arr[i][j-1]!=0){
+                        // 与上边和左边顶点形成三角形（下平面）
+                        indices.push(halfNum+i*rowNum+j, halfNum+(i-1)*rowNum+j, halfNum+i*rowNum+j-1);
+                    }
+                }
+            }
+        }
 
-		geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+        positions2 = positions.concat();  // 深拷贝一下
+
+        planeGeometry.setIndex( indices );
+
+		planeGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
         // 与模型保持同等长宽缩放，高度可以不变
-        geometry.translate(-0.5, -0.5, 0);
-        geometry.scale(edgeLen, edgeWid, 1);
-        geometry.translate(0,0,1);  // 稍微高于海面
+        planeGeometry.translate(-0.5, -0.5, 1);
+        planeGeometry.scale(edgeLen, edgeWid, 1);
 
         var material = new THREE.MeshBasicMaterial( {
-             color: 0x8B4513,
+             color: 0xA0522D,
              side: THREE.DoubleSide,
         } );
     
-        var mesh = new THREE.Mesh( geometry, material);
+        var mesh = new THREE.Mesh( planeGeometry, material);
         scene.add( mesh );
-        // console.log(mesh);
 
-        var geometry2 = geometry.clone();
-        geometry.translate(0,0, -biasZ-2);
-        var mesh2 = new THREE.Mesh( geometry2, material);
-        scene.add(mesh2);
-        // console.log(mesh2);
+
+        // 设置竖直高度，用同样的顶点，所以positions可以不变
+        var heightGeometry = new THREE.BufferGeometry();
+        var indices2 = [];
+
+        var leftBound = [];
+        var rightBound = [];
+        var curLB, curRB;
+        // 寻找0之前最后一个1
+        for(let i=0; i<rowNum; i++){
+            curLB = -1;
+            for(let j=0; j<colNum; j++){
+                if(arr[i][j]!=0 && j+1<colNum && arr[i][j+1]==0){
+                    curLB = j;
+                    break;
+                }
+            }
+            leftBound.push(curLB);
+        }
+        
+        // 寻找0之后第一个1
+        for(let i=0; i<rowNum; i++){
+            curRB = -1;
+            for(let j=colNum-1; j>=0; j--){
+                if(arr[i][j]!=0 && j-1>=0 && arr[i][j-1]==0){
+                    curRB = j;
+                    break;
+                }
+            }
+            rightBound.push(curRB);
+        }
+
+        console.log(leftBound);
+        console.log(rightBound);
+
+        // 左边界
+        for(let i =0; i<rowNum; i++){
+            if(i+1<rowNum && leftBound[i]!=-1 && leftBound[i+1]!=-1){
+                indices2.push(i*colNum+leftBound[i], (i+1)*colNum+leftBound[i+1], halfNum+i*colNum+leftBound[i]);
+                indices2.push((i+1)*colNum+leftBound[i+1], halfNum+i*colNum+leftBound[i], halfNum+(i+1)*colNum+leftBound[i+1]);
+            }
+        }
+        // 右边界
+        for(let i = 0; i<rowNum; i++){
+            if(i+1<rowNum && rightBound[i]!=-1 && rightBound[i+1]!=-1){
+                indices2.push(i*colNum+rightBound[i], (i+1)*colNum+rightBound[i+1], halfNum+i*colNum+rightBound[i]);
+                indices2.push((i+1)*colNum+rightBound[i+1], halfNum+i*colNum+rightBound[i], halfNum+(i+1)*colNum+rightBound[i+1]);
+            }
+        }
+
+        heightGeometry.setIndex( indices2 );
+
+		heightGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions2, 3 ) );
+        // 与模型保持同等长宽缩放，高度可以不变
+        heightGeometry.translate(-0.5, -0.5, 1);
+        heightGeometry.scale(edgeLen, edgeWid, 1);
+
+        var material2 = new THREE.MeshBasicMaterial( {
+             color: 0xA0522D,
+             side: THREE.DoubleSide,
+             transparent: true, // 可定义透明度
+             opacity: 0.1,
+             depthWrite: false,
+        } );
+    
+        var mesh2 = new THREE.Mesh( heightGeometry, material2);
+        scene.add( mesh2 );
     });
 }
 
@@ -438,7 +522,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_1000.vtk"));
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_100.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
