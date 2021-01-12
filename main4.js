@@ -16,7 +16,7 @@ const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 
 const edgeLen = 3000;  // 地形（海水、山脉）长度
-const edgeWid = 3000;  // 地形宽度
+const edgeWid = edgeLen;  // 地形宽度
 const scaleHeight = 1000; //缩放高度
 var biasZ = 2000;  // 海底山脉向下移动（默认为2000，如果生成地形这个值会更新）
 
