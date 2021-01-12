@@ -22,6 +22,7 @@ var matLine;
 var matLine1;
 var material1;
 var linesG;
+var curLine;
 
 //辅助坐标系
 var axesHelper = new THREE.AxesHelper(150);
@@ -62,26 +63,35 @@ function demo(){
 
             // 不应该翻下去！！！！！！！！！！ 而是z值变负
             var positions = temp_geometry.attributes.position.array;
+            var colors;
             // 改变顶点高度值
 
 
             temp_geometry.scale(100, 100, 100);
 
-            // var sectionNums = temp_geometry.attributes.sectionNum.array;
-            // var startNums = temp_geometry.attributes.startNum.array;
+            var sectionNums = temp_geometry.attributes.sectionNum.array;
+            var startNums = temp_geometry.attributes.startNum.array;
 
             // 转化为无索引格式，用来分组
             temp_geometry = temp_geometry.toNonIndexed();
 
+            
+            positions = temp_geometry.attributes.position.array;
+            colors = temp_geometry.attributes.color.array;
+
+
             var geometry = new LineSegmentsGeometry();
-            geometry.setPositions(temp_geometry.attributes.position.array);
+            // geometry.attributes.position= temp_geometry.attributes.position;
+            geometry.setPositions(positions);
+            
 
+            geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+            geometry.setAttribute( 'sectionNum', new THREE.Float32BufferAttribute( sectionNums, 1 ) );
+            geometry.setAttribute( 'startNum', new THREE.Float32BufferAttribute( startNums, 1 ) );
+            // 这个count具体我不知道是啥，对于position.count可以理解为点的个数，且position.length正好是count的三倍
+            geometry.attributes.sectionNum.count = geometry.attributes.sectionNum.array.length;
+            geometry.attributes.startNum.count = geometry.attributes.startNum.array.length;
 
-            // geometry.attributes.sectionNum.array = sectionNums;
-            // geometry.attributes.startNum.array = startNums;
-            // // 这个count具体我不知道是啥，对于position.count可以理解为点的个数，且position.length正好是count的三倍
-            // geometry.attributes.sectionNum.count = geometry.attributes.sectionNum.array.length;
-            // geometry.attributes.startNum.count = geometry.attributes.startNum.array.length;
 
             matLine1 = new LineMaterial( {
 
@@ -92,37 +102,43 @@ function demo(){
                 dashed: false
         
             } );
-        
-            var linesG = new Line2( geometry, matLine1 );
+
             
+           // 默认初始透明度最大的下标在开头
+           geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( startNums, 1 ));
+
+
+           var vertexNum = geometry.attributes.position.count;
            
-            // var groupId;  // 组号
+           var opa = []; // 顶点透明度，用来改变线条透明度
+           for (var i = 0; i<vertexNum; i++){
+               opa.push(1);  // 默认都是1
+           }
+           geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
 
-            // var mats = [];
-
-            // for (var i =0; i<vertexNum; i+=2){
-            //     groupId = i/2;
-            //     geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
-
-            //     let material = new THREE.LineBasicMaterial({
-            //         // vertexColors: false,  // 千万不能设置为true！！！！血的教训
-            //         transparent: true, // 可定义透明度
-            //         opacity: 0,
-            //         depthWrite: false, 
-            //     });
-            //     mats.push(material);
-            // }
-            // var linesG = new THREE.LineSegments(geometry, mats);
-
-            // //need update 我不知道有没有用，感觉没用
-            // linesG.geometry.colorsNeedUpdate = true;
-            // linesG.geometry.groupsNeedUpdate = true;
-            // linesG.material.needsUpdate = true;
-            
            
-            scene.add(linesG);
-            // linesG.visible = false;
-            resolve();
+           var groupId;  // 组号
+
+           var mats = [];
+
+           for (var i =0; i<vertexNum; i+=2){
+               groupId = i/2;
+               geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
+
+               let material = new LineMaterial({
+                   // vertexColors: false,  // 千万不能设置为true！！！！血的教训
+                   transparent: true, // 可定义透明度
+                   opacity: 0,
+                   depthWrite: false,
+                   linewidth: 3, // in pixels
+               });
+               mats.push(material);
+           }
+           var linesG = new Line2(geometry, matLine1);
+           scene.add(linesG);
+           curLine = linesG;
+
+           resolve();
         });
         
     })
@@ -272,6 +288,8 @@ function animate(){
     // matLine.resolution.set( window.innerWidth, window.innerHeight );
     matLine1.resolution.set( window.innerWidth, window.innerHeight );
     // material1.resolution.set( window.innerWidth, window.innerHeight );
+
+    // Solution();
     render();
     stats.update();
 }
@@ -280,3 +298,12 @@ function render() {
     renderer.render( scene, camera );
 }
 
+
+function Solution(){
+    if(curLine!=undefined){
+        for(let i=0; i<curLine.geometry.groups.length; i++){
+            curLine.material[i].resolution.set( window.innerWidth, window.innerHeight );
+        }
+        
+    }
+}

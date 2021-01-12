@@ -17,8 +17,10 @@ const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 
 const edgeLen = 3000;  // 地形（海水、山脉）长度
 const edgeWid = edgeLen;  // 地形宽度
-const scaleHeight = 1000; //缩放高度
+const scaleHeight = 0.5; //缩放高度
 var biasZ = 2000;  // 海底山脉向下移动（默认为2000，如果生成地形这个值会更新）
+var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
+var re_depth = new Map();  // 反向映射，通过高度映射第几层
 
 let helper;  // 鼠标helper
 
@@ -122,6 +124,9 @@ function init() {
     var axesHelper = new THREE.AxesHelper(1500);
     scene.add(axesHelper);
 
+    // 加载深度数组
+    loadDepth();
+
     // 创建海底地形和海水
     // createTerrain();
     createSea();
@@ -187,6 +192,28 @@ function generateMountainHeight( width, height ) {
     // console.log(data)
     return data;
 }
+
+function loadDepth(){
+    var depth_path = ("./depth.json");
+    var json_data;
+    $.ajax({
+        url: depth_path,//json文件位置
+        type: "GET",//请求方式为get
+        dataType: "json", //返回数据格式为json
+        async: false,  // 设置成同步
+        success: function(res) {//请求成功完成后要执行的方法 
+            json_data = res;
+            depth_array = json_data["depth"];
+
+            // 反向映射
+            for(let i=0; i<depth_array.length; i++){
+                re_depth.set(depth_array[i], i);
+            }
+            console.log(re_depth);
+        }
+    })
+}
+
 
 /*
     生成地形顶点纹理数据？？
@@ -484,7 +511,8 @@ function createChannel(){
         for(let k =0; k<layerNum; k++){
             for(let i=0; i<rowNum; i++){
                 for(let j=0; j<colNum; j++){
-                    positions.push(i/rowNum,j/colNum,-k/layerNum);  // 把长和宽变成0～1之间，高变成0~-1之间
+                    // 把长和宽变成0～1之间，高变成真实-depth[k]
+                    positions.push(i/rowNum,j/colNum,-depth_array[k]);  
                 }
             }
         }
@@ -606,8 +634,8 @@ function loadEddiesForDays(){
                 // 改变顶点高度值
                 
                 for ( let j = 0;  j < positions.length; j += 3 ) {
-                    // positions[ j + 2 ] = arr[i]/50*scaleHeight;
-                    positions[j+2] = -positions[j+2];
+                    // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
+                    positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
                 }
 
                 geometry.scale(edgeLen, edgeWid, scaleHeight);
@@ -705,17 +733,16 @@ function initLineOpacity(curLine, k){
     转换后的xyz到数组i,j,k的映射
 */
 function xyz2ijk(x, y, z){
-    // console.log(x,y,z);
-    z = -z; // 把z翻上去
     var orix = x/edgeLen + 0.5;
     var oriy = y/edgeWid + 0.5;
-    var oriz = z/scaleHeight;
+    var oriz = -z/scaleHeight;
 
     // console.log(orix, oriy, oriz);
 
     var i = Math.floor(orix/0.002);
     var j = Math.floor(oriy/0.002);
-    var k = Math.floor(oriz/0.02);
+    var k = re_depth.get(oriz);
+    // console.log(oriz);
 
     return new Array(i, j, k);
 }

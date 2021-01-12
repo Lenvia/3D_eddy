@@ -3,7 +3,9 @@ import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 import { ImprovedNoise } from './node_modules/three/examples/jsm/math/ImprovedNoise.js';
 import { VTKLoader } from './VTKLoader2.js';
-
+import { Line2 } from './node_modules/three/examples/jsm/lines/Line2.js';
+import { LineMaterial } from './node_modules/three/examples/jsm/lines/LineMaterial.js';
+import { LineSegmentsGeometry } from './node_modules/three/examples/jsm/lines/LineSegmentsGeometry.js';
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 
@@ -129,8 +131,8 @@ function init() {
 
     // 创建海底地形和海水
     // createTerrain();
-    createSea();
-    createLand();
+    // createSea();
+    // createLand();
 
  
 
@@ -178,6 +180,7 @@ function loadDepth(){
             for(let i=0; i<depth_array.length; i++){
                 re_depth.set(depth_array[i], i);
             }
+            console.log(re_depth);
         }
     })
 
@@ -625,12 +628,13 @@ function loadEddiesForDays(){
             var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_5000.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
-            loader.load( vtk_path, function ( geometry ) {  // 异步加载
+            loader.load( vtk_path, function ( temp_geometry ) {  // 异步加载
                 
-                geometry.translate(-0.5, -0.5, 0);
+                temp_geometry.translate(-0.5, -0.5, 0);
 
                 // 不应该翻下去！！！！！！！！！！ 而是z值变负
-                var positions = geometry.attributes.position.array;
+                var positions = temp_geometry.attributes.position.array;
+                var colors;
                 // 改变顶点高度值
                 
                 for ( let j = 0;  j < positions.length; j += 3 ) {
@@ -638,16 +642,25 @@ function loadEddiesForDays(){
                     positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
                 }
 
-                geometry.scale(edgeLen, edgeWid, scaleHeight);
+                temp_geometry.scale(edgeLen, edgeWid, scaleHeight);
 
-                var sectionNums = geometry.attributes.sectionNum.array;
-                var startNums = geometry.attributes.startNum.array;
+                var sectionNums = temp_geometry.attributes.sectionNum.array;
+                var startNums = temp_geometry.attributes.startNum.array;
 
                 // 转化为无索引格式，用来分组
-                geometry = geometry.toNonIndexed();
+                temp_geometry = temp_geometry.toNonIndexed();
 
-                geometry.attributes.sectionNum.array = sectionNums;
-                geometry.attributes.startNum.array = startNums;
+                positions = temp_geometry.attributes.position.array;
+                colors = temp_geometry.attributes.color.array;
+
+
+                var geometry = new LineSegmentsGeometry();
+
+                geometry.setPositions(positions);  // 这里的positoin不是原有意义上的position
+                geometry.setAttribute( 'pos', new THREE.Float32BufferAttribute( positions, 3 ) );
+                geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+                geometry.setAttribute( 'sectionNum', new THREE.Float32BufferAttribute( sectionNums, 1 ) );
+				geometry.setAttribute( 'startNum', new THREE.Float32BufferAttribute( startNums, 1 ) );
                 // 这个count具体我不知道是啥，对于position.count可以理解为点的个数，且position.length正好是count的三倍
                 geometry.attributes.sectionNum.count = geometry.attributes.sectionNum.array.length;
                 geometry.attributes.startNum.count = geometry.attributes.startNum.array.length;
@@ -656,7 +669,7 @@ function loadEddiesForDays(){
                 geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( startNums, 1 ));
 
 
-                var vertexNum = geometry.attributes.position.count;
+                var vertexNum = geometry.attributes.pos.count;  // 由于position变了，只能用color来表示顶点数
                 
                 var opa = []; // 顶点透明度，用来改变线条透明度
                 for (var i = 0; i<vertexNum; i++){
@@ -664,6 +677,7 @@ function loadEddiesForDays(){
                 }
                 geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
 
+                // console.log(geometry);
                 
                 var groupId;  // 组号
 
@@ -673,26 +687,47 @@ function loadEddiesForDays(){
                     groupId = i/2;
                     geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
 
-                    let material = new THREE.LineBasicMaterial({
+                    let material = new LineMaterial({
                         // vertexColors: false,  // 千万不能设置为true！！！！血的教训
                         transparent: true, // 可定义透明度
+                        color: 0xffffff,
                         opacity: 0,
-                        depthWrite: false, 
+                        depthWrite: false,
+                        linewidth: 2, // in pixels
+                        dashed: false,
                     });
                     mats.push(material);
                 }
-                var linesG = new THREE.LineSegments(geometry, mats);
+
+                var matLine1 = new LineMaterial( {
+
+                    color: 0xffffff,
+                    linewidth: 3, // in pixels
+                    vertexColors: false,
+                    //resolution:  // to be set by renderer, eventually
+                    dashed: false
+            
+                } );
+
+                // var linesG = new Line2(geometry, mats);
+                var linesG = new Line2(geometry, matLine1);
+                // console.log(linesG);
 
                 //need update 我不知道有没有用，感觉没用
                 linesG.geometry.colorsNeedUpdate = true;
                 linesG.geometry.groupsNeedUpdate = true;
                 linesG.material.needsUpdate = true;
                 
-                initLineOpacity(linesG, 0.5);  // 初始化透明度
+                
+
+                // initLineOpacity(linesG, 0.5);  // 初始化透明度
                 linesG.name = "day"+String(d);  // day0, day1, ...
                 scene.add(linesG);
                 linesG.visible = false;
+
+                console.log(linesG);
                 resolve(i);
+                
             });
             
         })
@@ -735,13 +770,14 @@ function initLineOpacity(curLine, k){
 function xyz2ijk(x, y, z){
     var orix = x/edgeLen + 0.5;
     var oriy = y/edgeWid + 0.5;
-    var oriz = -z;
+    var oriz = -z/scaleHeight;
 
     // console.log(orix, oriy, oriz);
 
     var i = Math.floor(orix/0.002);
     var j = Math.floor(oriy/0.002);
     var k = re_depth.get(oriz);
+    // console.log(oriz);
 
     return new Array(i, j, k);
 }
@@ -782,7 +818,8 @@ function loadOneOWArray(path, d){
         var OW = [];
         var x,y,z;  // 点的当前坐标（缩放后）
         var i,j,k;  // 点对应的OW数组中的下标
-        var position = linesG.geometry.attributes.position.array;  // 看清属性
+        var position = linesG.geometry.attributes.pos.array;  // 看清属性
+        
         // console.log("postion数组读取完毕");
 
         var temp = new Array(3);
@@ -795,6 +832,8 @@ function loadOneOWArray(path, d){
                 z = position[q+2];
             
                 temp = xyz2ijk(x, y, z);
+                // console.log(temp);
+
                 i = temp[0];
                 j = temp[1];
                 k = temp[2];
@@ -1333,7 +1372,9 @@ function printColor(){
 function animate() {
     requestAnimationFrame( animate );
     render();
-    DyChange(0.5);
+    curLine.material.resolution.set( window.innerWidth, window.innerHeight );
+    // Solution();
+    // DyChange(0.5);
     stats.update();
 }
 
@@ -1364,6 +1405,15 @@ function DyChange(k){
     }
 }
 
+function Solution(){
+    if(curLine!=undefined){
+        for(let i=0; i<curLine.geometry.groups.length; i++){
+            curLine.material[i].resolution.set( window.innerWidth, window.innerHeight );
+        }
+        
+    }
+}
+
 
 function onMouseMove( event ) {
     // 将鼠标位置归一化为设备坐标。x 和 y 方向的取值范围是 (-1 to +1)
@@ -1385,3 +1435,4 @@ function onMouseMove( event ) {
     // 	helper.position.copy( intersects[ 0 ].point );
     // }
 }
+
