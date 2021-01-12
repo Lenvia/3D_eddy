@@ -2,6 +2,12 @@ import * as THREE from './node_modules/three/build/three.module.js';
 import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
 import { VTKLoader } from './VTKLoader2.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
+import { Line2 } from './node_modules/three/examples/jsm/lines/Line2.js';
+import { LineMaterial } from './node_modules/three/examples/jsm/lines/LineMaterial.js';
+import { LineGeometry } from './node_modules/three/examples/jsm/lines/LineGeometry.js';
+import { LineSegments2 } from './node_modules/three/examples/jsm/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from './node_modules/three/examples/jsm/lines/LineSegmentsGeometry.js';
+import { GeometryUtils } from './node_modules/three/examples/jsm/utils/GeometryUtils.js';
 
 // import { Line2 } from './node_modules/three/examples/jsm/lines/Line2.js'
 // import { LineGeometry } from './node_modules/three/examples/jsm/lines/LineGeometry.js'
@@ -12,6 +18,10 @@ var scene = new THREE.Scene();
 scene.background = new THREE.Color( 0xbfd1e5 );  // 浅蓝色
 var container, camera, renderer, controls, stats;
 
+var matLine;
+var matLine1;
+var material1;
+var linesG;
 
 //辅助坐标系
 var axesHelper = new THREE.AxesHelper(150);
@@ -23,105 +33,197 @@ scene.add(axesHelper);
 
 
 init();
+animate();
 
-function testCreate(){
-    const geometry = new THREE.PlaneBufferGeometry( 3, 3, 3-1, 3-1);
-    const positions = geometry.attributes.position.array;
+function demo(){
 
-    // PlaneBufferGeometry 的顶点排列是 先动x再动y，x从小到大，y从大到小！！！！！！！！！
-    // 改变顶点高度值
-    // for ( let i = 0, j = 0, l = positions.length; i < l; i ++, j += 3 ) {
-    //     positions[j+2] = 10;
+
+    // var positions = [
+    //     0, 0, 0,
+    //     0, 0, 1,
+    //     0, 1, 0,
+    //     0, 1, 1,
+    //     1, 0, 0,
+    //     1, 0, 1,
+    //     1, 1, 0,
+    //     1, 1, 1
+    // ];
+
+    // var indices = [3, 0, 0, 1, 2, 3];
+
+    var promise1 = new Promise((resolve, reject)=>{
+        // 加载一天的形状
+        var vtk_path = ("./20.vtk");
+        var loader = new VTKLoader();
+        console.log("loading", vtk_path);
+        loader.load( vtk_path, function ( temp_geometry ) {  // 异步加载
+            
+            temp_geometry.translate(-0.5, -0.5, 0);
+
+            // 不应该翻下去！！！！！！！！！！ 而是z值变负
+            var positions = temp_geometry.attributes.position.array;
+            // 改变顶点高度值
+
+
+            temp_geometry.scale(100, 100, 100);
+
+            // var sectionNums = temp_geometry.attributes.sectionNum.array;
+            // var startNums = temp_geometry.attributes.startNum.array;
+
+            // 转化为无索引格式，用来分组
+            temp_geometry = temp_geometry.toNonIndexed();
+
+            var geometry = new LineSegmentsGeometry();
+            geometry.setPositions(temp_geometry.attributes.position.array);
+
+
+            // geometry.attributes.sectionNum.array = sectionNums;
+            // geometry.attributes.startNum.array = startNums;
+            // // 这个count具体我不知道是啥，对于position.count可以理解为点的个数，且position.length正好是count的三倍
+            // geometry.attributes.sectionNum.count = geometry.attributes.sectionNum.array.length;
+            // geometry.attributes.startNum.count = geometry.attributes.startNum.array.length;
+
+            matLine1 = new LineMaterial( {
+
+                color: 0xffffff,
+                linewidth: 1, // in pixels
+                vertexColors: true,
+                //resolution:  // to be set by renderer, eventually
+                dashed: false
+        
+            } );
+        
+            var linesG = new Line2( geometry, matLine1 );
+            
+           
+            // var groupId;  // 组号
+
+            // var mats = [];
+
+            // for (var i =0; i<vertexNum; i+=2){
+            //     groupId = i/2;
+            //     geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
+
+            //     let material = new THREE.LineBasicMaterial({
+            //         // vertexColors: false,  // 千万不能设置为true！！！！血的教训
+            //         transparent: true, // 可定义透明度
+            //         opacity: 0,
+            //         depthWrite: false, 
+            //     });
+            //     mats.push(material);
+            // }
+            // var linesG = new THREE.LineSegments(geometry, mats);
+
+            // //need update 我不知道有没有用，感觉没用
+            // linesG.geometry.colorsNeedUpdate = true;
+            // linesG.geometry.groupsNeedUpdate = true;
+            // linesG.material.needsUpdate = true;
+            
+           
+            scene.add(linesG);
+            // linesG.visible = false;
+            resolve();
+        });
+        
+    })
+
+    
+    // const colors = [];
+    // for (let i =0; i<positions.length; i++){
+    //     colors.push(1);
     // }
 
-    positions[4*3+2] = 10;
+    // Line2 ( LineGeometry, LineMaterial )
 
-    var colors = [];
-    for ( let i = 0; i<positions.length; i++) {
-        colors.push(Math.random());
-    }
+    // var temp_geometry = new THREE.BufferGeometry();
+    // temp_geometry.setIndex(indices);
+    // temp_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
 
-    for(let i =2; i<positions.length; i+=3){
-        if(positions[i]==0){
-            colors[i] = 0;
-            colors[i-1] = 0;
-            colors[i-2] = 0;
-        }
-    }
-
-    geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+    // temp_geometry = temp_geometry.toNonIndexed();
+    
+    // console.log(temp_geometry.attributes.position.array)
 
 
+    // var geometry = new LineSegmentsGeometry();
+    // geometry.setPositions(temp_geometry.attributes.position.array);
 
-    // 不执行computeVertexNormals，没有顶点法向量数据
-    geometry.computeFaceNormals(); // needed for helper
+    // geometry.scale(100,100,100);
 
-    const material = new THREE.MeshBasicMaterial( { 
-        // map: texture,
-        // color: 0x000000,
-        transparent: true,
-        opacity: 0.5,  // 纹理透明度 
-        depthWrite: false,
-        vertexColors: true,
-        side: THREE.DoubleSide,
-    } );
 
-    var mesh = new THREE.Mesh( geometry, material);
-    scene.add( mesh );
-    console.log(mesh);
+    // matLine1 = new LineMaterial( {
 
+    //     color: 0xffffff,
+    //     linewidth: 1, // in pixels
+    //     vertexColors: true,
+    //     //resolution:  // to be set by renderer, eventually
+    //     dashed: false
+
+    // } );
+
+    // var line = new Line2( geometry, matLine1 );
+    // line.computeLineDistances();
+
+    // scene.add( line );
+    // console.log(line);
 }
 
-function createLand(){
-    // 生成陆地高度数据
-    var path = ("./whole_attributes_txt_file/".concat("depth.txt"));  // 默认盐都为0的地方都是陆地
-    var arr = [];
-    var promise1 = new Promise(function(resolve, reject) {
-        $.get(path, function(data) {
-            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
-            // console.log(items);
+function createLine2(){
+    var positions = [];
+    const colors = [];
+    const points = GeometryUtils.hilbert3D( new THREE.Vector3( 0, 0, 0 ), 20.0, 1, 0, 1, 2, 3, 4, 5, 6, 7 );
 
-            arr = items;
-            resolve(1);
-        });
-    });
+    // console.log(points);
 
-    promise1.then(()=>{
-        var geometry = new THREE.BufferGeometry();
-        var indices = [];
-        var positions = [];
+    const spline = new THREE.CatmullRomCurve3( points );
 
-        var rowNum, colNum;
-        // rowNum = arr.length; colNum = arr[0].length;
-        rowNum = 500; colNum = 500;
+    // console.log(spline);
 
-        for(let i=0; i<rowNum; i++){
-            for(let j=0; j<colNum; j++){
-                positions.push(i,j,arr[i][j]);
+    const divisions = Math.round( 12 * points.length );
+    const point = new THREE.Vector3();
+    const color = new THREE.Color();
 
-                if(arr[i][j]>0){
-                    if(i+1<rowNum && j+1<colNum && arr[i+1][j]!=0 && arr[i][j+1]!=0){
-                        // 与下边和右边顶点形成三角形
-                        indices.push(i*rowNum+j, (i+1)*rowNum+j, i*rowNum+j+1);
-                    }
+    for ( let i = 0, l = divisions; i < l; i ++ ) {
 
-                    if(i-1>=0 && j-1>=0 && arr[i-1][j]!=0 && arr[i][j-1]!=0){
-                        // 与上边和左边顶点形成三角形
-                        indices.push(i*rowNum+j, (i-1)*rowNum+j, i*rowNum+j-1);
-                    }
-                }
-            }
-        }
-        geometry.setIndex( indices );
+        const t = i / l;
 
-		geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
-        
-        var material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
-    
-        var mesh = new THREE.Mesh( geometry, material);
-        scene.add( mesh );
-        console.log(mesh);
-    });
+        spline.getPoint( t, point );
+        positions.push( point.x, point.y, point.z );
+
+        color.setHSL( t, 1.0, 0.5 );
+        colors.push( color.r, color.g, color.b );
+
+    }
+
+
+    // Line2 ( LineGeometry, LineMaterial )
+
+    const geometry = new LineSegmentsGeometry();
+    // console.log(geometry);
+
+    console.log(positions);
+    console.log(colors);
+    console.log(geometry.index);
+
+    geometry.setPositions( positions );
+    geometry.setColors( colors );
+
+
+
+    matLine = new LineMaterial( {
+
+        color: 0xffffff,
+        linewidth: 5, // in pixels
+        vertexColors: true,
+        //resolution:  // to be set by renderer, eventually
+        dashed: false
+
+    } );
+
+    var line = new Line2( geometry, matLine );
+    // line.computeLineDistances();
+    // line.scale.set( 1, 1, 1 );
+    scene.add( line );
+    console.log(line);
 }
 
 
@@ -129,17 +231,21 @@ function init(){
     container = document.getElementById( 'container' );
     container.innerHTML = "";
 
-    createLand();
+
+    // createLine2();
+    
+    demo();
+
     /**
      * 相机设置
      */
     var width = window.innerWidth; //窗口宽度
     var height = window.innerHeight; //窗口高度
     var k = width / height; //窗口宽高比
-    var s = 50; //三维场景显示范围控制系数，系数越大，显示的范围越大
+    var s = 100; //三维场景显示范围控制系数，系数越大，显示的范围越大
     //创建相机对象
     camera = new THREE.OrthographicCamera(-s * k, s * k, s, -s, 1, 1000);
-    camera.position.set(100, 150, 1000); //设置相机位置
+    camera.position.set(200, 200, 500); //设置相机位置
     camera.lookAt(scene.position); //设置相机方向(指向的场景对象)
 
 
@@ -163,6 +269,9 @@ function init(){
 
 function animate(){
     requestAnimationFrame( animate );
+    // matLine.resolution.set( window.innerWidth, window.innerHeight );
+    matLine1.resolution.set( window.innerWidth, window.innerHeight );
+    // material1.resolution.set( window.innerWidth, window.innerHeight );
     render();
     stats.update();
 }
