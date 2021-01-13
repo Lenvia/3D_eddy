@@ -132,7 +132,7 @@ function init() {
     // 创建海底地形和海水
     // createTerrain();
     // createSea();
-    // createLand();
+    createLand();
 
  
 
@@ -702,9 +702,10 @@ function loadEddiesForDays(){
                 var matLine1 = new LineMaterial( {
 
                     color: 0xffffff,
-                    linewidth: 3, // in pixels
+                    linewidth: 2, // in pixels
                     vertexColors: false,
                     //resolution:  // to be set by renderer, eventually
+                    depthWrite: false,
                     dashed: false
             
                 } );
@@ -1372,7 +1373,8 @@ function printColor(){
 function animate() {
     requestAnimationFrame( animate );
     render();
-    curLine.material.resolution.set( window.innerWidth, window.innerHeight );
+    if(curLine!=undefined)
+        curLine.material.resolution.set( window.innerWidth, window.innerHeight );
     // Solution();
     // DyChange(0.5);
     stats.update();

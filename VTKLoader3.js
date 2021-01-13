@@ -6,8 +6,11 @@ import {
 	Loader,
 	LoaderUtils
 } from "./node_modules/three/build/three.module.js";
+import * as THREE from './node_modules/three/build/three.module.js';
 import { Inflate } from "./node_modules/three/examples/jsm/libs/inflate.module.min.js";
-import { LineSegmentsGeometry } from './node_modules/three/examples/jsm/lines/LineSegmentsGeometry.js'
+import { Line2 } from './node_modules/three/examples/jsm/lines/Line2.js';
+import { LineMaterial } from './node_modules/three/examples/jsm/lines/LineMaterial.js';
+import { LineSegmentsGeometry } from './node_modules/three/examples/jsm/lines/LineSegmentsGeometry.js';
 
 var VTKLoader = function ( manager ) {
 
@@ -343,9 +346,13 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 			}
 
 			var geometry = new LineSegmentsGeometry();
-			
+			// console.log(geometry);
+
 			geometry.setIndex( indices );
 			geometry.setAttribute( 'position', new Float32BufferAttribute( positions, 3 ) );  //每一个position元素都是xyz三元组
+
+			// console.log(positions);
+			// geometry.setPositions(positions);
 
 			// console.log(indices);
 			// console.log("indices.length: ", indices.length);
@@ -359,10 +366,10 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 				// 换成Math.random()就是五颜六色的涡旋
 				// colors.push(Math.random());
 
-			if (sectionNums.length != 0){
-				geometry.setAttribute( 'sectionNum', new Float32BufferAttribute( sectionNums, 1 ) );
-				geometry.setAttribute( 'startNum', new Float32BufferAttribute( startNums, 1 ) );
-			}
+			// if (sectionNums.length != 0){
+			// 	geometry.setAttribute( 'sectionNum', new Float32BufferAttribute( sectionNums, 1 ) );
+			// 	geometry.setAttribute( 'startNum', new Float32BufferAttribute( startNums, 1 ) );
+			// }
 
 
 			if ( normals.length === positions.length ) {  //设置每一个点的法线
@@ -376,6 +383,7 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 				if ( colors.length === positions.length ) {  // 顶点基础上的染色
 
 					geometry.setAttribute( 'color', new Float32BufferAttribute( colors, 3 ) );
+					// geometry.setColors( colors );
 
 				}
 
@@ -407,7 +415,7 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 			}
 
-
+			console.log(geometry);
 			return geometry;
 
 		}

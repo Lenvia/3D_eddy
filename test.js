@@ -37,21 +37,6 @@ init();
 animate();
 
 function demo(){
-
-
-    // var positions = [
-    //     0, 0, 0,
-    //     0, 0, 1,
-    //     0, 1, 0,
-    //     0, 1, 1,
-    //     1, 0, 0,
-    //     1, 0, 1,
-    //     1, 1, 0,
-    //     1, 1, 1
-    // ];
-
-    // var indices = [3, 0, 0, 1, 2, 3];
-
     var promise1 = new Promise((resolve, reject)=>{
         // 加载一天的形状
         var vtk_path = ("./20.vtk");
@@ -95,92 +80,55 @@ function demo(){
 
             matLine1 = new LineMaterial( {
 
-                color: 0xffffff,
+                color: 0x123456,
                 linewidth: 1, // in pixels
-                vertexColors: true,
+                vertexColors: false,
                 //resolution:  // to be set by renderer, eventually
                 dashed: false
         
             } );
 
+
+            var vertexNum = geometry.attributes.color.count;
             
-           // 默认初始透明度最大的下标在开头
-           geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( startNums, 1 ));
+            var opa = []; // 顶点透明度，用来改变线条透明度
+            for (var i = 0; i<vertexNum; i++){
+                opa.push(1);  // 默认都是1
+            }
+            geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
 
+            
+            var groupId;  // 组号
 
-           var vertexNum = geometry.attributes.position.count;
-           
-           var opa = []; // 顶点透明度，用来改变线条透明度
-           for (var i = 0; i<vertexNum; i++){
-               opa.push(1);  // 默认都是1
-           }
-           geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
+            var mats = [];
 
-           
-           var groupId;  // 组号
-
-           var mats = [];
-
-           for (var i =0; i<vertexNum; i+=2){
+            for (var i =0; i<vertexNum; i+=2){
                groupId = i/2;
                geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
 
                let material = new LineMaterial({
-                   // vertexColors: false,  // 千万不能设置为true！！！！血的教训
+                   vertexColors: false,  // 千万不能设置为true！！！！血的教训
+                   color: 0xffffff,
                    transparent: true, // 可定义透明度
-                   opacity: 0,
+                   opacity: 1,
                    depthWrite: false,
                    linewidth: 3, // in pixels
                });
                mats.push(material);
-           }
-           var linesG = new Line2(geometry, matLine1);
-           scene.add(linesG);
-           curLine = linesG;
+            }
+            var linesG = new Line2(geometry, matLine1);
+            // var linesG = new Line2(geometry, mats);
+            scene.add(linesG);
+            curLine = linesG;
 
-           resolve();
+            console.log(curLine);
+
+            resolve();
         });
         
     })
 
-    
-    // const colors = [];
-    // for (let i =0; i<positions.length; i++){
-    //     colors.push(1);
-    // }
 
-    // Line2 ( LineGeometry, LineMaterial )
-
-    // var temp_geometry = new THREE.BufferGeometry();
-    // temp_geometry.setIndex(indices);
-    // temp_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
-
-    // temp_geometry = temp_geometry.toNonIndexed();
-    
-    // console.log(temp_geometry.attributes.position.array)
-
-
-    // var geometry = new LineSegmentsGeometry();
-    // geometry.setPositions(temp_geometry.attributes.position.array);
-
-    // geometry.scale(100,100,100);
-
-
-    // matLine1 = new LineMaterial( {
-
-    //     color: 0xffffff,
-    //     linewidth: 1, // in pixels
-    //     vertexColors: true,
-    //     //resolution:  // to be set by renderer, eventually
-    //     dashed: false
-
-    // } );
-
-    // var line = new Line2( geometry, matLine1 );
-    // line.computeLineDistances();
-
-    // scene.add( line );
-    // console.log(line);
 }
 
 function createLine2(){
@@ -286,7 +234,8 @@ function init(){
 function animate(){
     requestAnimationFrame( animate );
     // matLine.resolution.set( window.innerWidth, window.innerHeight );
-    matLine1.resolution.set( window.innerWidth, window.innerHeight );
+    if(matLine1!=undefined)
+        matLine1.resolution.set( window.innerWidth, window.innerHeight );
     // material1.resolution.set( window.innerWidth, window.innerHeight );
 
     // Solution();
