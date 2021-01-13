@@ -15,8 +15,6 @@ var maxH;  // 产生的山脉最大高度
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 
-const renderWidth = 0.6*window.innerWidth, renderHeight = window.innerHeight;
-
 const edgeLen = 3000;  // 地形（海水、山脉）长度
 const edgeWid = edgeLen;  // 地形宽度
 const scaleHeight = 0.5; //缩放高度
@@ -99,7 +97,7 @@ function init() {
 
     renderer = new THREE.WebGLRenderer( { antialias: true } );  // 抗锯齿
     renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
-    renderer.setSize( renderWidth, renderHeight );  // 尺寸
+    renderer.setSize( window.innerWidth, window.innerHeight );  // 尺寸
 
 
     container.appendChild( renderer.domElement );
@@ -108,11 +106,7 @@ function init() {
     scene.background = new THREE.Color( 0xbfd1e5 );  // 浅蓝色
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
-    camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
-    camera.position.z = 1000;
-    camera.position.x = edgeLen*1.5;
-    camera.position.y = edgeWid*1.5;
-
+    camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 10, 20000 );
 
     controls = new OrbitControls( camera, renderer.domElement );
     controls.minDistance = 50;   // 最近距离
@@ -120,7 +114,9 @@ function init() {
     // controls.maxPolarAngle = Math.PI / 2;  // 限制竖直方向上最大旋转角度。（y轴正向为0度）
     controls.target.z = 0;
 
-    
+    camera.position.z = controls.target.z+500;
+    camera.position.x = edgeLen;
+    camera.position.y = edgeWid;
     controls.update();
 
 
@@ -134,7 +130,7 @@ function init() {
     // 创建海底地形和海水
     // createTerrain();
     createSea();
-    // createLand();
+    createLand();
 
  
 
@@ -161,9 +157,9 @@ function init() {
 }
 
 function onWindowResize() {
-    camera.aspect = renderWidth / renderHeight;
+    camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize( renderWidth, renderHeight );
+    renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
 /*
@@ -600,9 +596,7 @@ function showProgressModal(frameType){  // 假设frameType为"loadingFrames"
 
 	progressBar.appendChild(progressLabel);
 	progressBar.appendChild(progressBackground);
-    progressModal.appendChild(progressBar);
-    
-    container.appendChild(progressModal)
+	progressModal.appendChild(progressBar);
 }
 
 /*

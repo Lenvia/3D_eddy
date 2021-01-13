@@ -7,20 +7,18 @@ import { VTKLoader } from './VTKLoader2.js';
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 
-let container, stats;  // 容器，状态监控器
-let camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
+var container, stats;  // 容器，状态监控器
+var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 let mesh, texture;  // 山脉网格， 纹理
 var maxH;  // 产生的山脉最大高度
 
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 
-const edgeLen = 3000;  // 地形（海水、山脉）长度
-const edgeWid = edgeLen;  // 地形宽度
-const scaleHeight = 0.5; //缩放高度
-var biasZ = 2000;  // 海底山脉向下移动（默认为2000，如果生成地形这个值会更新）
-var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
-var re_depth = new Map();  // 反向映射，通过高度映射第几层
+const renderWidth = 0.6*window.innerWidth, renderHeight = window.innerHeight;
+
+
+
 
 let helper;  // 鼠标helper
 
@@ -39,18 +37,14 @@ var progressModal, progressBar, progressLabel, progressBackground;
 var frameLabel;
 
 
-// 场上显示的模型
-var existModel = []
-
-
 // gui参数
 var gui;
 var default_opt;  // 默认设置
 var custom_opt; // 定制设置
 
-var curLine;
 
-var currentDay;  // 当前日期
+
+
 var currentAttr;  // 当前属性
 var upValue;  // 属性上界
 var downValue;  // 属性下界
@@ -97,7 +91,7 @@ function init() {
 
     renderer = new THREE.WebGLRenderer( { antialias: true } );  // 抗锯齿
     renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
-    renderer.setSize( window.innerWidth, window.innerHeight );  // 尺寸
+    renderer.setSize( renderWidth, renderHeight );  // 尺寸
 
 
     container.appendChild( renderer.domElement );
@@ -106,7 +100,11 @@ function init() {
     scene.background = new THREE.Color( 0xbfd1e5 );  // 浅蓝色
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
-    camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 10, 20000 );
+    camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
+    camera.position.z = 1000;
+    camera.position.x = edgeLen*1.5;
+    camera.position.y = edgeWid*1.5;
+
 
     controls = new OrbitControls( camera, renderer.domElement );
     controls.minDistance = 50;   // 最近距离
@@ -114,9 +112,7 @@ function init() {
     // controls.maxPolarAngle = Math.PI / 2;  // 限制竖直方向上最大旋转角度。（y轴正向为0度）
     controls.target.z = 0;
 
-    camera.position.z = controls.target.z+500;
-    camera.position.x = edgeLen;
-    camera.position.y = edgeWid;
+    
     controls.update();
 
 
@@ -130,7 +126,7 @@ function init() {
     // 创建海底地形和海水
     // createTerrain();
     createSea();
-    createLand();
+    // createLand();
 
  
 
@@ -157,9 +153,9 @@ function init() {
 }
 
 function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.aspect = renderWidth / renderHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setSize( renderWidth, renderHeight );
 }
 
 /*
@@ -596,7 +592,9 @@ function showProgressModal(frameType){  // 假设frameType为"loadingFrames"
 
 	progressBar.appendChild(progressLabel);
 	progressBar.appendChild(progressBackground);
-	progressModal.appendChild(progressBar);
+    progressModal.appendChild(progressBar);
+    
+    container.appendChild(progressModal)
 }
 
 /*
