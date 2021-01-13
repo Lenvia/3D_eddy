@@ -1,8 +1,23 @@
+#container{
+	position: absolute;
+	right: 0px;
+	top: 0px;
+	width: 60%;
+	height: 100%;
+	background-color: #bfd1e5;
+}
 
-/* id 选择器以 "#" 来定义。 */
-/* 类选择器以一个点号显示 */
+#container2{
+	position: absolute;
+	left: 0px;
+	bottom: 0px;
+	width: 40%;
+	height: 50%;
+	background-color: #1b76dd;
+}
+
 #progressModal {
-	width: 500px;
+	width: 50%;
 	min-height: 45px;
 
 	position: absolute;
@@ -63,33 +78,4 @@
 	z-index:10;
 }
 
-#container{
-	
-}
 
-#test{
-	width: 500px;
-	min-height: 45px;
-
-	position: absolute;
-	left: 50%;
-	top: 60%;
-	transform: translate(-50%, -50%);
-
-	padding: 3px;
-	border-radius: 5px;
-
-	background-color: #333;
-	color: white;
-	font-family: sans-serif;
-	font-weight: bold;
-
-	z-index: 1000000;
-}
-
-#test #name {
-	display: block;
-
-	text-align: center;
-	text-transform: capitalize;
-}

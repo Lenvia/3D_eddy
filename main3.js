@@ -1,72 +1,719 @@
 import * as THREE from './node_modules/three/build/three.module.js';
 import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
-import { VTKLoader } from './VTKLoader2.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
+import { ImprovedNoise } from './node_modules/three/examples/jsm/math/ImprovedNoise.js';
+import { VTKLoader } from './VTKLoader2.js';
 
-// import { Line2 } from './node_modules/three/examples/jsm/lines/Line2.js'
-// import { LineGeometry } from './node_modules/three/examples/jsm/lines/LineGeometry.js'
-// import { LineMaterial } from './node_modules/three/examples/jsm/lines/LineMaterial.js'
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
-var scene = new THREE.Scene();
 
-var container, camera, renderer, controls, stats;
+let container, stats;  // 容器，状态监控器
+let camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
+let mesh, texture;  // 山脉网格， 纹理
+var maxH;  // 产生的山脉最大高度
+
+const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
+const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
+
+const renderWidth = 0.6*window.innerWidth, renderHeight = window.innerHeight;
+
+const edgeLen = 3000;  // 地形（海水、山脉）长度
+const edgeWid = edgeLen;  // 地形宽度
+const scaleHeight = 0.5; //缩放高度
+var biasZ = 2000;  // 海底山脉向下移动（默认为2000，如果生成地形这个值会更新）
+var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
+var re_depth = new Map();  // 反向映射，通过高度映射第几层
+
+let helper;  // 鼠标helper
+
+const raycaster = new THREE.Raycaster();  // 射线
+const mouse = new THREE.Vector2();  // 鼠标二维坐标
+
+const days = [];  // 一共60天
+const exDays = [-1]; // 扩展天数，第一个是-1
+for (var i =0; i<=59; i++){
+    days.push(i);
+    exDays.push(i);
+}
+
+// 进度条模块
+var progressModal, progressBar, progressLabel, progressBackground;
+var frameLabel;
 
 
-loadVTK();
+// 场上显示的模型
+var existModel = []
 
-//辅助坐标系
-var axesHelper = new THREE.AxesHelper(150);
-scene.add(axesHelper);
 
-//环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
-var ambient = new THREE.AmbientLight(0xffffff);
-scene.add(ambient);
+// gui参数
+var gui;
+var default_opt;  // 默认设置
+var custom_opt; // 定制设置
+
+var curLine;
+
+var currentDay;  // 当前日期
+var currentAttr;  // 当前属性
+var upValue;  // 属性上界
+var downValue;  // 属性下界
+var difValue;  // 上下界差值
+var mid1, mid2, mid3, mid4;  // 中间点
+var keepValue = true;  // 保持设置
+var hideChannel = false; // 隐藏地形
+
+// 当前gui颜色面板值
+var currentColor0 = [];
+var currentColor1 = [];
+var currentColor2 = [];
+var currentColor3 = [];
+var currentColor4 = [];
+//当前gui透明度面板值
+var currentOpacity0
+var currentOpacity1;
+var currentOpacity2;
+var currentOpacity3;
+var currentOpacity4;
+
+// 实现双向绑定（重置面板）
+var color0_ctrl;
+var color1_ctrl;
+var color2_ctrl;
+var color3_ctrl;
+var color4_ctrl;
+
+var opa0_ctrl;
+var opa1_ctrl;
+var opa2_ctrl;
+var opa3_ctrl;
+var opa4_ctrl;
+
+
 
 
 init();
 
 
-
-
-function init(){
+function init() {
     container = document.getElementById( 'container' );
     container.innerHTML = "";
 
-    /**
-     * 相机设置
-     */
-    var width = window.innerWidth; //窗口宽度
-    var height = window.innerHeight; //窗口高度
-    var k = width / height; //窗口宽高比
-    var s = 1; //三维场景显示范围控制系数，系数越大，显示的范围越大
-    //创建相机对象
-    camera = new THREE.OrthographicCamera(-s * k, s * k, s, -s, 1, 1000);
-    camera.position.set(100, 150, 100); //设置相机位置
-    camera.lookAt(scene.position); //设置相机方向(指向的场景对象)
+    renderer = new THREE.WebGLRenderer( { antialias: true } );  // 抗锯齿
+    renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
+    renderer.setSize( renderWidth, renderHeight );  // 尺寸
 
-    camera.position.y = 10;
-    camera.position.z = 10;
-    camera.position.x = 10;
-
-    /**
-     * 创建渲染器对象
-     */
-    renderer = new THREE.WebGLRenderer();
-    renderer.setSize(width, height);//设置渲染区域尺寸
-    // renderer.setClearColor(0xb9d3ff, 1); //设置背景颜色
-    document.body.appendChild(renderer.domElement); //body元素中插入canvas对象
-
-    controls = new OrbitControls( camera, renderer.domElement );
-    controls.addEventListener('change', render);//监听鼠标、键盘事件
 
     container.appendChild( renderer.domElement );
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color( 0xbfd1e5 );  // 浅蓝色
+
+    // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
+    camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
+    camera.position.z = 1000;
+    camera.position.x = edgeLen*1.5;
+    camera.position.y = edgeWid*1.5;
+
+
+    controls = new OrbitControls( camera, renderer.domElement );
+    controls.minDistance = 50;   // 最近距离
+    controls.maxDistance = 10000;  // 最远距离
+    // controls.maxPolarAngle = Math.PI / 2;  // 限制竖直方向上最大旋转角度。（y轴正向为0度）
+    controls.target.z = 0;
+
+    
+    controls.update();
+
+
+    // 辅助坐标系
+    var axesHelper = new THREE.AxesHelper(1500);
+    scene.add(axesHelper);
+
+    // 加载深度数组
+    loadDepth();
+
+    // 创建海底地形和海水
+    // createTerrain();
+    createSea();
+    // createLand();
+
+ 
+
+    // 显示等待条
+    showProgressModal("loadingFrames");
+    // 加载涡旋模型
+    loadEddiesForDays();
+    
+    // 设置交互面板
+    setGUI();
+
+    //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
+    var ambient = new THREE.AmbientLight(0xffffff);
+    scene.add(ambient);
+
+    container.addEventListener( 'mousemove', onMouseMove, false );
+
     stats = new Stats();
     container.appendChild( stats.dom );
+
+    // 窗口缩放时触发
+    window.addEventListener( 'resize', onWindowResize, false );
+
 }
 
-function initLineOpacity(curLine){
-    var k = 0.5; // 轨迹段数和长线总段数只比
+function onWindowResize() {
+    camera.aspect = renderWidth / renderHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( renderWidth, renderHeight );
+}
+
+/*
+    生成地形顶点高度数据
+*/
+function generateMountainHeight( width, height ) {
+    // 总的顶点数据量width * height
+    const size = width * height, data = new Uint8Array( size );
+    // ImprovedNoise来实现地形高度数据的随机生成。perlin —— 柏林噪声
+    const perlin = new ImprovedNoise();
+
+    // const z = Math.random() * 100; // z值不同 每次执行随机出来的地形效果不同
+    const z = 100;  // 这里不是控制高度的，而是整体地形。 如果z值固定，每次刷新都是一样的山脉（但内部高度不一样）
+
+    // 控制地面显示效果  可以尝试0.01  0.1  1等不值
+    // 0.1凹凸不平的地面效果  1山脉地形效果
+    let quality = 1;
+
+    for ( let j = 0; j < 4; j ++ ) {
+        for ( let i = 0; i < size; i ++ ) {
+            // x的值0 1 2 3 4 5 6...
+            const x = i % width, y = ~ ~ ( i / width );  //~表示按位取反 两个~就是按位取反后再取反。 ~~相当于Math.floor(),效率高一点
+            // 通过噪声生成数据
+            data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z ) * quality * 1.25 );
+        }
+        // 循环执行的时候，quality累乘  乘的系数是1  显示效果平面
+        quality *= 5;
+    }
+
+    // console.log(data)
+    return data;
+}
+
+function loadDepth(){
+    var depth_path = ("./depth.json");
+    var json_data;
+    $.ajax({
+        url: depth_path,//json文件位置
+        type: "GET",//请求方式为get
+        dataType: "json", //返回数据格式为json
+        async: false,  // 设置成同步
+        success: function(res) {//请求成功完成后要执行的方法 
+            json_data = res;
+            depth_array = json_data["depth"];
+
+            // 反向映射
+            for(let i=0; i<depth_array.length; i++){
+                re_depth.set(depth_array[i], i);
+            }
+            console.log(re_depth);
+        }
+    })
+}
+
+
+/*
+    生成地形顶点纹理数据？？
+*/
+function generateMountainTexture( data, width, height ) {
+    // bake lighting into texture
+    let context, image, imageData, shade;
+
+    const vector3 = new THREE.Vector3( 0, 0, 0 );
+
+    const sun = new THREE.Vector3( 1, 1, 1 );
+    sun.normalize();
+
+    const canvas = document.createElement( 'canvas' );  // 创建一个画布对象
+    canvas.width = width;
+    canvas.height = height;
+
+    context = canvas.getContext( '2d' );  // getContext() 方法可返回一个对象，该对象提供了用于在画布上绘图的方法和属性。
+    context.fillStyle = '#000';  // 设置或返回用于填充绘画的颜色、渐变或模式
+    context.fillRect( 0, 0, width, height );  // 绘制“被填充”的矩形。 左上角坐标，宽度，高度
+
+    // 返回 ImageData 对象，该对象为画布上指定的矩形复制像素数据
+    // 每个像素需要占用4位数据，分别是r,g,b,alpha透明通道
+    image = context.getImageData( 0, 0, canvas.width, canvas.height );
+    imageData = image.data;  // 仍然指向同一个地址
+    // 光影效果
+    // j的总范围也就是[0, width * height)
+    for ( let i = 0, j = 0, l = imageData.length; i < l; i += 4, j ++ ) {
+        vector3.x = data[ j - 2 ] - data[ j + 2 ];
+        vector3.y = data[ j - width * 2 ] - data[ j + width * 2 ];
+        vector3.z = 2;
+        vector3.normalize();
+
+        // 阴影？
+        shade = vector3.dot( sun );
+
+        // 山体颜色
+        imageData[ i ] = ( 96 + shade * 128 ) * ( 0.5 + data[ j ] * 0.007 ) * 0;
+        imageData[ i + 1 ] = ( 32 + shade * 96 ) * ( 0.5 + data[ j ] * 0.007 ) * 0.3;
+        imageData[ i + 2 ] = ( shade * 96 ) * ( 0.5 + data[ j ] * 0.007 ) * 0.7;
+
+    }
+
+    // 用于将ImagaData对象的数据填写到canvas中，起到覆盖canvas中
+    context.putImageData( image, 0, 0 );  // (img对象, 左上角x, 左上角y)
+
+    // Scaled 4x
+    // 我不是很懂为什么要乘4，只要保证canvasScaled和下面context的倍数相同，整体问题不大
+    const canvasScaled = document.createElement( 'canvas' );
+    var zoomDegree = 4;  // 缩放倍数
+    canvasScaled.width = width * zoomDegree;
+    canvasScaled.height = height * zoomDegree;
+
+    context = canvasScaled.getContext( '2d' );
+    context.scale( zoomDegree, zoomDegree );  // 宽度、高度缩放倍数
+    context.drawImage( canvas, 0, 0 );
+
+    image = context.getImageData( 0, 0, canvasScaled.width, canvasScaled.height );  //(x,y,width,height)
+    imageData = image.data;
+
+    // 这里不太明白，我注释掉之后没啥变化？
+    for ( let i = 0, l = imageData.length; i < l; i += 4 ) {
+        const v = ~ ~ ( Math.random() * 5 );  
+        imageData[ i ] += v;
+        imageData[ i + 1 ] += v;
+        imageData[ i + 2 ] += v;
+    }
+    context.putImageData( image, 0, 0 );
+    return canvasScaled;
+}
+
+/*
+    设置海底、海水、陆地
+*/
+
+function createTerrain(){
+    // 地形顶点高度数据
+    const data = generateMountainHeight( worldWidth, worldDepth );
+
+    // 创建一个平面地形，行列两个方向顶点数据分别为width，height
+    // PlaneBufferGeometry(width, height, widthSegments, heightSegments) 后两个参数是分段数
+    const geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, worldWidth - 1, worldDepth - 1 );
+
+    // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
+    const positions = geometry.attributes.position.array;
+    // console.log(positions);
+
+    // 改变顶点高度值
+    maxH = data[0] * 10;
+    for ( let i = 0, j = 0, l = positions.length; i < l; i ++, j += 3 ) {
+        positions[ j + 2 ] = data[ i ] * 10;
+        if(maxH < positions[j + 2])  // 找出最高的
+            maxH = positions[j + 2]
+    }
+
+    biasZ = 1.5*maxH;
+    console.log("maxH:", maxH);
+
+    // 不执行computeVertexNormals，没有顶点法向量数据
+    geometry.computeFaceNormals(); // needed for helper
+
+    // 设置海底！
+    
+    geometry.translate(0, 0, -biasZ);
+
+    // generateMountainTexture返回一个画布对象
+    texture = new THREE.CanvasTexture( generateMountainTexture( data, worldWidth, worldDepth ) );
+    // wrapS/wrapT 纹理在水平和垂直方向的扩展方式
+    texture.wrapS = THREE.ClampToEdgeWrapping;  // 纹理边缘像素会被拉伸，以填满剩下的空间。
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    const material = new THREE.MeshBasicMaterial( { 
+        map: texture,
+        transparent: true,
+        opacity: 0.3,  // 纹理透明度 
+        depthWrite: false, 
+    } );
+
+    mesh = new THREE.Mesh( geometry, material);
+    scene.add( mesh );
+}
+
+function createSea(){
+    // 海水箱子的长、宽
+    var boxLen = edgeLen, boxWid = edgeLen;
+    const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
+    const material2 = new THREE.MeshLambertMaterial({
+        // color: 0x1E90FF,
+        color: 0x191970,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false, 
+        vertexColors: true,
+    }); //材质对象Material
+
+    geometry2.translate(0, 0, -biasZ/2);
+    var mesh2 = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
+    mesh2.position.set(0,0,0);
+    // console.log(mesh2);
+    scene.add(mesh2); //网格模型添加到场景中
+}
+
+function createLand(){
+    // 生成第0层平面
+    var path = ("./whole_attributes_txt_file/".concat("surface.txt"));  // 默认盐都为0的地方都是陆地
+    var arr = [];
+    var promise1 = new Promise(function(resolve, reject) {
+        $.get(path, function(data) {
+            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+            items.pop();
+            // console.log(items);
+
+            arr = items;
+            resolve(1);
+        });
+    });
+
+    promise1.then(()=>{
+        var planeGeometry = new THREE.BufferGeometry();
+        var indices = [];
+        var positions = [];  // 上平面
+        // var positions2 = [];  // 内部竖直
+        // var positions3 = [];  // 外部竖直
+
+        var rowNum, colNum;  // 行、列数量
+        rowNum = arr.length; colNum = arr[0].length;
+        var halfNum = rowNum*colNum;  // 一半顶点数
+
+        // console.log(arr);
+        /*
+            上平面三角形
+        */
+
+        for(let i=0; i<rowNum; i++){
+            for(let j=0; j<colNum; j++){
+                // 上平面500*500个点
+                positions.push(i/rowNum,j/colNum,0);  // 先把长和宽变成0～1之间
+                if(arr[i][j]==0){
+                    if(i+1<rowNum && j+1<colNum && arr[i+1][j]==0 && arr[i][j+1]==0){
+                        // 与下边和右边顶点形成三角形（上平面）
+                        indices.push(i*colNum+j, (i+1)*colNum+j, i*colNum+j+1);
+                    }
+
+                    if(i-1>=0 && j-1>=0 && arr[i-1][j]==0 && arr[i][j-1]==0){
+                        // 与上边和左边顶点形成三角形（上平面）
+                        indices.push(i*colNum+j, (i-1)*colNum+j, i*colNum+j-1);
+                    }
+                }
+            }
+        }
+        // console.log(indices);
+
+        planeGeometry.setIndex( indices );
+		planeGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+        // 与模型保持同等长宽缩放，高度可以不变
+        planeGeometry.translate(-0.5, -0.5, 1);
+        planeGeometry.scale(edgeLen, edgeWid, 1);
+
+        var material = new THREE.MeshBasicMaterial( {
+            color: 0xA0522D,
+            side: THREE.DoubleSide,
+            transparent: true, // 可定义透明度
+            opacity: 0.9,
+        } );
+    
+        var mesh = new THREE.Mesh( planeGeometry, material);
+        mesh.name = "surface";
+        scene.add( mesh );
+
+
+        createChannel();
+        
+    });
+}
+
+// 根据盐度数据建立峡谷
+function createChannel(){
+    var path = ("./whole_attributes_txt_file/SALT/".concat("SALT_0.txt"));  // 默认盐都为0的地方都是陆地
+    var arr;
+    var promise1 = new Promise(function(resolve, reject) {
+        $.get(path, function(data) {
+            // 加载盐度数组
+            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+            items.pop(); // 去除结尾空格
+            // console.log(items);
+        
+            // (经度, 纬度, 层)
+            arr = new Array(500);
+            for (var i = 0; i < arr.length; i++) {
+                arr[i] = new Array(500);
+                for (var j = 0; j < arr[i].length; j++) {
+                    arr[i][j] = new Array(50);
+                    for (var k = 0; k<arr[i][j].length; k++){
+                        arr[i][j][k] = items[i][j*arr[i][j].length+k];
+                    }
+                }
+            }
+            resolve(1);
+        });
+    });
+
+    promise1.then(()=>{
+        // 设置竖直高度，用同样的顶点，所以positions可以不变
+        var heightGeometry = new THREE.BufferGeometry();
+        var indices = [];
+        var positions = [];
+        
+
+        var rowNum, colNum, layerNum;
+        rowNum = arr.length; colNum = arr[0].length;
+        layerNum = arr[0][0].length;
+
+        var leftBound = new Array(layerNum);  // leftBound[k][i] 表示第k层第i行的左边界下标
+        var rightBound = new Array(layerNum);
+
+        var layerVertexNum = rowNum*colNum;
+
+        // console.log(rowNum, colNum, layerNum);
+
+        var curLB, curRB;
+        // 寻找第一个盐度非0值
+        for(let k =0; k<layerNum; k++){
+            leftBound[k] = new Array(rowNum);
+            // 对于第k层
+            for(let i=0; i<rowNum; i++){
+                curLB = -1;
+                for(let j=0; j<colNum; j++){
+                    if(arr[i][j][k]!=0){
+                        curLB = j;
+                        break;
+                    }
+                }
+                leftBound[k][i] = (curLB);
+            }
+        }
+
+        // 寻找从后面数第一个盐度非0值
+        for(let k =0; k<layerNum; k++){
+            rightBound[k] = new Array(rowNum);
+            // 对于第k层
+            for(let i=0; i<rowNum; i++){
+                curRB = -1;
+                for(let j=colNum-1; j>=0; j--){
+                    if(arr[i][j][k]!=0){
+                        curRB = j;
+                        break;
+                    }
+                }
+                rightBound[k][i] = (curRB);
+            }
+        }
+
+        // console.log(leftBound);
+        // console.log(rightBound);
+
+        for(let k =0; k<layerNum; k++){
+            for(let i=0; i<rowNum; i++){
+                for(let j=0; j<colNum; j++){
+                    // 把长和宽变成0～1之间，高变成真实-depth[k]
+                    positions.push(i/rowNum,j/colNum,-depth_array[k]);  
+                }
+            }
+        }
+        // console.log(positions);
+
+        // 左边界
+        for(let k = 0; k<layerNum; k++){
+            for(let i =0; i<rowNum; i++){
+                if(k+1<layerNum && i+1<rowNum){  // 层和行不越界
+                    // 第一个三角形，第k层的两个和第k+1层的一个
+                    if(leftBound[k][i]!=-1 && leftBound[k][i+1]!=-1 && leftBound[k+1][i]!=-1){
+                        indices.push(k*layerVertexNum+i*colNum+leftBound[k][i], k*layerVertexNum+(i+1)*colNum+leftBound[k][i+1], (k+1)*layerVertexNum+i*colNum+leftBound[k+1][i]);
+                    }
+                    // 第二个三角形，第k层的一个和第k+1层的两个
+                    if(leftBound[k][i+1]!=-1 && leftBound[k+1][i]!=-1 && leftBound[k+1][i+1]!=-1){
+                        indices.push(k*layerVertexNum+(i+1)*colNum+leftBound[k][i+1], (k+1)*layerVertexNum+i*colNum+leftBound[k+1][i], (k+1)*layerVertexNum+(i+1)*colNum+leftBound[k+1][i+1]);
+                    }
+                }
+            }
+        }
+        
+
+        // 右边界
+        for(let k = 0; k<layerNum; k++){
+            for(let i =0; i<rowNum; i++){
+                if(k+1<layerNum && i+1<rowNum){  // 层和行不越界
+                    // 第一个三角形，第k层的两个和第k+1层的一个
+                    if(rightBound[k][i]!=-1 && rightBound[k][i+1]!=-1 && rightBound[k+1][i]!=-1){
+                        indices.push(k*layerVertexNum+i*colNum+rightBound[k][i], k*layerVertexNum+(i+1)*colNum+rightBound[k][i+1], (k+1)*layerVertexNum+i*colNum+rightBound[k+1][i]);
+                    }
+                    // 第二个三角形，第k层的一个和第k+1层的两个
+                    if(rightBound[k][i+1]!=-1 && rightBound[k+1][i]!=-1 && rightBound[k+1][i+1]!=-1){
+                        indices.push(k*layerVertexNum+(i+1)*colNum+rightBound[k][i+1], (k+1)*layerVertexNum+i*colNum+rightBound[k+1][i], (k+1)*layerVertexNum+(i+1)*colNum+rightBound[k+1][i+1]);
+                    }
+                }
+            }
+        }
+
+        // console.log(indices);
+
+        heightGeometry.setIndex( indices);
+
+		heightGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+        // 与模型保持同等长宽高缩放
+        heightGeometry.translate(-0.5, -0.5, 0);
+        heightGeometry.scale(edgeLen, edgeWid, scaleHeight);
+
+        var material = new THREE.MeshBasicMaterial( {
+            color: 0xA9A9A9,
+            side: THREE.DoubleSide,
+            transparent: true, // 可定义透明度
+            opacity: 0.3,
+            depthWrite: false,
+        } );
+    
+        var mesh = new THREE.Mesh( heightGeometry, material);
+        mesh.name = "channel";
+        scene.add( mesh );
+        // mesh.visible = false;
+    })
+}
+
+/*
+    显示等待条
+*/
+function showProgressModal(frameType){  // 假设frameType为"loadingFrames"
+    progressModal = document.getElementById("progressModal");
+    frameLabel = document.getElementById("frameLabel");
+    
+	frameLabel.innerHTML = frameType.slice(0,-6);  // frameLabel = "loading"
+	progressBar = document.createElement('div');
+	progressBar.id = frameType;
+	progressBar.className = 'progressBar';
+
+	progressLabel = document.createElement('span');
+	progressLabel.id = 'label';
+	progressLabel.setAttribute("data-perc", "Preparing models...");
+
+	progressBackground = document.createElement('span');
+	progressBackground.id = 'bar';
+
+	progressBar.appendChild(progressLabel);
+	progressBar.appendChild(progressBackground);
+    progressModal.appendChild(progressBar);
+    
+    container.appendChild(progressModal)
+}
+
+/*
+    隐藏等待条
+*/
+function hideProgressModal(){
+    // 进度条图形填满
+    progressBackground.style.width = "100%";
+    // 标题填满
+    progressLabel.setAttribute("data-perc", "100%");
+    // Remove the modal
+    progressModal.removeChild(progressBar);
+    frameLabel.style.display = 'none';
+    progressModal.style.display = 'none';
+}
+
+/*
+    加载涡旋n天的形状
+*/
+function loadEddiesForDays(){
+    let arr = []; //promise返回值的数组
+    for (let i = 0; i<2; i++){
+        arr[i] = new Promise((resolve, reject)=>{
+            // 加载一天的形状
+            var d = i;
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_5000.vtk"));
+            var loader = new VTKLoader();
+            console.log("loading", vtk_path);
+            loader.load( vtk_path, function ( geometry ) {  // 异步加载
+                
+                geometry.translate(-0.5, -0.5, 0);
+
+                // 不应该翻下去！！！！！！！！！！ 而是z值变负
+                var positions = geometry.attributes.position.array;
+                // 改变顶点高度值
+                
+                for ( let j = 0;  j < positions.length; j += 3 ) {
+                    // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
+                    positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
+                }
+
+                geometry.scale(edgeLen, edgeWid, scaleHeight);
+
+                var sectionNums = geometry.attributes.sectionNum.array;
+                var startNums = geometry.attributes.startNum.array;
+
+                // 转化为无索引格式，用来分组
+                geometry = geometry.toNonIndexed();
+
+                geometry.attributes.sectionNum.array = sectionNums;
+                geometry.attributes.startNum.array = startNums;
+                // 这个count具体我不知道是啥，对于position.count可以理解为点的个数，且position.length正好是count的三倍
+                geometry.attributes.sectionNum.count = geometry.attributes.sectionNum.array.length;
+                geometry.attributes.startNum.count = geometry.attributes.startNum.array.length;
+                
+                 // 默认初始透明度最大的下标在开头
+                geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( startNums, 1 ));
+
+
+                var vertexNum = geometry.attributes.position.count;
+                
+                var opa = []; // 顶点透明度，用来改变线条透明度
+                for (var i = 0; i<vertexNum; i++){
+                    opa.push(1);  // 默认都是1
+                }
+                geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
+
+                
+                var groupId;  // 组号
+
+                var mats = [];
+
+                for (var i =0; i<vertexNum; i+=2){
+                    groupId = i/2;
+                    geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
+
+                    let material = new THREE.LineBasicMaterial({
+                        // vertexColors: false,  // 千万不能设置为true！！！！血的教训
+                        transparent: true, // 可定义透明度
+                        opacity: 0,
+                        depthWrite: false, 
+                    });
+                    mats.push(material);
+                }
+                var linesG = new THREE.LineSegments(geometry, mats);
+
+                //need update 我不知道有没有用，感觉没用
+                linesG.geometry.colorsNeedUpdate = true;
+                linesG.geometry.groupsNeedUpdate = true;
+                linesG.material.needsUpdate = true;
+                
+                initLineOpacity(linesG, 0.5);  // 初始化透明度
+                linesG.name = "day"+String(d);  // day0, day1, ...
+                scene.add(linesG);
+                linesG.visible = false;
+                resolve(i);
+            });
+            
+        })
+    }
+    // 当所有加载都完成之后，再隐藏“等待进度条”
+    Promise.all(arr).then((res)=>{
+        console.log("模型加载完毕");
+        // 设置OW属性
+        loadOWArray();
+    })
+}
+
+// 初始化透明度
+function initLineOpacity(curLine, k){
+    // k为轨迹段数和长线总段数只比
     var attributes = curLine.geometry.attributes;
     var mats = curLine.material;
 
@@ -87,155 +734,661 @@ function initLineOpacity(curLine){
     }
 }
 
-function DyChange(){
-    var curLine = scene.getObjectByName("test");
-    var k = 0.5; // 轨迹段数和长线总段数只比
-    var attributes = curLine.geometry.attributes;
-    var mats = curLine.material;
 
-    for(var i=0; i<attributes.sectionNum.count; i++){  // 对于每一组长线i
-        var L = attributes.sectionNum.array[i];  // 长线包含的线段数
-        var l = parseInt(k*L);  // 轨迹段数
-        var diff = 1/l;  // 透明度变化单位
+/*
+    转换后的xyz到数组i,j,k的映射
+*/
+function xyz2ijk(x, y, z){
+    var orix = x/edgeLen + 0.5;
+    var oriy = y/edgeWid + 0.5;
+    var oriz = -z/scaleHeight;
 
-        var startIndex = attributes.startNum.array[i];
-        for(var j=startIndex; j<startIndex+L; j++){  // 对于每个小线段
-            mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
+    // console.log(orix, oriy, oriz);
+
+    var i = Math.floor(orix/0.002);
+    var j = Math.floor(oriy/0.002);
+    var k = re_depth.get(oriz);
+    // console.log(oriz);
+
+    return new Array(i, j, k);
+}
+
+/*
+    加载OW数组
+*/
+//  单个加载函数
+function loadOneOWArray(path, d){
+    var site, linesG;
+    var arr;
+    var promise1 = new Promise(function(resolve, reject) {
+        $.get(path, function(data) {
+            // 加载OW数组
+            var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
+            // console.log(items);
+        
+            arr = new Array(500);
+            for (var i = 0; i < arr.length; i++) {
+                arr[i] = new Array(500);
+                for (var j = 0; j < arr[i].length; j++) {
+                    arr[i][j] = new Array(50);
+                    for (var k = 0; k<arr[i][j].length; k++){
+                        arr[i][j][k] = items[i][j*arr[i][j].length+k];
+                    }
+                }
+            }
+            // console.log(d, "OW数组提取完毕");
+            // console.log(arr);
+            resolve(1);
+        });
+    });
+
+    promise1.then(()=>{
+        // 将OW值放到geometry中
+        site = "day"+String(d)
+        linesG = scene.getObjectByName(site);
+        var OW = [];
+        var x,y,z;  // 点的当前坐标（缩放后）
+        var i,j,k;  // 点对应的OW数组中的下标
+        var position = linesG.geometry.attributes.position.array;  // 看清属性
+        // console.log("postion数组读取完毕");
+
+        var temp = new Array(3);
+        let flag1 = []; //promise返回数组
+
+        for( var q =0; q<position.length; q+=3){
+            flag1[q/3] = new Promise((resolve, reject)=>{
+                x = position[q];
+                y = position[q+1];
+                z = position[q+2];
+            
+                temp = xyz2ijk(x, y, z);
+                i = temp[0];
+                j = temp[1];
+                k = temp[2];
+                // console.log(x,y,z, "-->", i, j, k);
+                // console.log(arr[i][j][k]);
+
+                OW[q/3] = arr[i][j][k];
+                resolve(q);
+            })
         }
-        // 赋值为1的
-        var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex-1+L)%L+startIndex;
-        mats[next_mOpaIndex].opacity = 1;
-        attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
+        
+        Promise.all(flag1).then((res)=>{
+            linesG.geometry.setAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
+            // console.log(OW);
+            if(d==1){
+                hideProgressModal();
+                console.log("OW值设置完毕");
+                animate();
+            }
+        })
+    });
+}
+
+function loadOWArray(){
+    let flag0 = []; //promise数组
+    for(var i =0; i<2; i++){
+        flag0[i] = new Promise((resolve, reject)=>{
+            var d = i;
+            var path = ("./whole_attributes_txt_file/OW/".concat("OW_", String(d), ".txt"));
+            loadOneOWArray(path,d);
+            resolve(i);
+        });
+    }
+    Promise.all(flag0).then((res)=>{
+       
+    })
+    
+}
+
+/*
+    设置交互GUI
+*/
+function setGUI(){
+    gui = new dat.GUI();
+    default_opt = new function(){
+        this.currentDay = -1;  // 初始时间为第0天
+        this.currentAttr = 'OW'; // 初始展示属性为OW
+        this.upValue = 1; // 属性的下界
+        this.downValue = -1;  // 属性的上界
+        this.keepValue = true; // 保持设置
+        this.hideChannel = false;  // 是否隐藏海峡地形
+        this.color0 = [255, 255, 255]; // RGB array
+        this.color1 = [255, 255, 255]; // RGB array
+        this.color2 = [255, 255, 255]; // RGB array
+        this.color3 = [255, 255, 255]; // RGB array
+        this.color4 = [255, 255, 255]; // RGB array
+        this.opacity0 = 1.0;
+        this.opacity1 = 1.0;
+        this.opacity2 = 1.0;
+        this.opacity3 = 1.0;
+        this.opacity4 = 1.0;
+    };
+
+    /* 
+        一些默认的属性
+    */
+
+    // 日期相关
+    currentDay = -1;
+    var lastDay = -1;
+    var lastLine;  // 当前显示的线，上次显示的线
+    var site, last_site;
+    // 默认属性值
+    currentAttr = 'OW';
+
+    // 属性值上下界
+    upValue = default_opt.upValue;
+    downValue = default_opt.downValue;
+    updateMid();
+
+
+    // 切换日期
+    gui.add(default_opt, 'currentDay', exDays).onChange(function(){
+        if(lastDay!=-1){  // 清除上次的显示
+            last_site = "day"+String(lastDay);
+            lastLine = scene.getObjectByName(last_site);
+            lastLine.visible = false;
+        }
+
+        currentDay = default_opt.currentDay;
+        console.log("currentDay:", currentDay);
+
+        site = "day"+String(currentDay);
+        
+        curLine = scene.getObjectByName(site);
+
+        if(keepValue){  // 更换日期，但属性设置不变
+            keepValue_update(curLine);
+        }
+        else{
+            resetCtrl();
+            resetMaterial(curLine);
+        }
+
+        console.log(curLine.name);
+        curLine.visible = true;
+        lastDay = currentDay;
+    });
+
+    // 切换属性
+    gui.add(default_opt, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
+        currentAttr = default_opt.currentAttr;
+        console.log("currentAttr:", currentAttr);
+
+        // 切换属性的话，一定要重新设置
+        resetCtrl();
+        resetMaterial(curLine);
+    });
+
+    // 设置上界
+    gui.add(default_opt, 'upValue').onChange(function(){
+        upValue = default_opt.upValue;
+        console.log("upValue:", upValue);
+
+        // 更新中间点
+        updateMid();
+
+        resetCtrl();
+        resetMaterial(curLine);
+    });
+
+    // 设置下界
+    gui.add(default_opt, 'downValue').onChange(function(){
+        downValue = default_opt.downValue;
+        console.log("downValue:", downValue);
+
+        // 更新中间点
+        updateMid();
+
+        resetCtrl();
+        resetMaterial(curLine);
+    });
+
+    // 是否保持？
+    gui.add(default_opt, 'keepValue').onChange(function(){
+        keepValue = default_opt.keepValue;
+    })
+
+    // 是否隐藏地形
+    gui.add(default_opt, 'hideChannel').onChange(function(){
+        hideChannel = default_opt.hideChannel;
+
+        var channel = scene.getObjectByName("channel");
+        var surface = scene.getObjectByName("surface");
+
+        // 不隐藏
+        if(hideChannel==false){
+            surface.visible = true;
+            channel.visible = true;
+        }
+        else{
+            surface.visible = false;
+            channel.visible = false;
+        }
+    })
+
+    /*
+        交互颜色
+    */
+    var colorFolder = gui.addFolder('color');
+    // color0
+    color0_ctrl = colorFolder.addColor(default_opt, 'color0').onFinishChange(function(){
+        currentColor0 = default_opt.color0;
+        assignColor(curLine, currentColor0, 0);  // 设置geometry的color
+        updateColor(curLine);  // 更新material
+    });
+    
+
+    // color1
+    color1_ctrl = colorFolder.addColor(default_opt, 'color1').onFinishChange(function(){
+        currentColor1 = default_opt.color1;
+        assignColor(curLine, currentColor1, 1);  // 设置geometry的color
+        updateColor(curLine);  // 更新material
+    });
+
+    // color2
+    color2_ctrl = colorFolder.addColor(default_opt, 'color2').onFinishChange(function(){
+        currentColor2 = default_opt.color2;
+        assignColor(curLine, currentColor2, 2);  // 设置geometry的color
+        updateColor(curLine);  // 更新material
+    });
+    // color3
+    color3_ctrl = colorFolder.addColor(default_opt, 'color3').onFinishChange(function(){
+        currentColor3 = default_opt.color3;
+        assignColor(curLine, currentColor3, 3);  // 设置geometry的color
+        updateColor(curLine);  // 更新material
+    });
+
+    // color4
+    color4_ctrl = colorFolder.addColor(default_opt, 'color4').onFinishChange(function(){
+        currentColor4 = default_opt.color4;
+        assignColor(curLine, currentColor4, 4);  // 设置geometry的color
+        updateColor(curLine);  // 更新material
+    });
+
+
+    /*
+        交互透明度
+    */
+    var opaFolder = gui.addFolder('opacity');
+    
+    // opacity0
+    opa0_ctrl = opaFolder.add(default_opt, 'opacity0', 0, 1, 0.05).onFinishChange(function(){
+        currentOpacity0 = default_opt.opacity0;
+        assignOpacity(curLine, default_opt.opacity0, 0);
+        updateOpacity(curLine);
+    })
+    // opacity1
+    opa1_ctrl= opaFolder.add(default_opt, 'opacity1', 0, 1, 0.05).onFinishChange(function(){
+        currentOpacity1 = default_opt.opacity1;
+        assignOpacity(curLine, default_opt.opacity1, 1);
+        updateOpacity(curLine);
+    })
+    // opacity2
+    opa2_ctrl = opaFolder.add(default_opt, 'opacity2', 0, 1, 0.05).onFinishChange(function(){
+        currentOpacity2 = default_opt.opacity2;
+        assignOpacity(curLine, default_opt.opacity2, 2);
+        updateOpacity(curLine);
+    })
+    // opacity3
+    opa3_ctrl = opaFolder.add(default_opt, 'opacity3', 0, 1, 0.05).onFinishChange(function(){
+        currentOpacity3 = default_opt.opacity3;
+        assignOpacity(curLine, default_opt.opacity3, 3);
+        updateOpacity(curLine);
+    })
+
+    // opacity4
+    opa4_ctrl = opaFolder.add(default_opt, 'opacity4', 0, 1, 0.05).onFinishChange(function(){
+        currentOpacity4 = default_opt.opacity4;
+        assignOpacity(curLine, default_opt.opacity4, 4);
+        updateOpacity(curLine);
+    })
+
+    var func_opt = new function(){
+        this.play = function(){
+            alert("------------");
+        };
+        this.reset = function(){
+            resetCtrl();
+            resetMaterial(curLine);
+        };
+    };
+
+    // 播放
+    // gui.add(func_opt, 'play');
+    gui.add(func_opt, 'reset');
+}
+
+
+// 根据上下界改变mid中间点
+function updateMid(){
+    difValue = upValue-downValue;
+    mid1 = downValue+0.2*difValue;
+    mid2 = downValue+0.4*difValue;
+    mid3 = downValue+0.6*difValue;
+    mid4 = downValue+0.8*difValue;
+}
+
+/*
+    改变geometry的属性
+*/
+function assignColor(curLine, opt_color, num){
+    var cColor = [opt_color[0]/255, opt_color[1]/255, opt_color[2]/255];
+
+    switch(num){
+        case 0:
+            console.log("color0:", opt_color);
+            // 修改该范围内的点的颜色
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]<= mid1){
+                    curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                    curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                    curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+                }
+            }
+            break;
+        case 1:
+            console.log("color1:", opt_color);
+            // 修改该范围内的点的颜色
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+                    curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                    curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                    curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+                }
+            }
+            break;
+        case 2:
+            console.log("color2:", opt_color);
+            // 修改该范围内的点的颜色
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+                    curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                    curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                    curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+                }
+            }
+            break;
+        case 3:
+            console.log("color3:", opt_color);
+            // 修改该范围内的点的颜色
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+                    curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                    curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                    curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+                }
+            }
+            break;
+        case 4:
+            console.log("color4:", opt_color);
+            // 修改该范围内的点的颜色
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]> mid4){
+                    curLine.geometry.attributes.color.array[3*i] = cColor[0];
+                    curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
+                    curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
+                }
+            }
+            break;
     }
 }
 
-function animate(){
-    requestAnimationFrame( animate );
-    DyChange();
-    render();
-    stats.update();
+function assignOpacity(curLine, opt_opacity, num){
+    var cOpa = opt_opacity;
+
+    switch(num){
+        case 0:
+            console.log("opacity0:", opt_opacity);
+            // 修改该范围内的点的透明度
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]<= mid1){
+                    curLine.geometry.attributes.opacity.array[i] = cOpa;
+                }
+            }
+            break;
+        case 1:
+            console.log("opacity1:", opt_opacity);
+            // 修改该范围内的点的透明度
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+                    curLine.geometry.attributes.opacity.array[i] = cOpa;
+                }
+            }
+            break;
+        case 2:
+            console.log("opacity2:", opt_opacity);
+            // 修改该范围内的点的透明度
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+                    curLine.geometry.attributes.opacity.array[i] = cOpa;
+                }
+            }
+            break;
+        case 3:
+            console.log("opacity3:", opt_opacity);
+            // 修改该范围内的点的透明度
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+                    curLine.geometry.attributes.opacity.array[i] = cOpa;
+                }
+            }
+            break;
+        case 4:
+            console.log("opacity4:", opt_opacity);
+            // 修改该范围内的点的透明度
+            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+                if(curLine.geometry.attributes.OW.array[i]> mid4){
+                    curLine.geometry.attributes.opacity.array[i] = cOpa;
+                }
+            }
+            break;
+    }
 }
 
-// var fps = 50;
-// var now;
-// var then = Date.now();
-// var interval = 1000/fps;
-// var delta;
+// 用于全局赋值geometry的color，只用一边循环 比5次assignColor快
+function assignAllColor(curLine){
+    var cColor0 = [currentColor0[0]/255, currentColor0[1]/255, currentColor0[2]/255];
+    var cColor1 = [currentColor1[0]/255, currentColor1[1]/255, currentColor1[2]/255];
+    var cColor2 = [currentColor2[0]/255, currentColor2[1]/255, currentColor2[2]/255];
+    var cColor3 = [currentColor3[0]/255, currentColor3[1]/255, currentColor3[2]/255];
+    var cColor4 = [currentColor4[0]/255, currentColor4[1]/255, currentColor4[2]/255];
 
-// function tick(){
-// 　　requestAnimationFrame(tick);
-// 　　now = Date.now();
-// 　　delta = now - then;
-// 　　if (delta > interval) {
-// 　　　　// 这里不能简单then=now，否则还会出现上边简单做法的细微时间差问题。
-// 　　　　then = now - (delta % interval);
-// 　　　　animate(); // ... Code for Drawing the Frame ...
-// 　　}
-// }
+    for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+        if(curLine.geometry.attributes.OW.array[i]<= mid1){
+            curLine.geometry.attributes.color.array[3*i] = cColor0[0];
+            curLine.geometry.attributes.color.array[3*i+1] = cColor0[1];
+            curLine.geometry.attributes.color.array[3*i+2] = cColor0[2];
+        }
+        else if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+            curLine.geometry.attributes.color.array[3*i] = cColor1[0];
+            curLine.geometry.attributes.color.array[3*i+1] = cColor1[1];
+            curLine.geometry.attributes.color.array[3*i+2] = cColor1[2];
+        }
+        else if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+            curLine.geometry.attributes.color.array[3*i] = cColor2[0];
+            curLine.geometry.attributes.color.array[3*i+1] = cColor2[1];
+            curLine.geometry.attributes.color.array[3*i+2] = cColor2[2];
+        }
+        else if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+            curLine.geometry.attributes.color.array[3*i] = cColor3[0];
+            curLine.geometry.attributes.color.array[3*i+1] = cColor3[1];
+            curLine.geometry.attributes.color.array[3*i+2] = cColor3[2];
+        }
+        else{
+            curLine.geometry.attributes.color.array[3*i] = cColor4[0];
+            curLine.geometry.attributes.color.array[3*i+1] = cColor4[1];
+            curLine.geometry.attributes.color.array[3*i+2] = cColor4[2];
+        }
+    }
+}
+
+function assignAllOpacity(curLine){
+    var cOpa0 = currentOpacity0;
+    var cOpa1 = currentOpacity1;
+    var cOpa2 = currentOpacity2;
+    var cOpa3 = currentOpacity3;
+    var cOpa4 = currentOpacity4;
+
+    for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
+        if(curLine.geometry.attributes.OW.array[i]<= mid1){
+            curLine.geometry.attributes.opacity.array[i] = cOpa0;
+        }
+        else if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+            curLine.geometry.attributes.opacity.array[i] = cOpa1;
+        }
+        else if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+            curLine.geometry.attributes.opacity.array[i] = cOpa2;
+        }
+        else if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+            curLine.geometry.attributes.opacity.array[i] = cOpa3;
+        }
+        else{
+            curLine.geometry.attributes.opacity.array[i] = cOpa4;
+        }
+    }
+}
+
+/*
+    更新material的属性
+*/
+function updateColor(curLine){
+    for(var i=0; i<curLine.material.length; i++){
+        let r = (curLine.geometry.attributes.color.array[6*i] + curLine.geometry.attributes.color.array[6*i+3])/2;
+        let g = (curLine.geometry.attributes.color.array[6*i+1] + curLine.geometry.attributes.color.array[6*i+4])/2;
+        let b = (curLine.geometry.attributes.color.array[6*i+2] + curLine.geometry.attributes.color.array[6*i+5])/2;
+        curLine.material[i].color.setRGB(r, g, b);
+    }
+    // animate();
+}
+
+function updateOpacity(curLine){
+    for(var i=0; i<curLine.material.length; i++){
+        curLine.material[i].opacity = (curLine.geometry.attributes.opacity.array[2*i] + curLine.geometry.attributes.opacity.array[2*i+1])/2;
+    }
+}
+
+// 交互界面颜色和透明度复位
+function resetCtrl(){
+    color0_ctrl.setValue([255, 255, 255]);
+    color1_ctrl.setValue([255, 255, 255]);
+    color2_ctrl.setValue([255, 255, 255]);
+    color3_ctrl.setValue([255, 255, 255]);
+    color4_ctrl.setValue([255, 255, 255]);
+
+    opa0_ctrl.setValue(1.0);
+    opa1_ctrl.setValue(1.0);
+    opa2_ctrl.setValue(1.0);
+    opa3_ctrl.setValue(1.0);
+    opa4_ctrl.setValue(1.0);
+
+    getCurrentValue();  // 更新current
+}
+
+// 把所有线条颜色都变成白色，透明度变为1
+function resetMaterial(curLine){
+    for(var i=0; i<curLine.material.length; i++){
+        curLine.material[i].color = new THREE.Color(1, 1, 1);
+        curLine.material[i].opacity = 1.0;
+    }
+}
+
+// 更新currentColor和currentOpacity
+function getCurrentValue(){
+    currentColor0 = color0_ctrl.getValue();
+    currentColor1 = color1_ctrl.getValue();
+    currentColor2 = color2_ctrl.getValue();
+    currentColor3 = color3_ctrl.getValue();
+    currentColor4 = color4_ctrl.getValue();
+
+    currentOpacity0 = opa0_ctrl.getValue();
+    currentOpacity1 = opa1_ctrl.getValue();
+    currentOpacity2 = opa2_ctrl.getValue();
+    currentOpacity3 = opa3_ctrl.getValue();
+    currentOpacity4 = opa4_ctrl.getValue();
+}
+
+// 保持交互面板属性不变，按照当前属性渲染新的线条
+function keepValue_update(curLine){
+    // resetMaterial(curLine);
+
+    getCurrentValue();  // 更新current
+
+    assignAllColor(curLine);
+    assignAllOpacity(curLine);
+
+    updateColor(curLine);
+    updateOpacity(curLine);
+}
+
+function printColor(){
+    console.log(currentColor0);
+    console.log(currentColor1);
+    console.log(currentColor2);
+    console.log(currentColor3);
+    console.log(currentColor4);
+
+    console.log(default_opt.color0);
+    console.log(default_opt.color1);
+    console.log(default_opt.color2);
+    console.log(default_opt.color3);
+    console.log(default_opt.color4);
+
+}
+
+function animate() {
+    requestAnimationFrame( animate );
+    render();
+    DyChange(0.5);
+    stats.update();
+}
 
 function render() {
     renderer.render( scene, camera );
 }
 
+// 动态变化透明度
+function DyChange(k){
+    if(curLine != undefined){
+        var attributes = curLine.geometry.attributes;
+        var mats = curLine.material;
 
-function loadVTK(){
-    var vtk_path = './whole_vtk_folder/vtk0_100.vtk'
-    var loader = new VTKLoader();
-    console.log("loading", vtk_path);
+        for(var i=0; i<attributes.sectionNum.count; i++){  // 对于每一组长线i
+            var L = attributes.sectionNum.array[i];  // 长线包含的线段数
+            var l = parseInt(k*L);  // 轨迹段数
+            var diff = 1/l;  // 透明度变化单位
 
-    var linesG;
-    
-    var promise = new Promise((resolve, reject)=>{
-        loader.load( vtk_path, function ( geometry ) {  // 异步加载
-
-            geometry.translate(-0.5, -0.5, -1);
-        
-            // 这里要备份一下，因为toNonIndexed()也会改变sectionNums和startNums，但我们不希望这俩变！
-            var sectionNums = geometry.attributes.sectionNum.array;
-            var startNums = geometry.attributes.startNum.array;
-
-            geometry = geometry.toNonIndexed();
-
-            geometry.attributes.sectionNum.array = sectionNums;
-            geometry.attributes.startNum.array = startNums;
-            // 这个count具体我不知道是啥，对于position.count可以理解为点的个数，且position.length正好是count的三倍
-            geometry.attributes.sectionNum.count = geometry.attributes.sectionNum.array.length;
-            geometry.attributes.startNum.count = geometry.attributes.startNum.array.length;
-
-            // 默认初始透明度最大的下标在开头
-            geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( startNums, 1 ));
-
-            var vertexNum = geometry.attributes.position.count;
-
-            var groupId;  // 组号
-
-            var mats = [];
-            for (var i =0; i<vertexNum; i+=2){
-                groupId = i/2;
-                geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
-
-                let material = new THREE.LineBasicMaterial({
-                    transparent: true, // 可定义透明度
-                    opacity: 0,
-                    depthWrite: false, 
-                    linewidth: 3,  // 无效
-                });
-
-                // material.resolution.set(window.innerWidth,window.innerHeight);
-
-                mats.push(material);
+            var startIndex = attributes.startNum.array[i];
+            for(var j=startIndex; j<startIndex+L; j++){  // 对于每个小线段
+                mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
             }
-            linesG = new THREE.LineSegments(geometry, mats);
-            // var linesG = new Line2(geometry, mats);
-            linesG.name = "test";
-
-            console.log(linesG);
-            scene.add(linesG);
-
-            resolve(i);
-        });
-    });
-
-    promise.then(()=>{
-        initLineOpacity(linesG)
-        // tick();
-        animate();
-    });
+            // 赋值为1的
+            var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex-1 + L)%L+startIndex;
+            mats[next_mOpaIndex].opacity = 1;
+            attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
+        }
+    }
 }
 
-function loadExample(){
-    var geometry = new THREE.BufferGeometry(); // //创建一个Buffer类型几何体对象
-    //类型数组创建顶点数据
-    var positions = new Float32Array([
-        0.841831, 0.113365, 0.207607, 0.842071, 0.109332, 0.207607, 0.842624, 0.0992476, 0.207607, 0.843542, 0.0891909, 0.207607, 0.844436, 0.079133, 0.207605, 0.84424, 0.07249, 0.207604, 0.8423, 0.0669689, 0.207602, 0.838448, 0.0632466, 0.207601, 0.833632, 0.0607723, 0.207602, 0.82891, 0.0591717, 0.207603, 0.824441, 0.0589394, 0.207605, 0.820969, 0.0592618, 0.207607, 0.816634, 0.0596673, 0.207606, 0.813375, 0.0598143, 0.207605, 0.81004, 0.0598151, 0.207603, 0.806408, 0.0611267, 0.207602, 0.803152, 0.064999, 0.207602, 0.80144, 0.0709633, 0.207601, 0.799958, 0.0781582, 0.207602, 0.797925, 0.0880472, 0.207602, 0.796831, 0.098086, 0.207601, 0.795746, 0.108127, 0.207599, 0.794584, 0.118159, 0.207597, 0.792586, 0.128041, 0.207595, 0.789824, 0.132681, 0.207594, 0.784297, 0.134465, 0.207593, 0.778722, 0.133418, 0.207593, 0.769248, 0.129935, 0.207592, 0.761421, 0.126485, 0.207592, 0.753441, 0.122825, 0.207592, 0.744139, 0.118893, 0.207593, 0.73491, 0.114791, 0.207594, 0.726081, 0.109904, 0.207595, 0.718236, 0.103568, 0.207596, 0.711762, 0.0958364, 0.207595, 0.706914, 0.0869971, 0.207596, 0.704145, 0.0773098, 0.207597, 0.70373, 0.0672381, 0.207596, 0.705281, 0.0572816, 0.207597, 0.70964, 0.0482268, 0.207599, 0.716661, 0.0412401, 0.2076, 0.725586, 0.0365836, 0.207602, 0.735359, 0.0340858, 0.207602, 0.745417, 0.0335142, 0.207602, 0.755254, 0.0356374, 0.207602, 0.762941, 0.0393733, 0.207603, 0.769023, 0.0431071, 0.207603, 0.775922, 0.0476686, 0.207602, 0.783993, 0.0537377, 0.207601, 0.790468, 0.0594436, 0.207601, 0.79344, 0.0654057, 0.207601, 0.794012, 0.0718821, 0.207602, 0.794231, 0.0819747, 0.207602, 0.793222, 0.0920201, 0.207601, 0.791632, 0.101993, 0.207599, 0.789511, 0.111866, 0.207597, 0.785966, 0.121276, 0.207595, 0.781651, 0.125151, 0.207593, 0.775333, 0.126023, 0.207592, 0.765482, 0.123897, 0.207591, 0.755925, 0.120633, 0.207591, 0.746425, 0.117205, 0.207589, 0.736984, 0.113621, 0.20759, 0.727942, 0.109145, 0.207589, 0.71989, 0.103077, 0.207589, 0.71323, 0.0955074, 0.207589, 0.708275, 0.0867312, 0.207589, 0.705562, 0.077032, 0.20759, 0.705494, 0.0669614, 0.20759, 0.70773, 0.0571328, 0.20759, 0.711402, 0.0497941, 0.207591, 0.718456, 0.0426398, 0.207592, 0.72743, 0.0380862, 0.207594, 0.737283, 0.0359674, 0.207595, 0.747356, 0.0361226, 0.207595, 0.757078, 0.0387639, 0.207595, 0.76604, 0.043394, 0.207595, 0.77357, 0.0483336, 0.207595, 0.780505, 0.0537391, 0.207594, 0.785637, 0.0585587, 0.207593, 0.788962, 0.0623796, 0.207593, 0.791695, 0.0692459, 0.207593, 0.792384, 0.0762172, 0.207593, 0.792444, 0.0846227, 0.207593, 0.791291, 0.0946522, 0.207592, 0.789384, 0.104567, 0.20759, 0.786609, 0.114271, 0.207588, 0.781966, 0.121465, 0.207586, 0.773826, 0.123761, 0.207584, 0.763915, 0.121947, 0.207583, 0.754281, 0.118921, 0.207582, 0.744723, 0.115657, 0.207581, 0.73528, 0.112082, 0.207581, 0.726367, 0.107361, 0.20758, 0.71858, 0.100959, 0.20758, 0.71228, 0.0930872, 0.207579, 0.707855, 0.0840359, 0.20758, 0.705881, 0.0741638, 0.207581, 0.706668, 0.0641235, 0.207581, 0.709582, 0.0550461, 0.207581, 0.715228, 0.0467313, 0.207582, 0.723365, 0.0408249, 0.207583, 0.732894, 0.0375716, 0.207584, 0.742935, 0.0367356, 0.207585, 0.752875, 0.0383767, 0.207586, 0.762187, 0.0422409, 0.207586, 0.770782, 0.0475346, 0.207585, 0.7787, 0.0535359, 0.207584, 0.785239, 0.060105, 0.207583, 0.788725, 0.0648106, 0.207582, 0.79065, 0.0702319, 0.207583, 0.791439, 0.0780289, 0.207582, 0.791462, 0.0785778, 0.207582, 0.783607, 0.170497, 0.233256, 0.934068, 0.164705, 0.24822, 0.934156, 0.168742, 0.248219, 0.933537, 0.17379, 0.248219, 0.931883, 0.178989, 0.248218, 0.929074, 0.184978, 0.248216, 0.926448, 0.188535, 0.248215, 0.923574, 0.19019, 0.248214, 0.920509, 0.190969, 0.248215, 0.91734, 0.191677, 0.248216, 0.912981, 0.192503, 0.24822, 0.908471, 0.192331, 0.248224, 0.903972, 0.191247, 0.248228, 0.89973, 0.189407, 0.248231, 0.895204, 0.187369, 0.248233, 0.890957, 0.185631, 0.248236, 0.885955, 0.183269, 0.24824, 0.880051, 0.17999, 0.248242, 0.874741, 0.177017, 0.248244, 0.870253, 0.174454, 0.248244, 0.867508, 0.172733, 0.248242, 0.863047, 0.169, 0.248242, 0.859095, 0.163593, 0.24824, 0.854564, 0.157328, 0.248239, 0.848914, 0.149784, 0.248239, 0.843729, 0.141119, 0.24824, 0.841427, 0.133875, 0.248239, 0.841508, 0.126796, 0.248239, 0.842388, 0.116735, 0.248241, 0.84295, 0.106652, 0.248241, 0.843047, 0.0965536, 0.24824, 0.842903, 0.0864552, 0.248239, 0.841993, 0.0764127, 0.248237, 0.837003, 0.0678621, 0.248235, 0.827763, 0.0640705, 0.248235, 0.817699, 0.0638135, 0.248235, 0.812577, 0.0649069, 0.248234, 0.806988, 0.0683324, 0.248235, 0.80377, 0.0742842, 0.248236, 0.801297, 0.084067, 0.248236, 0.799672, 0.094034, 0.248236, 0.798224, 0.104029, 0.248235, 0.797209, 0.114074, 0.248232, 0.797305, 0.124167, 0.248229, 0.798491, 0.134194, 0.248227, 0.798884, 0.137872, 0.248226, 0.798176, 0.14209, 0.248226, 0.79478, 0.143703, 0.248226, 0.7912, 0.14303, 0.248227, 0.786935, 0.141279, 0.248227, 0.777913, 0.136741, 0.248226, 0.768842, 0.1323, 0.248226, 0.760518, 0.127424, 0.248226, 0.753779, 0.123509, 0.248224, 0.74634, 0.119915, 0.248224, 0.737121, 0.115791, 0.248223, 0.728034, 0.11139, 0.248223, 0.719802, 0.105577, 0.248223, 0.712892, 0.0982277, 0.248223, 0.707397, 0.0897745, 0.248223, 0.70381, 0.0803545, 0.248224, 0.702331, 0.070385, 0.248225, 0.703308, 0.060369, 0.248226, 0.707068, 0.0510265, 0.248227, 0.713421, 0.0432437, 0.248228, 0.722012, 0.0380156, 0.248229, 0.731712, 0.0352487, 0.248231, 0.741739, 0.0342319, 0.248231, 0.751658, 0.0359275, 0.248232, 0.760786, 0.040201, 0.248232, 0.769274, 0.0456715, 0.248231, 0.777648, 0.0513168, 0.24823, 0.785926, 0.0570997, 0.248229, 0.791016, 0.0620524, 0.248228, 0.793437, 0.0697182, 0.248227, 0.793305, 0.0798042, 0.248226, 0.792224, 0.0898444, 0.248225, 0.790515, 0.0997959, 0.248224, 0.788121, 0.109606, 0.248221, 0.784952, 0.119185, 0.248218, 0.781682, 0.12387, 0.248215, 0.775878, 0.125665, 0.248213, 0.769741, 0.124762, 0.248212, 0.760173, 0.121557, 0.24821, 0.750909, 0.117535, 0.248209, 0.741525, 0.1138, 0.248207, 0.732217, 0.109886, 0.248206, 0.723436, 0.104926, 0.248205, 0.716058, 0.098067, 0.248204, 0.710405, 0.0897225, 0.248204, 0.706889, 0.0802834, 0.248206, 0.705858, 0.0702641, 0.248207, 0.707411, 0.0603185, 0.248208, 0.711803, 0.0512661, 0.248209, 0.718915, 0.0441749, 0.24821, 0.727988, 0.0398253, 0.248211, 0.737885, 0.0379416, 0.248212, 0.747924, 0.0386906, 0.248213, 0.757404, 0.042094, 0.248213, 0.766085, 0.0472417, 0.248213, 0.774244, 0.0531913, 0.248212, 0.78203, 0.0596196, 0.24821, 0.787036, 0.0655892, 0.248209, 0.789454, 0.0739255, 0.248207, 0.789284, 0.0840109, 0.248206, 0.788004, 0.0940258, 0.248204, 0.78565, 0.103841, 0.248202, 0.782008, 0.113247, 0.248199, 0.777551, 0.118897, 0.248196, 0.770093, 0.120711, 0.248194, 0.760213, 0.11874, 0.248192, 0.750711, 0.115326, 0.24819, 0.741227, 0.111855, 0.248188, 0.731864, 0.108076, 0.248186, 0.723116, 0.103063, 0.248185, 0.715923, 0.0960169, 0.248185, 0.711682, 0.089521, 0.248185, 0.973353, 0.215207, 0.388181, 0.972849, 0.2112, 0.388191, 0.972142, 0.206813, 0.388201, 0.971825, 0.196741, 0.388219, 0.973077, 0.186722, 0.38823, 0.975132, 0.176838, 0.388235, 0.979006, 0.167546, 0.388233, 0.984728, 0.15923, 0.388225, 0.990745, 0.15112, 0.388215, 0.994292, 0.145278, 0.388207, 0.996327, 0.139392, 0.388198, 0.996631, 0.131254, 0.388189, 0.994646, 0.12181, 0.388167, 0.98987, 0.113068, 0.388163, 0.984462, 0.109209, 0.388163, 0.974697, 0.106722, 0.388162, 0.964635, 0.106203, 0.38816, 0.955024, 0.109035, 0.388156, 0.947615, 0.11578, 0.388149, 0.943451, 0.124913, 0.388143, 0.942935, 0.134945, 0.388133, 0.945684, 0.144625, 0.388117, 0.951064, 0.15313, 0.388097, 0.959001, 0.159235, 0.388072, 0.965809, 0.159883, 0.388053, 0.972085, 0.156895, 0.388036, 0.979283, 0.149863, 0.388018, 0.984338, 0.14115, 0.388, 0.986791, 0.131412, 0.387982, 0.983777, 0.122057, 0.387972, 0.975737, 0.117967, 0.387965, 0.965723, 0.11714, 0.387956, 0.956555, 0.120982, 0.387946, 0.951506, 0.129537, 0.387926, 0.952056, 0.139498, 0.387896, 0.957324, 0.147999, 0.38786, 0.966406, 0.151634, 0.387822, 0.9746, 0.147315, 0.387792, 0.979405, 0.138931, 0.387767, 0.978925, 0.129546, 0.387742, 0.972021, 0.124177, 0.387722, 0.963062, 0.124501, 0.387705, 0.956625, 0.131715, 0.38768, 0.957763, 0.141507, 0.387639, 0.963097, 0.146821, 0.387604, 0.969279, 0.147024, 0.387574, 0.974191, 0.143171, 0.387549, 0.976612, 0.137239, 0.387526, 0.974218, 0.129293, 0.387496, 0.966586, 0.126755, 0.387471, 0.959802, 0.131086, 0.387446, 0.959768, 0.140772, 0.387402, 0.965788, 0.145509, 0.387359, 0.972316, 0.142973, 0.387321, 0.975017, 0.136593, 0.38729, 0.972797, 0.13052, 0.387262, 0.965796, 0.128625, 0.387233, 0.960286, 0.133718, 0.387203, 0.961077, 0.14065, 0.387166, 0.967154, 0.144445, 0.38712, 0.973012, 0.140395, 0.387078, 0.973196, 0.132881, 0.387039, 0.967906, 0.129524, 0.387009, 0.962355, 0.131853, 0.386983, 0.962356, 0.141235, 0.386927, 0.965847, 0.143599, 0.386898, 0.970722, 0.142317, 0.386863, 0.973273, 0.137757, 0.386834, 0.971993, 0.132382, 0.386803, 0.965216, 0.130638, 0.386766, 0.961442, 0.135326, 0.386734, 0.962843, 0.141019, 0.386696, 0.967162, 0.143247, 0.386659, 0.971423, 0.140984, 0.386625, 0.972814, 0.135261, 0.386589, 0.970005, 0.131399, 0.386561, 0.964854, 0.131355, 0.386533, 0.961746, 0.136622, 0.386497, 0.963678, 0.141416, 0.386461, 0.9677, 0.142874, 0.386426, 0.971687, 0.140094, 0.386391, 0.971448, 0.133063, 0.386345, 0.96621, 0.131248, 0.386311, 0.962267, 0.135091, 0.386278, 0.963146, 0.140376, 0.386241, 0.966822, 0.142666, 0.386205, 0.97087, 0.140903, 0.38617, 0.972429, 0.136413, 0.386138, 0.970442, 0.132413, 0.386109, 0.965089, 0.131935, 0.386076, 0.96227, 0.137218, 0.386036, 0.965274, 0.142051, 0.385991, 0.969355, 0.14196, 0.385956, 0.971923, 0.138847, 0.385927, 0.971684, 0.134169, 0.385895, 0.967732, 0.131584, 0.385864, 0.963371, 0.1337, 0.385834, 0.96277, 0.138914, 0.385796, 0.966139, 0.142266, 0.385756, 0.970768, 0.140697, 0.385714, 0.972192, 0.136333, 0.385682, 0.970084, 0.132525, 0.385652, 0.965083, 0.132315, 0.38562, 0.962526, 0.137048, 0.385583, 0.965158, 0.141775, 0.385539, 0.968983, 0.141996, 0.385504, 0.971653, 0.139213, 0.385475, 0.971786, 0.134772, 0.385444, 0.968561, 0.131932, 0.385415, 0.964168, 0.133115, 0.385385, 0.962611, 0.137301, 0.385354, 0.965098, 0.141693, 0.385313, 0.968824, 0.142046, 0.385279, 0.97156, 0.139398, 0.38525, 0.97155, 0.134315, 0.385213, 0.967722, 0.131856, 0.385182, 0.963586, 0.133881, 0.385152, 0.962843, 0.1385, 0.385118, 0.965815, 0.142054, 0.385079, 0.969958, 0.141427, 0.385042, 0.972084, 0.137817, 0.385011, 0.970552, 0.133031, 0.384975, 0.965421, 0.132344, 0.384941, 0.962659, 0.136892, 0.384904, 0.964956, 0.141614, 0.384861, 0.968563, 0.142197, 0.384828, 0.97145, 0.139757, 0.384799, 0.971577, 0.134269, 0.384759, 0.967671, 0.131863, 0.384728, 0.963565, 0.133968, 0.384698, 0.962853, 0.138559, 0.384665, 0.96588, 0.142155, 0.384625, 0.970105, 0.141445, 0.384588, 0.972204, 0.137729, 0.384557, 0.970174, 0.132649, 0.384518, 0.964605, 0.132846, 0.384481, 0.962757, 0.13824, 0.384441, 0.965545, 0.142067, 0.384402, 0.969516, 0.141925, 0.384367, 0.972011, 0.138814, 0.384338, 0.971661, 0.134179, 0.384305, 0.97033, 0.13269, 0.384292, 0.772117, 0.109791, 0.289135, 0.769317, 0.112691, 0.289133, 0.761577, 0.115615, 0.289129, 0.751565, 0.114542, 0.289125, 0.741715, 0.112316, 0.289123, 0.732008, 0.109538, 0.289121, 0.722825, 0.105383, 0.289119, 0.715151, 0.0988711, 0.289119, 0.709321, 0.0906541, 0.28912, 0.706002, 0.0811611, 0.289121, 0.705692, 0.0711012, 0.289123, 0.708125, 0.0613321, 0.289124, 0.713235, 0.0526665, 0.289125, 0.720872, 0.0461365, 0.289126, 0.730255, 0.0425095, 0.289128, 0.740283, 0.0416486, 0.289129, 0.750145, 0.0436707, 0.28913, 0.759212, 0.0480741, 0.289131, 0.76743, 0.0539327, 0.28913, 0.77494, 0.0606795, 0.289128, 0.780866, 0.0686228, 0.289125, 0.782721, 0.0779697, 0.289123, 0.781799, 0.0880118, 0.289121, 0.779366, 0.0978053, 0.289118, 0.775408, 0.107082, 0.289114, 0.768965, 0.114721, 0.289109, 0.759938, 0.11667, 0.289105, 0.750008, 0.114892, 0.289102, 0.740201, 0.11248, 0.2891, 0.730548, 0.109521, 0.289098, 0.721513, 0.105065, 0.289097, 0.714073, 0.0982798, 0.289096, 0.708465, 0.0899098, 0.289097, 0.705442, 0.0803178, 0.289099, 0.705359, 0.0702515, 0.2891, 0.707964, 0.0605264, 0.289101, 0.713207, 0.0519405, 0.289103, 0.72094, 0.0455233, 0.289103, 0.730362, 0.0419949, 0.289105, 0.740395, 0.041171, 0.289107, 0.750256, 0.0432004, 0.289108, 0.759338, 0.0475747, 0.289108, 0.7676, 0.0533729, 0.289107, 0.77521, 0.0600069, 0.289105, 0.781456, 0.0678729, 0.289102, 0.783537, 0.0776739, 0.2891, 0.782668, 0.0877215, 0.289098, 0.780344, 0.0975424, 0.289095, 0.776596, 0.106909, 0.289091, 0.770634, 0.114962, 0.289086, 0.76293, 0.117573, 0.289082, 0.754909, 0.116564, 0.28908, 0.745097, 0.114175, 0.289078, 0.735359, 0.111499, 0.289076, 0.72591, 0.107961, 0.289074, 0.717559, 0.102351, 0.289073, 0.710955, 0.0947372, 0.289074, 0.706406, 0.0857587, 0.289075, 0.704735, 0.0758351, 0.289076, 0.705847, 0.0658261, 0.289077, 0.70958, 0.0564774, 0.289079, 0.715909, 0.0486637, 0.28908, 0.724479, 0.0434163, 0.289081, 0.734252, 0.0409827, 0.289083, 0.744311, 0.0412805, 0.289084, 0.753926, 0.0442846, 0.289085, 0.762684, 0.0492898, 0.289084, 0.770729, 0.0553884, 0.289083, 0.778163, 0.0622162, 0.289081, 0.78326, 0.0708093, 0.289078, 0.784084, 0.0808299, 0.289076, 0.782703, 0.0908257, 0.289074, 0.780024, 0.100555, 0.28907, 0.775916, 0.109768, 0.289066, 0.769085, 0.116993, 0.289061, 0.75919, 0.117894, 0.289057, 0.749353, 0.115619, 0.289055, 0.739591, 0.113033, 0.289053, 0.729971, 0.109968, 0.289051, 0.720985, 0.105416, 0.28905, 0.713599, 0.0985683, 0.28905, 0.707992, 0.090197, 0.289051, 0.704932, 0.0806148, 0.289052, 0.704747, 0.0705487, 0.289053, 0.707206, 0.060784, 0.289055, 0.71226, 0.0520826, 0.289056, 0.719802, 0.0454416, 0.289057, 0.72912, 0.0416489, 0.289058, 0.739121, 0.0404843, 0.28906, 0.749051, 0.0421472, 0.289061, 0.758274, 0.0462118, 0.289061, 0.766686, 0.0517888, 0.28906, 0.774501, 0.0581818, 0.289059, 0.7814, 0.0655175, 0.289056, 0.784426, 0.0744164, 0.289054, 0.784201, 0.0844917, 0.289052, 0.782352, 0.0944141, 0.289049, 0.779239, 0.104013, 0.289045, 0.774601, 0.11296, 0.289041, 0.768986, 0.117759, 0.289037, 0.760906, 0.118546, 0.289034, 0.756305, 0.117673, 0.289032, 0.854209, 0.105055, 0.523704, 0.853112, 0.101168, 0.523703, 0.849546, 0.0937905, 0.523698, 0.842464, 0.086675, 0.523693, 0.833371, 0.0823746, 0.523691, 0.823451, 0.0805816, 0.523692, 0.813359, 0.0804306, 0.523694, 0.803588, 0.0826932, 0.52369, 0.795666, 0.0888441, 0.523688, 0.790318, 0.0973668, 0.523685, 0.787691, 0.107079, 0.523679, 0.788061, 0.117134, 0.523673, 0.791352, 0.126643, 0.523667, 0.797217, 0.134825, 0.52366, 0.8052, 0.14094, 0.523655, 0.814711, 0.144232, 0.523653, 0.824709, 0.145623, 0.523654, 0.834787, 0.145508, 0.523659, 0.844549, 0.14302, 0.523679, 0.852625, 0.137116, 0.523684, 0.857571, 0.128376, 0.523684, 0.859536, 0.118501, 0.52368, 0.859371, 0.108415, 0.52367, 0.85713, 0.0985939, 0.52366, 0.852282, 0.089782, 0.523652, 0.84488, 0.082972, 0.523646, 0.835806, 0.0786118, 0.523643, 0.825943, 0.076503, 0.523646, 0.815879, 0.0757061, 0.523648, 0.80801, 0.0759091, 0.523646, 0.798652, 0.0794791, 0.523639, 0.791266, 0.0863018, 0.523638, 0.786161, 0.0949822, 0.523635, 0.783374, 0.104661, 0.523627, 0.783296, 0.114725, 0.523619, 0.78602, 0.124419, 0.523611, 0.791102, 0.133119, 0.523603, 0.79803, 0.140435, 0.523595, 0.806693, 0.145542, 0.52359, 0.816478, 0.147958, 0.523587, 0.826523, 0.148978, 0.523587, 0.836611, 0.14896, 0.523591, 0.846464, 0.146854, 0.5236, 0.855129, 0.141791, 0.523599, 0.861364, 0.133906, 0.523596, 0.865069, 0.12454, 0.523587, 0.866649, 0.114581, 0.523579, 0.866752, 0.104488, 0.523566, 0.864573, 0.0946784, 0.523555, 0.859304, 0.0861022, 0.523546, 0.852191, 0.0789535, 0.523536, 0.843761, 0.0734342, 0.523529, 0.834271, 0.0700344, 0.523527, 0.824356, 0.0681332, 0.523529, 0.814366, 0.0666493, 0.523531, 0.804312, 0.0666509, 0.523521, 0.795337, 0.0700132, 0.523515, 0.787513, 0.076341, 0.523516, 0.78141, 0.084366, 0.523512, 0.777014, 0.0934403, 0.523505, 0.774484, 0.1032, 0.523495, 0.774298, 0.113268, 0.523485, 0.776785, 0.123028, 0.523472, 0.78147, 0.131954, 0.523459, 0.787531, 0.140027, 0.523446, 0.79461, 0.147213, 0.523437, 0.803243, 0.15233, 0.523431, 0.81317, 0.15406, 0.523427, 0.822189, 0.154699, 0.523428, 0.832244, 0.155649, 0.523431, 0.842317, 0.156274, 0.523434, 0.852059, 0.153916, 0.523438, 0.860392, 0.148267, 0.523445, 0.867209, 0.14084, 0.523447, 0.872489, 0.132246, 0.523444, 0.87642, 0.122949, 0.523441, 0.879748, 0.113414, 0.523441, 0.88376, 0.104155, 0.523437, 0.886265, 0.0945724, 0.523378, 0.883237, 0.0887994, 0.523342, 0.880147, 0.0864873, 0.523318, 0.876529, 0.0848707, 0.523297, 0.873146, 0.0836762, 0.523283, 0.867811, 0.0814704, 0.523269, 0.862682, 0.0781237, 0.523256, 0.858269, 0.0744936, 0.523251, 0.854178, 0.0713723, 0.523248, 0.849376, 0.0683103, 0.523247, 0.84142, 0.0649139, 0.523248, 0.831608, 0.0625495, 0.523249, 0.821662, 0.060798, 0.523252, 0.811716, 0.0590435, 0.52325, 0.804769, 0.0591396, 0.523235, 0.798556, 0.0609509, 0.523218, 0.789994, 0.0660616, 0.52321, 0.783052, 0.0727087, 0.52321, 0.77692, 0.0807205, 0.523207, 0.772397, 0.0897317, 0.523202, 0.769499, 0.0993957, 0.523193, 0.768409, 0.109417, 0.52318, 0.769717, 0.119404, 0.523164, 0.773442, 0.128761, 0.523148, 0.779392, 0.136902, 0.523131, 0.7858, 0.144708, 0.52311, 0.792137, 0.151232, 0.523102, 0.796074, 0.224402, 0.325692, 0.983787, 0.0783486, 0.327627, 0.980617, 0.0799394, 0.32758, 0.977556, 0.0816757, 0.327558, 0.974389, 0.0835134, 0.327544, 0.970335, 0.0856495, 0.327534, 0.965311, 0.0881058, 0.327527, 0.956291, 0.0926478, 0.327521, 0.947855, 0.0981753, 0.32752, 0.940866, 0.105429, 0.327523, 0.935755, 0.114117, 0.327525, 0.932587, 0.123687, 0.327524, 0.931232, 0.133685, 0.32752, 0.931224, 0.143779, 0.327514, 0.93234, 0.153812, 0.327507, 0.934399, 0.163697, 0.3275, 0.935576, 0.169587, 0.327497, 0.934979, 0.174481, 0.327495, 0.931946, 0.178126, 0.327495, 0.927947, 0.180614, 0.327496, 0.922476, 0.182844, 0.327498, 0.912614, 0.184887, 0.327504, 0.902537, 0.184412, 0.327509, 0.892505, 0.183255, 0.327513, 0.884221, 0.180612, 0.327516, 0.875699, 0.17522, 0.327519, 0.87175, 0.172287, 0.32752, 0.868328, 0.169989, 0.327519, 0.864987, 0.168225, 0.327519, 0.860287, 0.166402, 0.327519, 0.855622, 0.164693, 0.327518, 0.851006, 0.162223, 0.327517, 0.845709, 0.159083, 0.327519, 0.840419, 0.155952, 0.32752, 0.835315, 0.152494, 0.327521, 0.833575, 0.150282, 0.327521, 0.833833, 0.146915, 0.327522, 0.83519, 0.144092, 0.327522, 0.836985, 0.140691, 0.327522, 0.838784, 0.136924, 0.327523, 0.842167, 0.127417, 0.327524, 0.844144, 0.117522, 0.327526, 0.84472, 0.107447, 0.327527, 0.843898, 0.0973897, 0.327526, 0.84158, 0.0875716, 0.327522, 0.836709, 0.0788226, 0.327518, 0.829877, 0.0749965, 0.327515, 0.819851, 0.0739846, 0.327513, 0.813374, 0.0742102, 0.327512, 0.807929, 0.0765632, 0.327513, 0.804482, 0.0809369, 0.327512, 0.801482, 0.0873674, 0.327512, 0.798192, 0.0969128, 0.32751, 0.795741, 0.106706, 0.327508, 0.794857, 0.116744, 0.327503, 0.797073, 0.126536, 0.327497, 0.802945, 0.134662, 0.327494, 0.811603, 0.139732, 0.327493, 0.821511, 0.141343, 0.327493, 0.829916, 0.138495, 0.327493, 0.836337, 0.130817, 0.327495, 0.839851, 0.121376, 0.327497, 0.841226, 0.111387, 0.327499, 0.840638, 0.101321, 0.327498, 0.83788, 0.0916338, 0.327495, 0.831769, 0.0837595, 0.327492, 0.823516, 0.0808638, 0.32749, 0.815597, 0.0806579, 0.327489, 0.809617, 0.0829579, 0.327489, 0.805578, 0.0878184, 0.327489, 0.801514, 0.0970455, 0.327488, 0.79896, 0.106807, 0.327486, 0.798442, 0.116861, 0.327481, 0.801464, 0.126416, 0.327476, 0.808418, 0.133605, 0.327474, 0.81788, 0.136883, 0.327473, 0.827675, 0.135148, 0.327474, 0.834627, 0.128004, 0.327476, 0.838163, 0.118584, 0.327479, 0.839098, 0.108553, 0.32748, 0.837571, 0.0985986, 0.327479, 0.832909, 0.0897326, 0.327476, 0.826659, 0.0856085, 0.327474, 0.818115, 0.0842825, 0.327474, 0.811619, 0.0858368, 0.327473, 0.806927, 0.0905618, 0.327473, 0.803575, 0.0973972, 0.327472, 0.800923, 0.107125, 0.32747, 0.800708, 0.117181, 0.327466, 0.804395, 0.126482, 0.327462, 0.812142, 0.132775, 0.32746, 0.822001, 0.134289, 0.32746, 0.830818, 0.129785, 0.327461, 0.835811, 0.121097, 0.327464, 0.837592, 0.111192, 0.327466, 0.836531, 0.101184, 0.327466, 0.832055, 0.09223, 0.327464, 0.824667, 0.0876587, 0.327462, 0.816331, 0.086915, 0.327462, 0.810396, 0.0895336, 0.327462, 0.806424, 0.0948033, 0.327461, 0.803654, 0.101603, 0.32746, 0.801907, 0.111522, 0.327457, 0.803521, 0.121415, 0.327453, 0.809629, 0.129294, 0.327451, 0.819016, 0.132615, 0.32745, 0.828475, 0.129723, 0.327451, 0.834286, 0.121609, 0.327454, 0.836415, 0.111783, 0.327456, 0.835358, 0.101784, 0.327457, 0.830468, 0.093078, 0.327454, 0.822813, 0.0891246, 0.327453, 0.815434, 0.0889639, 0.327453, 0.808974, 0.0932886, 0.327453, 0.805542, 0.0995686, 0.327452, 0.803155, 0.109349, 0.32745, 0.804086, 0.119335, 0.327446, 0.806132, 0.123672, 0.327444, 0.874832, 0.260507, 0.248775, 0.966285, 0.0664153, 0.425624, 0.775869, 0.112389, 0.499624, 0.777432, 0.122332, 0.499613, 0.781594, 0.131505, 0.499601, 0.787515, 0.139676, 0.499591, 0.794664, 0.146779, 0.499581, 0.803521, 0.151532, 0.499575, 0.81345, 0.153233, 0.499571, 0.82354, 0.153655, 0.499571, 0.833224, 0.153889, 0.499576, 0.843263, 0.153024, 0.49958, 0.85226, 0.14862, 0.499582, 0.859148, 0.141281, 0.499583, 0.864112, 0.132504, 0.499578, 0.867515, 0.123004, 0.499572, 0.869619, 0.113134, 0.499564, 0.870629, 0.103087, 0.499554, 0.870698, 0.093003, 0.499544, 0.86794, 0.0833396, 0.499524, 0.865434, 0.0782996, 0.499511, 0.864177, 0.0753044, 0.499511, 0.862219, 0.0727181, 0.499509, 0.859422, 0.071118, 0.499513, 0.856215, 0.070055, 0.499518, 0.853023, 0.068771, 0.499519, 0.849393, 0.0670707, 0.499519, 0.845968, 0.0657424, 0.499519, 0.838983, 0.0639259, 0.499521, 0.82904, 0.0621564, 0.499522, 0.81914, 0.0601654, 0.499528, 0.809243, 0.0582318, 0.499521, 0.801426, 0.0589362, 0.499497, 0.795777, 0.0614016, 0.499477, 0.790178, 0.0663027, 0.499477, 0.784819, 0.0728536, 0.499474, 0.779497, 0.0814255, 0.49947, 0.775405, 0.0906528, 0.499462, 0.772315, 0.100263, 0.499453, 0.770669, 0.11021, 0.499442, 0.77146, 0.120249, 0.499428, 0.774795, 0.129751, 0.499415, 0.780546, 0.138024, 0.499402, 0.786965, 0.145821, 0.499383, 0.794369, 0.152664, 0.499378, 0.801077, 0.156373, 0.499376, 0.80899, 0.157428, 0.499374, 0.819086, 0.157649, 0.499375, 0.82622, 0.157835, 0.499373, 0.83136, 0.158436, 0.499375, 0.836241, 0.159715, 0.499377, 0.841436, 0.160753, 0.499379, 0.846165, 0.159298, 0.49938, 0.853745, 0.152681, 0.499387, 0.860148, 0.144878, 0.499393, 0.865423, 0.136277, 0.499392, 0.869444, 0.127019, 0.499386, 0.872418, 0.117371, 0.49938, 0.874626, 0.107518, 0.499374, 0.876758, 0.0976465, 0.499363, 0.877129, 0.0908305, 0.499343, 0.875519, 0.0837582, 0.499314, 0.874974, 0.0817408, 0.499306, 0.874821, 0.0801361, 0.499305, 0.875455, 0.0791085, 0.499309, 0.87667, 0.0787799, 0.499317, 0.877959, 0.0785662, 0.499327, 0.88356, 0.0771439, 0.499358, 0.889647, 0.0758946, 0.499374, 0.897653, 0.0766222, 0.499389, 0.901439, 0.0774931, 0.499396, 0.904533, 0.0780552, 0.4994, 0.908422, 0.0790183, 0.499405, 0.911988, 0.0813866, 0.499413, 0.913349, 0.0862632, 0.499428, 0.912229, 0.0908456, 0.499434, 0.911059, 0.0950338, 0.499435, 0.910476, 0.0994658, 0.499436, 0.911998, 0.109407, 0.499438, 0.915081, 0.119023, 0.49944, 0.918253, 0.128612, 0.499439, 0.922003, 0.137982, 0.499432, 0.927445, 0.14646, 0.49942, 0.934449, 0.153728, 0.499406, 0.941717, 0.160739, 0.499389, 0.945831, 0.165751, 0.499376, 0.94726, 0.170301, 0.499363, 0.944897, 0.174776, 0.499352, 0.940524, 0.177705, 0.499345, 0.934699, 0.179864, 0.499341, 0.926339, 0.181166, 0.499342, 0.918616, 0.181503, 0.49935, 0.910438, 0.180502, 0.499361, 0.900504, 0.178682, 0.499376, 0.890638, 0.176529, 0.499386, 0.881909, 0.172661, 0.49939, 0.874733, 0.167098, 0.499395, 0.870154, 0.162644, 0.499398, 0.86848, 0.158677, 0.499402, 0.868915, 0.154445, 0.499407, 0.870351, 0.150445, 0.499413, 0.87239, 0.14622, 0.499419, 0.874973, 0.141408, 0.499424, 0.878133, 0.135682, 0.499428, 0.883337, 0.12703, 0.499434, 0.889623, 0.119138, 0.499437, 0.896218, 0.111493, 0.499427, 0.897983, 0.109228, 0.499415, 0.900848, 0.106023, 0.499386, 0.902381, 0.10537, 0.49937, 0.904217, 0.10621, 0.499359, 0.905727, 0.107796, 0.499356, 0.908193, 0.111302, 0.499355, 0.910696, 0.115795, 0.499356, 0.91474, 0.125045, 0.499358, 0.918395, 0.134459, 0.499355, 0.923064, 0.143398, 0.499345, 0.92957, 0.151099, 0.499331, 0.936855, 0.158094, 0.499315, 0.943314, 0.165813, 0.499295, 0.944364, 0.169689, 0.499285, 0.941645, 0.174475, 0.499273, 0.936815, 0.177251, 0.499267, 0.930429, 0.179036, 0.499265, 0.92038, 0.179938, 0.499272, 0.912754, 0.179209, 0.499281, 0.904561, 0.177714, 0.499294, 0.894687, 0.175597, 0.499308, 0.8851, 0.172522, 0.499314, 0.878768, 0.168212, 0.499317, 0.875228, 0.165119, 0.49932, 0.755585, 0.00888497, 0.474311, 0.838226, 0.13074, 0.292042, 0.839396, 0.126873, 0.292043, 0.841538, 0.117009, 0.292045, 0.842436, 0.106957, 0.292046, 0.841987, 0.0968743, 0.292044, 0.840487, 0.0868913, 0.292042, 0.836863, 0.0775423, 0.292039, 0.830667, 0.0730665, 0.292037, 0.823061, 0.0722614, 0.292035, 0.813168, 0.074125, 0.292036, 0.808891, 0.0767416, 0.292036, 0.805318, 0.082237, 0.292036, 0.802151, 0.0918169, 0.292037, 0.799833, 0.101645, 0.292035, 0.798497, 0.111646, 0.292032, 0.799412, 0.121668, 0.292028, 0.803666, 0.130755, 0.292026, 0.811123, 0.137471, 0.292025, 0.820284, 0.141677, 0.292025, 0.825662, 0.142487, 0.292026, 0.830651, 0.139866, 0.292027, 0.833928, 0.135479, 0.292027, 0.836587, 0.130024, 0.292028, 0.839555, 0.120382, 0.292031, 0.841064, 0.110405, 0.292032, 0.841032, 0.100316, 0.292031, 0.839635, 0.0903196, 0.292029, 0.836303, 0.0808361, 0.292026, 0.831278, 0.0761479, 0.292024, 0.823983, 0.0746585, 0.292023, 0.815981, 0.0757431, 0.292023, 0.810127, 0.0786448, 0.292024, 0.806519, 0.083494, 0.292024, 0.803098, 0.0929792, 0.292024, 0.800795, 0.10281, 0.292023, 0.799766, 0.112842, 0.29202, 0.801311, 0.122778, 0.292016, 0.806393, 0.131419, 0.292014, 0.814556, 0.137258, 0.292014, 0.821514, 0.13963, 0.292014, 0.82738, 0.139255, 0.292015, 0.833308, 0.133883, 0.292016, 0.837506, 0.12473, 0.292018, 0.839822, 0.114911, 0.29202, 0.840521, 0.104847, 0.292021, 0.839611, 0.0947977, 0.292019, 0.837077, 0.0850433, 0.292016, 0.830666, 0.0775435, 0.292013, 0.820784, 0.0762554, 0.292012, 0.812539, 0.078603, 0.292013, 0.80698, 0.0847244, 0.292014, 0.804168, 0.0919562, 0.292014, 0.801714, 0.101749, 0.292013, 0.800546, 0.111766, 0.29201, 0.801914, 0.121729, 0.292006, 0.806857, 0.130448, 0.292004, 0.815016, 0.136279, 0.292004, 0.822425, 0.138448, 0.292004, 0.828344, 0.137361, 0.292005, 0.832866, 0.133069, 0.292006, 0.837177, 0.123975, 0.292008, 0.839464, 0.114151, 0.29201, 0.840046, 0.104081, 0.29201, 0.838959, 0.0940501, 0.292008, 0.836007, 0.0844253, 0.292006, 0.831141, 0.0788932, 0.292004, 0.823858, 0.0769953, 0.292002, 0.815796, 0.0781351, 0.292003, 0.809788, 0.0817943, 0.292003, 0.80627, 0.0875363, 0.292004, 0.803185, 0.0971425, 0.292003, 0.8013, 0.107057, 0.292001, 0.801378, 0.117127, 0.291998, 0.804713, 0.12659, 0.291995, 0.8117, 0.133762, 0.291994, 0.819724, 0.137243, 0.291994, 0.827283, 0.13705, 0.291995, 0.832861, 0.13222, 0.291996, 0.837114, 0.1231, 0.291998, 0.839301, 0.113254, 0.292, 0.839724, 0.103177, 0.292, 0.838445, 0.0931689, 0.291998, 0.83506, 0.0837026, 0.291996, 0.829987, 0.0789463, 0.291994, 0.820095, 0.077773, 0.291993, 0.812577, 0.0801696, 0.291993, 0.806944, 0.0869155, 0.291994, 0.803662, 0.096451, 0.291994, 0.801682, 0.106347, 0.291992, 0.801619, 0.116418, 0.291989, 0.804782, 0.125941, 0.291986, 0.811652, 0.133221, 0.291985, 0.819381, 0.136669, 0.291985, 0.827355, 0.136462, 0.291985, 0.833987, 0.129809, 0.291987, 0.837658, 0.120428, 0.291989, 0.839388, 0.110491, 0.291991, 0.83931, 0.100406, 0.29199, 0.837521, 0.090479, 0.291988, 0.83378, 0.0825284, 0.291986, 0.827847, 0.0785987, 0.291984, 0.821246, 0.0780731, 0.291983, 0.813822, 0.0799416, 0.291984, 0.808168, 0.0852384, 0.291985, 0.80513, 0.0921887, 0.291985, 0.8026, 0.10196, 0.291984, 0.801543, 0.111987, 0.291981, 0.803199, 0.121901, 0.291977, 0.805414, 0.126452, 0.291976, 0.935334, 0.067683, 0.286396, 0.937793, 0.067683, 0.286393, 0.940017, 0.0674045, 0.286391, 0.942667, 0.0668256, 0.28639, 0.946433, 0.0666341, 0.28639, 0.949801, 0.0666936, 0.286391, 0.951667, 0.0669866, 0.286391, 0.954145, 0.0675275, 0.286391, 0.961325, 0.0675275, 0.286391, 0.962314, 0.0675275, 0.286391, 0.965421, 0.142559, 0.506648, 0.969123, 0.140973, 0.50664, 0.975742, 0.133537, 0.506622, 0.977449, 0.123707, 0.50661, 0.973782, 0.114431, 0.506601, 0.96593, 0.108263, 0.506591, 0.95604, 0.107183, 0.506579, 0.9473, 0.111929, 0.506571, 0.94304, 0.120897, 0.506567, 0.944156, 0.130838, 0.506559, 0.949682, 0.139175, 0.506541, 0.958491, 0.143878, 0.50651, 0.968349, 0.142828, 0.506485, 0.975769, 0.136174, 0.506468, 0.978842, 0.126666, 0.506455, 0.976814, 0.116891, 0.506447, 0.970308, 0.109294, 0.506439, 0.961002, 0.105678, 0.506428, 0.951222, 0.10757, 0.506419, 0.944012, 0.114434, 0.506415, 0.941824, 0.124166, 0.506412, 0.94434, 0.133866, 0.506402, 0.950769, 0.141542, 0.506382, 0.959954, 0.145481, 0.506352, 0.969735, 0.143761, 0.50633, 0.977031, 0.136938, 0.506314, 0.980309, 0.127484, 0.506301, 0.978782, 0.117607, 0.506294, 0.972884, 0.109513, 0.506287, 0.96408, 0.104748, 0.506278, 0.95411, 0.10491, 0.506268, 0.945583, 0.110114, 0.506264, 0.941016, 0.118965, 0.506263, 0.941307, 0.128984, 0.506258, 0.945574, 0.138058, 0.506246, 0.953156, 0.144618, 0.506223, 0.962806, 0.147195, 0.506195, 0.972285, 0.144144, 0.506175, 0.979069, 0.136781, 0.506161, 0.98207, 0.127222, 0.506149, 0.980501, 0.117342, 0.506142, 0.974795, 0.109097, 0.506137, 0.966315, 0.10374, 0.506129, 0.956379, 0.102752, 0.506119, 0.947197, 0.106728, 0.506114, 0.940927, 0.114497, 0.506115, 0.939332, 0.124379, 0.506113, 0.941743, 0.134126, 0.506105, 0.947617, 0.142263, 0.506091, 0.956122, 0.14759, 0.506065, 0.966045, 0.148617, 0.50604, 0.97505, 0.144293, 0.506023, 0.981301, 0.136449, 0.50601, 0.983996, 0.126789, 0.505999, 0.982309, 0.11692, 0.505993, 0.97673, 0.108576, 0.505989, 0.968538, 0.10276, 0.505982, 0.958742, 0.100742, 0.505972, 0.949142, 0.103576, 0.505966, 0.941592, 0.110163, 0.505968, 0.938061, 0.119508, 0.505969, 0.938735, 0.129532, 0.505964, 0.942807, 0.138715, 0.505955, 0.949851, 0.14588, 0.505937, 0.958949, 0.15012, 0.505911, 0.968917, 0.149783, 0.505889, 0.977476, 0.144582, 0.505874, 0.983376, 0.136453, 0.505862, 0.985952, 0.126754, 0.505852, 0.984311, 0.11687, 0.505846, 0.978958, 0.10837, 0.505842, 0.971104, 0.102085, 0.505836, 0.961573, 0.0989924, 0.505826, 0.951688, 0.100557, 0.50582, 0.943206, 0.105935, 0.505821, 0.937688, 0.114268, 0.505824, 0.936534, 0.124235, 0.505823, 0.938805, 0.134032, 0.505817, 0.944147, 0.142544, 0.505805, 0.951954, 0.148885, 0.505786, 0.961414, 0.152225, 0.50576, 0.971293, 0.150804, 0.50574, 0.979506, 0.14504, 0.505727, 0.985219, 0.136767, 0.505715, 0.987804, 0.127065, 0.505705, 0.986309, 0.117152, 0.5057, 0.981239, 0.108473, 0.505696, 0.973734, 0.101765, 0.505691, 0.964553, 0.0977026, 0.505681, 0.954551, 0.0979728, 0.505674, 0.945454, 0.102243, 0.505673, 0.938383, 0.109359, 0.505678, 0.935277, 0.118871, 0.50568, 0.935937, 0.128908, 0.505677, 0.939577, 0.138284, 0.505668, 0.945978, 0.146043, 0.505654, 0.954373, 0.151594, 0.505634, 0.964117, 0.153928, 0.505609, 0.973779, 0.15137, 0.505592, 0.9816, 0.14506, 0.505579, 0.983813, 0.142282, 0.505575, 0.787396, 0.132605, 0.389424, 0.789275, 0.136178, 0.389422, 0.795866, 0.143768, 0.389417, 0.804577, 0.148793, 0.389416, 0.814383, 0.151076, 0.389418, 0.824391, 0.150226, 0.389422, 0.831896, 0.147139, 0.389425, 0.838922, 0.141455, 0.389428, 0.843458, 0.134063, 0.389432, 0.846558, 0.12447, 0.389435, 0.847908, 0.114471, 0.389438, 0.847859, 0.10438, 0.389438, 0.846213, 0.0944323, 0.389436, 0.841971, 0.0853259, 0.389431, 0.8342, 0.0790518, 0.389425, 0.824606, 0.0759401, 0.389422, 0.814759, 0.0737418, 0.389419, 0.806206, 0.075121, 0.389416, 0.799852, 0.0812358, 0.389415, 0.79499, 0.0900725, 0.389413, 0.791408, 0.0995087, 0.389408, 0.78908, 0.109326, 0.389402, 0.788713, 0.119395, 0.389395, 0.791143, 0.129156, 0.389389, 0.796522, 0.137648, 0.389384, 0.804534, 0.143697, 0.389381, 0.814197, 0.146454, 0.389382, 0.824218, 0.14577, 0.389383, 0.83322, 0.141354, 0.389385, 0.839435, 0.133487, 0.389389, 0.842979, 0.124055, 0.389393, 0.844361, 0.114068, 0.389395, 0.843798, 0.104, 0.389395, 0.840913, 0.0943615, 0.389392, 0.834447, 0.086751, 0.389388, 0.825233, 0.0827148, 0.389385, 0.815392, 0.0805213, 0.389382, 0.807364, 0.0819935, 0.389379, 0.800393, 0.0891512, 0.389377, 0.795935, 0.0981953, 0.389375, 0.793178, 0.107896, 0.38937, 0.792658, 0.117952, 0.389363, 0.795199, 0.127675, 0.389357, 0.801029, 0.135847, 0.389352, 0.809617, 0.141015, 0.38935, 0.819568, 0.142273, 0.389349, 0.829078, 0.139173, 0.38935, 0.835906, 0.131872, 0.389351, 0.839531, 0.122483, 0.389355, 0.840534, 0.11246, 0.389357, 0.838965, 0.102516, 0.389356, 0.834002, 0.0938258, 0.389354, 0.825522, 0.0884871, 0.389351, 0.817606, 0.0862875, 0.389349, 0.809152, 0.0873007, 0.389346, 0.80261, 0.0934698, 0.389344, 0.79821, 0.10253, 0.389341, 0.796175, 0.112392, 0.389336, 0.79723, 0.122383, 0.38933, 0.802028, 0.131184, 0.389324, 0.810172, 0.136992, 0.389322, 0.820078, 0.138354, 0.38932, 0.82928, 0.134532, 0.38932, 0.835154, 0.12644, 0.389321, 0.83745, 0.116652, 0.389324, 0.836635, 0.106626, 0.389325, 0.832228, 0.0976399, 0.389324, 0.824022, 0.0919185, 0.389323, 0.814755, 0.0899711, 0.38932, 0.807837, 0.0925339, 0.389318, 0.803126, 0.0982026, 0.389317, 0.799456, 0.107571, 0.389313, 0.798903, 0.117603, 0.389308, 0.802317, 0.127017, 0.389302, 0.809701, 0.133742, 0.389298, 0.819473, 0.135723, 0.389297, 0.82865, 0.131918, 0.389296, 0.834147, 0.123584, 0.389298, 0.835653, 0.113654, 0.389301, 0.833539, 0.103843, 0.389302, 0.827203, 0.0961469, 0.389301, 0.817891, 0.0924536, 0.3893, 0.810482, 0.0934939, 0.389297, 0.804574, 0.0992874, 0.389296, 0.800886, 0.108633, 0.389293, 0.800748, 0.118666, 0.389287, 0.804964, 0.127729, 0.389282, 0.813194, 0.133341, 0.389279, 0.823125, 0.133304, 0.389278, 0.830953, 0.127213, 0.389278, 0.834316, 0.117785, 0.389281, 0.833642, 0.107771, 0.389283, 0.828698, 0.0991041, 0.389283, 0.819947, 0.0942749, 0.389282, 0.811812, 0.0944514, 0.38928, 0.804957, 0.100824, 0.389278, 0.801635, 0.110297, 0.389275, 0.802236, 0.120298, 0.389269, 0.807471, 0.128791, 0.389265, 0.816488, 0.13296, 0.389263, 0.826133, 0.130742, 0.389262, 0.832263, 0.122923, 0.389263, 0.832408, 0.122541, 0.389263, 0.813433, 0.0157294, 0.369291, 0.841831, 0.113365, 0.207607, 0.841608, 0.117398, 0.207606, 0.841409, 0.122543, 0.207605, 0.841946, 0.129172, 0.207604, 0.844807, 0.135299, 0.207604, 0.848752, 0.140357, 0.207604, 0.853673, 0.147136, 0.207602, 0.859401, 0.153632, 0.207601, 0.866381, 0.160927, 0.2076, 0.874636, 0.166704, 0.207596, 0.883148, 0.17213, 0.207595, 0.89108, 0.178379, 0.207591, 0.899096, 0.184517, 0.207588, 0.906725, 0.188941, 0.207585, 0.915358, 0.192442, 0.207582, 0.918516, 0.193728, 0.207582, 0.921364, 0.195601, 0.207588, 0.922306, 0.196546, 0.207595, 0.927832, 0.202295, 0.207637, 0.783607, 0.170497, 0.233256, 0.934068, 0.164705, 0.24822, 0.93377, 0.160676, 0.248221, 0.933317, 0.15059, 0.248226, 0.93407, 0.140527, 0.248231, 0.936243, 0.130673, 0.248234, 0.939965, 0.121299, 0.248236, 0.945353, 0.112776, 0.248237, 0.952363, 0.105531, 0.248237, 0.960711, 0.0998761, 0.248238, 0.969947, 0.095821, 0.248239, 0.97982, 0.0938645, 0.248241, 0.989666, 0.0956631, 0.248242, 0.973353, 0.215207, 0.388181, 0.973266, 0.219238, 0.388169, 0.970338, 0.224265, 0.388135, 0.964894, 0.224392, 0.388096, 0.961877, 0.222957, 0.388079, 0.959288, 0.22073, 0.388063, 0.957803, 0.219549, 0.388059, 0.956477, 0.218382, 0.388054, 0.955216, 0.216885, 0.388049, 0.954043, 0.215779, 0.388047, 0.95267, 0.214483, 0.388045, 0.950793, 0.212791, 0.388043, 0.949717, 0.211835, 0.388042, 0.948665, 0.210819, 0.388043, 0.947589, 0.209906, 0.388043, 0.945884, 0.208167, 0.388043, 0.94459, 0.206412, 0.388044, 0.943508, 0.204412, 0.388046, 0.942362, 0.202309, 0.388054, 0.941268, 0.201182, 0.38807, 0.940163, 0.200231, 0.388075, 0.938499, 0.198418, 0.388071, 0.936954, 0.196821, 0.388067, 0.935988, 0.195802, 0.388067, 0.935128, 0.194668, 0.388068, 0.934411, 0.192902, 0.388071, 0.934932, 0.190914, 0.388071, 0.936603, 0.189213, 0.388069, 0.939236, 0.187568, 0.388067, 0.94408, 0.185016, 0.388065, 0.949118, 0.182328, 0.388065, 0.954806, 0.179343, 0.388067, 0.95929, 0.177893, 0.38807, 0.962492, 0.179047, 0.388071, 0.964243, 0.181776, 0.38807, 0.964945, 0.186178, 0.388065, 0.964184, 0.191601, 0.388055, 0.961976, 0.19739, 0.388035, 0.959905, 0.201753, 0.388012, 0.95908, 0.203799, 0.387998, 0.958256, 0.205772, 0.387979, 0.956343, 0.207483, 0.387946, 0.953905, 0.207319, 0.387926, 0.950898, 0.20625, 0.387916, 0.946956, 0.203242, 0.387907, 0.945756, 0.201255, 0.387906, 0.945272, 0.200027, 0.387909, 0.943829, 0.197971, 0.387915, 0.941426, 0.196023, 0.387914, 0.939704, 0.194288, 0.387913, 0.938974, 0.192427, 0.387913, 0.939817, 0.190592, 0.387912, 0.941968, 0.188885, 0.387912, 0.944905, 0.187263, 0.387911, 0.948729, 0.185505, 0.38791, 0.952736, 0.184064, 0.38791, 0.957204, 0.183564, 0.387909, 0.960314, 0.185243, 0.387904, 0.961498, 0.188622, 0.387896, 0.960833, 0.192957, 0.387882, 0.9585, 0.19687, 0.387859, 0.955812, 0.198837, 0.387838, 0.951954, 0.19904, 0.387818, 0.94926, 0.197618, 0.387816, 0.947885, 0.196353, 0.387819, 0.946543, 0.194956, 0.387819, 0.945853, 0.193876, 0.387818, 0.945723, 0.192729, 0.387818, 0.946711, 0.191307, 0.387818, 0.949168, 0.190065, 0.387817, 0.952217, 0.189689, 0.387815, 0.954949, 0.191158, 0.387808, 0.955071, 0.193815, 0.387795, 0.95325, 0.195763, 0.387782, 0.950689, 0.196112, 0.387776, 0.94846, 0.194726, 0.387776, 0.94785, 0.193736, 0.387775, 0.948169, 0.192372, 0.387774, 0.949405, 0.191559, 0.387773, 0.951744, 0.191333, 0.38777, 0.953207, 0.192333, 0.387765, 0.952928, 0.194365, 0.387754, 0.951119, 0.195215, 0.387747, 0.949524, 0.194637, 0.387745, 0.948803, 0.193784, 0.387743, 0.949026, 0.192669, 0.387742, 0.950052, 0.192082, 0.38774, 0.951864, 0.192291, 0.387736, 0.952494, 0.193306, 0.38773, 0.951706, 0.194481, 0.387722, 0.949969, 0.194389, 0.387717, 0.949373, 0.193813, 0.387716, 0.949515, 0.192858, 0.387714, 0.950351, 0.192425, 0.387712, 0.95159, 0.192627, 0.387707, 0.952049, 0.193461, 0.387702, 0.951084, 0.19437, 0.387694, 0.949827, 0.19399, 0.387691, 0.949557, 0.19337, 0.387689, 0.950342, 0.192646, 0.387686, 0.951455, 0.192816, 0.387681, 0.951775, 0.193534, 0.387676, 0.951017, 0.194186, 0.387669, 0.949877, 0.193806, 0.387665, 0.949894, 0.193089, 0.387662, 0.950526, 0.19276, 0.38766, 0.95154, 0.193168, 0.387654, 0.951256, 0.193939, 0.387647, 0.95044, 0.194036, 0.387643, 0.949964, 0.193702, 0.38764, 0.950081, 0.193083, 0.387638, 0.950685, 0.192855, 0.387635, 0.951399, 0.193197, 0.387629, 0.951165, 0.193857, 0.387623, 0.950463, 0.193942, 0.387619, 0.950022, 0.193508, 0.387615, 0.950493, 0.19297, 0.387612, 0.95128, 0.193213, 0.387605, 0.951085, 0.193794, 0.387599, 0.950478, 0.193855, 0.387595, 0.950126, 0.193488, 0.387591, 0.950553, 0.193033, 0.387587, 0.951214, 0.193292, 0.387581, 0.950827, 0.193806, 0.387573, 0.95023, 0.19355, 0.387568, 0.950607, 0.193087, 0.387563, 0.951131, 0.19331, 0.387557, 0.950794, 0.193746, 0.387549, 0.950291, 0.193494, 0.387544, 0.950656, 0.193132, 0.387538, 0.951072, 0.19335, 0.387532, 0.950757, 0.193699, 0.387525, 0.950357, 0.193504, 0.38752, 0.950657, 0.193175, 0.387514, 0.951015, 0.193368, 0.387508, 0.950724, 0.193656, 0.387501, 0.9504, 0.19346, 0.387496, 0.950686, 0.193208, 0.38749, 0.950971, 0.19341, 0.387484, 0.950688, 0.19362, 0.387477, 0.95044, 0.193406, 0.387471, 0.950725, 0.193237, 0.387466, 0.950919, 0.193462, 0.387459, 0.950631, 0.193583, 0.387452, 0.950478, 0.19339, 0.387447, 0.950738, 0.193263, 0.387442, 0.950885, 0.193451, 0.387435, 0.950634, 0.193556, 0.387429, 0.950506, 0.19339, 0.387424, 0.950738, 0.193283, 0.387418, 0.950856, 0.193438, 0.387412, 0.950637, 0.193532, 0.387405, 0.95053, 0.193388, 0.3874, 0.950695, 0.193295, 0.387395, 0.950833, 0.193413, 0.387389, 0.95068, 0.193517, 0.387383, 0.950547, 0.193398, 0.387377, 0.950709, 0.19331, 0.387371, 0.950792, 0.193452, 0.387363, 0.950607, 0.193479, 0.387357, 0.950636, 0.193329, 0.387349, 0.950787, 0.193411, 0.387341, 0.950619, 0.193468, 0.387333, 0.950656, 0.19332, 0.387324, 0.950776, 0.19343, 0.387316, 0.950597, 0.19345, 0.387308, 0.950685, 0.19332, 0.3873, 0.950735, 0.193453, 0.38729, 0.950579, 0.19339, 0.387282, 0.950746, 0.193354, 0.387273, 0.950632, 0.193457, 0.387262, 0.950658, 0.193318, 0.387252, 0.95074, 0.193438, 0.387243, 0.950575, 0.193395, 0.387234, 0.950735, 0.193345, 0.387225, 0.950628, 0.193451, 0.387214, 0.950651, 0.193312, 0.387204, 0.950735, 0.193431, 0.387194, 0.95057, 0.193388, 0.387186, 0.95073, 0.193339, 0.387176, 0.950621, 0.193444, 0.387165, 0.950649, 0.193305, 0.387155, 0.950726, 0.193427, 0.387146, 0.950565, 0.193376, 0.387137, 0.950729, 0.193337, 0.387128, 0.95061, 0.193434, 0.387117, 0.950655, 0.193299, 0.387107, 0.950708, 0.193427, 0.387097, 0.950566, 0.193352, 0.387088, 0.950734, 0.193348, 0.387079, 0.950589, 0.193408, 0.387068, 0.950703, 0.193319, 0.387055, 0.95061, 0.193428, 0.387042, 0.950634, 0.19329, 0.387032, 0.950713, 0.193411, 0.387023, 0.950552, 0.19336, 0.387014, 0.950715, 0.193321, 0.387005, 0.950596, 0.193418, 0.386994, 0.950642, 0.193283, 0.386984, 0.950694, 0.193411, 0.386975, 0.950553, 0.193335, 0.386966, 0.950721, 0.193333, 0.386956, 0.950575, 0.193392, 0.386946, 0.950689, 0.193302, 0.386933, 0.9506, 0.193414, 0.386921, 0.950616, 0.193274, 0.386911, 0.950705, 0.193392, 0.386902, 0.950538, 0.193353, 0.386893, 0.950695, 0.193299, 0.386884, 0.950593, 0.193408, 0.386873, 0.95061, 0.193267, 0.386863, 0.950702, 0.193384, 0.386854, 0.950533, 0.193352, 0.386846, 0.950686, 0.19329, 0.386837, 0.950594, 0.193405, 0.386826, 0.950595, 0.193265, 0.386817, 0.9507, 0.193374, 0.386808, 0.950529, 0.193348, 0.386799, 0.950681, 0.193285, 0.38679, 0.950584, 0.193396, 0.386779, 0.950599, 0.193256, 0.386769, 0.950692, 0.193372, 0.38676, 0.950523, 0.193339, 0.386752, 0.950676, 0.193278, 0.386743, 0.950583, 0.193393, 0.386732, 0.950585, 0.193252, 0.386723, 0.95069, 0.193362, 0.386714, 0.950519, 0.193337, 0.386706, 0.950669, 0.193272, 0.386696, 0.950576, 0.193385, 0.386685, 0.950585, 0.193244, 0.386676, 0.950684, 0.193357, 0.386667, 0.950513, 0.193331, 0.386659, 0.950663, 0.193264, 0.38665, 0.950575, 0.193381, 0.386639, 0.950573, 0.193242, 0.386629, 0.950678, 0.19335, 0.38662, 0.950509, 0.19332, 0.386612, 0.950664, 0.193264, 0.386603, 0.950558, 0.193369, 0.386592, 0.950588, 0.193231, 0.386582, 0.950662, 0.193354, 0.386573, 0.950503, 0.1933, 0.386565, 0.950667, 0.193263, 0.386557, 0.950548, 0.193361, 0.386546, 0.950589, 0.193224, 0.386536, 0.950652, 0.193351, 0.386528, 0.9505, 0.193286, 0.386519, 0.950667, 0.193263, 0.386511, 0.950536, 0.193348, 0.386501, 0.950605, 0.193222, 0.38649, 0.950621, 0.193356, 0.386481, 0.950511, 0.193253, 0.386472, 0.950672, 0.19329, 0.386463, 0.950509, 0.193323, 0.386454, 0.950636, 0.193235, 0.386443, 0.950558, 0.193356, 0.386433, 0.950546, 0.19322, 0.386424, 0.950651, 0.193323, 0.386414, 0.950489, 0.193283, 0.386406, 0.950651, 0.193247, 0.386397, 0.950521, 0.193331, 0.386386, 0.950598, 0.193209, 0.386376, 0.950603, 0.193346, 0.386366, 0.950494, 0.193239, 0.386358, 0.950662, 0.193264, 0.386349, 0.950506, 0.193319, 0.38634, 0.950607, 0.193209, 0.38633, 0.950581, 0.193347, 0.38632, 0.950493, 0.193225, 0.386312, 0.95066, 0.19326, 0.386304, 0.950503, 0.193318, 0.386295, 0.95059, 0.193196, 0.386286, 0.950596, 0.193333, 0.386276, 0.950483, 0.193229, 0.386268, 0.950652, 0.193249, 0.386259, 0.950499, 0.193309, 0.38625, 0.950595, 0.193196, 0.38624, 0.950575, 0.193335, 0.38623, 0.95048, 0.193216, 0.386222, 0.95065, 0.193244, 0.386214, 0.950497, 0.193308, 0.386206, 0.950575, 0.193183, 0.386196, 0.950591, 0.193318, 0.386187, 0.950476, 0.193218, 0.386178, 0.950641, 0.193244, 0.38617, 0.950483, 0.193291, 0.386161, 0.950597, 0.193191, 0.386151, 0.950542, 0.193322, 0.38614, 0.950496, 0.19319, 0.386132, 0.950632, 0.193269, 0.386123, 0.950462, 0.193266, 0.386115, 0.950605, 0.193201, 0.386106, 0.950495, 0.193295, 0.386094, 0.950562, 0.19317, 0.386083, 0.950575, 0.193304, 0.386074, 0.950468, 0.193199, 0.386066, 0.950629, 0.193236, 0.386057, 0.950467, 0.193272, 0.386048, 0.95059, 0.193179, 0.386038, 0.950523, 0.193306, 0.386028, 0.950493, 0.193172, 0.38602, 0.950613, 0.193264, 0.386011, 0.950447, 0.193238, 0.386002, 0.950602, 0.193191, 0.385993, 0.950481, 0.19328, 0.385983, 0.950552, 0.193155, 0.385973, 0.950563, 0.19329, 0.385963, 0.950454, 0.193185, 0.385955, 0.950618, 0.193218, 0.385947, 0.950458, 0.193261, 0.385938, 0.950573, 0.193161, 0.385928, 0.950521, 0.193293, 0.385918, 0.950469, 0.193162, 0.38591, 0.950611, 0.193236, 0.385901, 0.950441, 0.193243, 0.385893, 0.950576, 0.193169, 0.385884, 0.950476, 0.193271, 0.385872, 0.950525, 0.193138, 0.385863, 0.950568, 0.193267, 0.385854, 0.950436, 0.193183, 0.385846, 0.950603, 0.193193, 0.385837, 0.950452, 0.193247, 0.385828, 0.950565, 0.193151, 0.385817, 0.950497, 0.193276, 0.385807, 0.950474, 0.193141, 0.385799, 0.950586, 0.193239, 0.38579, 0.950423, 0.193203, 0.385781, 0.950583, 0.193165, 0.385773, 0.950454, 0.19325, 0.385763, 0.950532, 0.193127, 0.385753, 0.950538, 0.193264, 0.385744, 0.950428, 0.193157, 0.385736, 0.950595, 0.193183, 0.385728, 0.95044, 0.193237, 0.385719, 0.95054, 0.193127, 0.385709, 0.950517, 0.193266, 0.3857, 0.950424, 0.193146, 0.385692, 0.950594, 0.193173, 0.385685, 0.950443, 0.193241, 0.385676, 0.950515, 0.193112, 0.385667, 0.950542, 0.193246, 0.385659, 0.950416, 0.193153, 0.385651, 0.950584, 0.193169, 0.385642, 0.950432, 0.193224, 0.385634, 0.950539, 0.193121, 0.385624, 0.950491, 0.193254, 0.385614, 0.950435, 0.193123, 0.385606, 0.95058, 0.193194, 0.385598, 0.95041, 0.193206, 0.38559, 0.950542, 0.193126, 0.385581, 0.950453, 0.193237, 0.38557, 0.950475, 0.193097, 0.385561, 0.950559, 0.193218, 0.385553, 0.950393, 0.193176, 0.385545, 0.950551, 0.193121, 0.385537, 0.950455, 0.193237, 0.385528, 0.950454, 0.193096, 0.385519, 0.950563, 0.193203, 0.385511, 0.950392, 0.193181, 0.385504, 0.95054, 0.193113, 0.385495, 0.950452, 0.193231, 0.385485, 0.950451, 0.19309, 0.385477, 0.950556, 0.193199, 0.385469, 0.950387, 0.193172, 0.385461, 0.950538, 0.19311, 0.385453, 0.950444, 0.193224, 0.385443, 0.95045, 0.193082, 0.385434, 0.950555, 0.193193, 0.385426, 0.950382, 0.193173, 0.385419, 0.950527, 0.193099, 0.385411, 0.950452, 0.193223, 0.385401, 0.950432, 0.193087, 0.385393, 0.950545, 0.193185, 0.385385, 0.95038, 0.193154, 0.385377, 0.950538, 0.193108, 0.385369, 0.950418, 0.193201, 0.385359, 0.950476, 0.19307, 0.385349, 0.950511, 0.193202, 0.385341, 0.950383, 0.193113, 0.385333, 0.95055, 0.193127, 0.385325, 0.950399, 0.193181, 0.385316, 0.950507, 0.19308, 0.385306, 0.950454, 0.193212, 0.385297, 0.950406, 0.193079, 0.385289, 0.950545, 0.193157, 0.385281, 0.950374, 0.193159, 0.385273, 0.950513, 0.193088, 0.385265, 0.950412, 0.19319, 0.385253, 0.950458, 0.193056, 0.385244, 0.950508, 0.193185, 0.385236, 0.950367, 0.193108, 0.385228, 0.950536, 0.193103, 0.385221, 0.950395, 0.19317, 0.385212, 0.950495, 0.193067, 0.385201, 0.950443, 0.193197, 0.385191, 0.950397, 0.193065, 0.385184, 0.950533, 0.193145, 0.385175, 0.950362, 0.193143, 0.385168, 0.950504, 0.193075, 0.385159, 0.9504, 0.193176, 0.385148, 0.95045, 0.193042, 0.385139, 0.950494, 0.193173, 0.385131, 0.950358, 0.19309, 0.385123, 0.950527, 0.193093, 0.385116, 0.950381, 0.193155, 0.385107, 0.950485, 0.193053, 0.385097, 0.950433, 0.193184, 0.385087, 0.950385, 0.193052, 0.38508, 0.950523, 0.19313, 0.385072, 0.950353, 0.193132, 0.385064, 0.950491, 0.19306, 0.385055, 0.950392, 0.193163, 0.385044, 0.950435, 0.193028, 0.385036, 0.950489, 0.193157, 0.385028, 0.950344, 0.193084, 0.38502, 0.950512, 0.19307, 0.385012, 0.950378, 0.193146, 0.385004, 0.950466, 0.193034, 0.384993, 0.950437, 0.193172, 0.384984, 0.950357, 0.193047, 0.384977, 0.95052, 0.193092, 0.384969, 0.950359, 0.19314, 0.384962, 0.950453, 0.193021, 0.384953, 0.950457, 0.19316, 0.384945, 0.95034, 0.193056, 0.384938, 0.950512, 0.193067, 0.38493, 0.950368, 0.19314, 0.384922, 0.950443, 0.193016, 0.384913, 0.950454, 0.193152, 0.384904, 0.950342, 0.193047, 0.384897, 0.950508, 0.193075, 0.384889, 0.950351, 0.193126, 0.384881, 0.950456, 0.193017, 0.384872, 0.950428, 0.193157, 0.384863, 0.950338, 0.193034, 0.384856, 0.950508, 0.193064, 0.384849, 0.950357, 0.193132, 0.384841, 0.950424, 0.193001, 0.384833, 0.950463, 0.193134, 0.384825, 0.950324, 0.193053, 0.384818, 0.950494, 0.193045, 0.38481, 0.950357, 0.19312, 0.384802, 0.950443, 0.193006, 0.384792, 0.950421, 0.193145, 0.384783, 0.950331, 0.193024, 0.384776, 0.9505, 0.193056, 0.384769, 0.950346, 0.193119, 0.384761, 0.950422, 0.192991, 0.384753, 0.950447, 0.193127, 0.384745, 0.95032, 0.193035, 0.384737, 0.950489, 0.193043, 0.38473, 0.950343, 0.193108, 0.384722, 0.950437, 0.192996, 0.384712, 0.950412, 0.193135, 0.384703, 0.950323, 0.193013, 0.384696, 0.950492, 0.193045, 0.384689, 0.950339, 0.19311, 0.384682, 0.95041, 0.19298, 0.384673, 0.950444, 0.193115, 0.384665, 0.950309, 0.193029, 0.384658, 0.950479, 0.193028, 0.384651, 0.950339, 0.193099, 0.384642, 0.950428, 0.192985, 0.384633, 0.950405, 0.193124, 0.384624, 0.950315, 0.193003, 0.384617, 0.950483, 0.193034, 0.38461, 0.950331, 0.193099, 0.384602, 0.950403, 0.19297, 0.384594, 0.950435, 0.193105, 0.384586, 0.950301, 0.193017, 0.384579, 0.950471, 0.193018, 0.384572, 0.95033, 0.193088, 0.384563, 0.95042, 0.192975, 0.384554, 0.950398, 0.193114, 0.384545, 0.950306, 0.192993, 0.384538, 0.950475, 0.193022, 0.384531, 0.950324, 0.19309, 0.384524, 0.950393, 0.192959, 0.384515, 0.950429, 0.193093, 0.384508, 0.950292, 0.19301, 0.3845, 0.950462, 0.193005, 0.384493, 0.950325, 0.193079, 0.384485, 0.95041, 0.192964, 0.384475, 0.950391, 0.193103, 0.384467, 0.950297, 0.192984, 0.38446, 0.950467, 0.19301, 0.384453, 0.950318, 0.19308, 0.384445, 0.950384, 0.192949, 0.384437, 0.950422, 0.193083, 0.384429, 0.950284, 0.193, 0.384422, 0.950454, 0.192994, 0.384415, 0.950317, 0.193069, 0.384407, 0.950402, 0.192953, 0.384397, 0.950385, 0.193093, 0.384388, 0.950288, 0.192974, 0.384382, 0.950459, 0.192999, 0.384375, 0.950311, 0.19307, 0.384367, 0.950375, 0.192938, 0.384359, 0.950415, 0.193072, 0.384351, 0.950275, 0.192991, 0.384344, 0.950445, 0.192982, 0.384337, 0.950311, 0.193059, 0.384329, 0.950392, 0.192943, 0.38432, 0.950379, 0.193082, 0.384311, 0.950279, 0.192965, 0.384304, 0.950451, 0.192987, 0.384297, 0.950304, 0.19306, 0.38429, 0.950367, 0.192928, 0.384282, 0.950408, 0.193062, 0.384274, 0.950268, 0.192981, 0.384267, 0.950438, 0.192972, 0.38426, 0.950303, 0.193049, 0.384252, 0.950384, 0.192932, 0.384242, 0.950371, 0.193072, 0.384234, 0.950271, 0.192955, 0.384227, 0.950443, 0.192977, 0.38422, 0.950297, 0.19305, 0.384213, 0.950359, 0.192918, 0.384205, 0.9504, 0.193051, 0.384197, 0.95026, 0.192971, 0.38419, 0.950429, 0.192961, 0.384183, 0.950296, 0.19304, 0.384175, 0.950375, 0.192921, 0.384166, 0.950366, 0.193061, 0.384157, 0.950263, 0.192946, 0.38415, 0.950435, 0.192966, 0.384143, 0.950289, 0.19304, 0.384136, 0.950352, 0.192908, 0.384128, 0.950391, 0.193042, 0.38412, 0.950253, 0.192959, 0.384113, 0.950423, 0.192953, 0.384106, 0.950286, 0.193028, 0.384098, 0.950371, 0.192913, 0.384089, 0.950354, 0.193053, 0.38408, 0.950257, 0.192934, 0.384074, 0.950428, 0.192957, 0.384067, 0.950281, 0.193031, 0.38406, 0.950342, 0.192897, 0.384052, 0.950387, 0.19303, 0.384044, 0.950243, 0.192955, 0.384037, 0.950412, 0.192936, 0.38403, 0.950285, 0.193026, 0.384023, 0.95034, 0.192894, 0.384014, 0.950376, 0.193027, 0.384007, 0.950246, 0.192939, 0.384, 0.950414, 0.192947, 0.383992, 0.950267, 0.193009, 0.383985, 0.950366, 0.192901, 0.383976, 0.950333, 0.193039, 0.383967, 0.950253, 0.192912, 0.38396, 0.950418, 0.192954, 0.383954, 0.95026, 0.193011, 0.383947, 0.95034, 0.192883, 0.383939, 0.950368, 0.19302, 0.383931, 0.950234, 0.192932, 0.383924, 0.950405, 0.192928, 0.383918, 0.950269, 0.193005, 0.38391, 0.950346, 0.192885, 0.383901, 0.950344, 0.193024, 0.383892, 0.950237, 0.192913, 0.383886, 0.950408, 0.192932, 0.383879, 0.950261, 0.193003, 0.383872, 0.950331, 0.192874, 0.383864, 0.950358, 0.193009, 0.383856, 0.950231, 0.192917, 0.383849, 0.9504, 0.192926, 0.383842, 0.950254, 0.192992, 0.383834, 0.950346, 0.192878, 0.383826, 0.950328, 0.193018, 0.383817, 0.950229, 0.1929, 0.383811, 0.950401, 0.192918, 0.383804, 0.95026, 0.192998, 0.383797, 0.95031, 0.192862, 0.383789, 0.950369, 0.192993, 0.383782, 0.950213, 0.19293, 0.383776, 0.950379, 0.192892, 0.383769, 0.950272, 0.193005, 0.383761, 0.950275, 0.192862, 0.383754, 0.950388, 0.192968, 0.383746, 0.950214, 0.192958, 0.38374, 0.950349, 0.192874, 0.383733, 0.950293, 0.193005, 0.383724, 0.950249, 0.192871, 0.383718, 0.950387, 0.19295, 0.38371, 0.950216, 0.192955, 0.383704, 0.95035, 0.192877, 0.383696, 0.950265, 0.192991, 0.383687, 0.950277, 0.192849, 0.383679, 0.950375, 0.192965, 0.383672, 0.950204, 0.19294, 0.383665, 0.950349, 0.192866, 0.383658, 0.950283, 0.192996, 0.38365, 0.950241, 0.19286, 0.383643, 0.950381, 0.192939, 0.383636, 0.95021, 0.192949, 0.38363, 0.950339, 0.192863, 0.383622, 0.950268, 0.192985, 0.383613, 0.950258, 0.192848, 0.383606, 0.950362, 0.192954, 0.383598, 0.950199, 0.192916, 0.383591, 0.950357, 0.19287, 0.383584, 0.950244, 0.192973, 0.383576, 0.950276, 0.192832, 0.383568, 0.950361, 0.192956, 0.383561, 0.950191, 0.192922, 0.383555, 0.950339, 0.19285, 0.383548, 0.950277, 0.192983, 0.38354, 0.950222, 0.192848, 0.383534, 0.950376, 0.192911, 0.383527, 0.950209, 0.192948, 0.383521, 0.950309, 0.192829, 0.383513, 0.950316, 0.192969, 0.383506, 0.950194, 0.192869, 0.383499, 0.950366, 0.192873, 0.383493, 0.950228, 0.192953, 0.383485, 0.950293, 0.192824, 0.383477, 0.950317, 0.192959, 0.38347, 0.950197, 0.192862, 0.383463, 0.950363, 0.192882, 0.383456, 0.950211, 0.192938, 0.383448, 0.950312, 0.192828, 0.38344, 0.950287, 0.192969, 0.383432, 0.950192, 0.192847, 0.383426, 0.950364, 0.192868, 0.383419, 0.950222, 0.192949, 0.383413, 0.950269, 0.19281, 0.383405, 0.950337, 0.19294, 0.383398, 0.950174, 0.192889, 0.383392, 0.950333, 0.192834, 0.383385, 0.950249, 0.19296, 0.383378, 0.950218, 0.192821, 0.383371, 0.950354, 0.192906, 0.383364, 0.950182, 0.192913, 0.383357, 0.950311, 0.192826, 0.38335, 0.950245, 0.192951, 0.383341, 0.950227, 0.192814, 0.383334, 0.950336, 0.192916, 0.383327, 0.950173, 0.192881, 0.38332, 0.950331, 0.192835, 0.383313, 0.950216, 0.192936, 0.383305, 0.950254, 0.192796, 0.383297, 0.950329, 0.192923, 0.38329, 0.950164, 0.192879, 0.383284, 0.950319, 0.192817, 0.383278, 0.950243, 0.192946, 0.38327, 0.950202, 0.192809, 0.383263, 0.950347, 0.192885, 0.383257, 0.950176, 0.192905, 0.38325, 0.950293, 0.192799, 0.383243, 0.950275, 0.192943, 0.383235, 0.950164, 0.192828, 0.383229, 0.95034, 0.192829, 0.383223, 0.950218, 0.192928, 0.383217, 0.950233, 0.192786, 0.383209, 0.950328, 0.192904, 0.383202, 0.950157, 0.192878, 0.383196, 0.950302, 0.192802, 0.383189, 0.95024, 0.192935, 0.383181, 0.95019, 0.1928, 0.383175, 0.950339, 0.192869, 0.383168, 0.95017, 0.192896, 0.383162, 0.950281, 0.192785, 0.383155, 0.950273, 0.192929, 0.383147, 0.950154, 0.192821, 0.383141, 0.950329, 0.192815, 0.383135, 0.95021, 0.192916, 0.383128, 0.950227, 0.192775, 0.383121, 0.950317, 0.192895, 0.383114, 0.950148, 0.192861, 0.383108, 0.950299, 0.192793, 0.383101, 0.950225, 0.192922, 0.383093, 0.950188, 0.192785, 0.383087, 0.950327, 0.192865, 0.38308, 0.950156, 0.192877, 0.383073, 0.950282, 0.192787, 0.383066, 0.950223, 0.192915, 0.383058, 0.950193, 0.192779, 0.383051, 0.950314, 0.192873, 0.383044, 0.950147, 0.192852, 0.383037, 0.950297, 0.192794, 0.38303, 0.950193, 0.1929, 0.383022, 0.95022, 0.192759, 0.383014, 0.950308, 0.192882, 0.383008, 0.950137, 0.19285, 0.383002, 0.950284, 0.192776, 0.382995, 0.950225, 0.19291, 0.382988, 0.950165, 0.192776, 0.382981, 0.950323, 0.192834, 0.382975, 0.950159, 0.192879, 0.382968, 0.950247, 0.192753, 0.382962, 0.950274, 0.192892, 0.382955, 0.950136, 0.192805, 0.382948, 0.950307, 0.192793, 0.382942, 0.950181, 0.192882, 0.382935, 0.950233, 0.192751, 0.382927, 0.950269, 0.192884, 0.38292, 0.95014, 0.192794, 0.382913, 0.950308, 0.192805, 0.382906, 0.950161, 0.192866, 0.382899, 0.950257, 0.192755, 0.382891, 0.950234, 0.192896, 0.382883, 0.950139, 0.192774, 0.382877, 0.950311, 0.192796, 0.382871, 0.950169, 0.192876, 0.382864, 0.950215, 0.192737, 0.382857, 0.950285, 0.192867, 0.38285, 0.950121, 0.192819, 0.382844, 0.950277, 0.192759, 0.382838, 0.950202, 0.192889, 0.382831, 0.950156, 0.192752, 0.382825, 0.950307, 0.19282, 0.382818, 0.950139, 0.192854, 0.382812, 0.950239, 0.192734, 0.382805, 0.95025, 0.192875, 0.382798, 0.950124, 0.192778, 0.382792, 0.950296, 0.192777, 0.382785, 0.950163, 0.192861, 0.382778, 0.950221, 0.19273, 0.382771, 0.950253, 0.192864, 0.382763, 0.950125, 0.192773, 0.382757, 0.950294, 0.192783, 0.38275, 0.950147, 0.192847, 0.382743, 0.95024, 0.192733, 0.382735, 0.950224, 0.192875, 0.382727, 0.950121, 0.192757, 0.382721, 0.950294, 0.192771, 0.382715, 0.950158, 0.192857, 0.382709, 0.950196, 0.192717, 0.382702, 0.950273, 0.192844, 0.382695, 0.950106, 0.192802, 0.382689, 0.95026, 0.192737, 0.382683, 0.950189, 0.192869, 0.382675, 0.950139, 0.192732, 0.382669, 0.950293, 0.192797, 0.382663, 0.950126, 0.192835, 0.382657, 0.950221, 0.192713, 0.38265, 0.95024, 0.192852, 0.382643, 0.950108, 0.192761, 0.382637, 0.950279, 0.192754, 0.382631, 0.95015, 0.192841, 0.382624, 0.950205, 0.19271, 0.382616, 0.950238, 0.192843, 0.382609, 0.950111, 0.192752, 0.382602, 0.950279, 0.192764, 0.382596, 0.950131, 0.192826, 0.382589, 0.950226, 0.192713, 0.382581, 0.950208, 0.192855, 0.382573, 0.950107, 0.192736, 0.382567, 0.95028, 0.192751, 0.382561, 0.950144, 0.192837, 0.382555, 0.950181, 0.192696, 0.382548, 0.95026, 0.192823, 0.382541, 0.950091, 0.192784, 0.382535, 0.950243, 0.192715, 0.382529, 0.950179, 0.192849, 0.382522, 0.950119, 0.192714, 0.382516, 0.950279, 0.192769, 0.382509, 0.950118, 0.192821, 0.382503, 0.950196, 0.192689, 0.382497, 0.95024, 0.192826, 0.38249, 0.950087, 0.192758, 0.382484, 0.950253, 0.192718, 0.382478, 0.950156, 0.192839, 0.382471, 0.950134, 0.192698, 0.382465, 0.950268, 0.192787, 0.382458, 0.950095, 0.192795, 0.382452, 0.95022, 0.192703, 0.382445, 0.950169, 0.192834, 0.382437, 0.950127, 0.192699, 0.382431, 0.95026, 0.192783, 0.382424, 0.95009, 0.192781, 0.382418, 0.950229, 0.192707, 0.382411, 0.950141, 0.192822, 0.382403, 0.950152, 0.192679, 0.382395, 0.950252, 0.192795, 0.382389, 0.95008, 0.192773, 0.382383, 0.950221, 0.192693, 0.382377, 0.950166, 0.192828, 0.382369, 0.950108, 0.192694, 0.382363, 0.950263, 0.192755, 0.382357, 0.950098, 0.192795, 0.382351, 0.950193, 0.192672, 0.382344, 0.95021, 0.192812, 0.382337, 0.950079, 0.192719, 0.382331, 0.950251, 0.192714, 0.382325, 0.950121, 0.1928, 0.382318, 0.950175, 0.192669, 0.382311, 0.95021, 0.192803, 0.382304, 0.950081, 0.192713, 0.382297, 0.950249, 0.192721, 0.382291, 0.950105, 0.192787, 0.382284, 0.950195, 0.192671, 0.382276, 0.950182, 0.192813, 0.382269, 0.950077, 0.192697, 0.382263, 0.95025, 0.192709, 0.382257, 0.950116, 0.192797, 0.382251, 0.950152, 0.192656, 0.382244, 0.95023, 0.192783, 0.382237, 0.950063, 0.192742, 0.382231, 0.950216, 0.192675, 0.382225, 0.950148, 0.192809, 0.382218, 0.950092, 0.192673, 0.382212, 0.950251, 0.192731, 0.382206, 0.950087, 0.19278, 0.3822, 0.950169, 0.192649, 0.382194, 0.95021, 0.192787, 0.382187, 0.950058, 0.192716, 0.382181, 0.950225, 0.192678, 0.382175, 0.950128, 0.192799, 0.382168, 0.950105, 0.192658, 0.382162, 0.95024, 0.192746, 0.382156, 0.950068, 0.192756, 0.38215, 0.950189, 0.192661, 0.382144, 0.950146, 0.192795, 0.382136, 0.950091, 0.192662, 0.38213, 0.950237, 0.192734, 0.382123, 0.950068, 0.192752, 0.382117, 0.950189, 0.192654, 0.38211, 0.950153, 0.192794, 0.382103, 0.950069, 0.192667, 0.382097, 0.950239, 0.192699, 0.382091, 0.950091, 0.192772, 0.382085, 0.950142, 0.192632, 0.382078, 0.950215, 0.192763, 0.382072, 0.950046, 0.192723, 0.382067, 0.950196, 0.19265, 0.382061, 0.950143, 0.192789, 0.382054, 0.950064, 0.192658, 0.382048, 0.950235, 0.19269, 0.382042, 0.95009, 0.192769, 0.382036, 0.950128, 0.192625, 0.382029, 0.950221, 0.192749, 0.382023, 0.950045, 0.192733, 0.382018, 0.950174, 0.192636, 0.382012, 0.950157, 0.19278, 0.382005, 0.950049, 0.192664, 0.381999, 0.950224, 0.192668, 0.381993, 0.950099, 0.192765, 0.381987, 0.950116, 0.192622, 0.38198, 0.950213, 0.192741, 0.381974, 0.950041, 0.192719, 0.381968, 0.95018, 0.192636, 0.381962, 0.950134, 0.192774, 0.381955, 0.95006, 0.192643, 0.381949, 0.950226, 0.192685, 0.381943, 0.950071, 0.19275, 0.381937, 0.950133, 0.192613, 0.381931, 0.950197, 0.192746, 0.381924, 0.950032, 0.192698, 0.381919, 0.950187, 0.192632, 0.381913, 0.950125, 0.192769, 0.381906, 0.950054, 0.192636, 0.3819, 0.950222, 0.192675, 0.381895, 0.950072, 0.192748, 0.381889, 0.950117, 0.192605, 0.381882, 0.950206, 0.192731, 0.381876, 0.950031, 0.192713, 0.381871, 0.950161, 0.192616, 0.381865, 0.950144, 0.19276, 0.381858, 0.950034, 0.192646, 0.381852, 0.950209, 0.192646, 0.381847, 0.950088, 0.192747, 0.38184, 0.9501, 0.192604, 0.381833, 0.950199, 0.192721, 0.381827, 0.950028, 0.192699, 0.381822, 0.950168, 0.192618, 0.381815, 0.950116, 0.192754, 0.381808, 0.950052, 0.192621, 0.381802, 0.950212, 0.192674, 0.381796, 0.950051, 0.192726, 0.38179, 0.95013, 0.192595, 0.381784, 0.950172, 0.192733, 0.381778, 0.95002, 0.192662, 0.381772, 0.950186, 0.192623, 0.381766, 0.950091, 0.192746, 0.381759, 0.950064, 0.192605, 0.381754, 0.950203, 0.192689, 0.381747, 0.950032, 0.192706, 0.381742, 0.950146, 0.1926, 0.381735, 0.95013, 0.192743, 0.381728, 0.950026, 0.192625, 0.381723, 0.9502, 0.192635, 0.381717, 0.950068, 0.192727, 0.381711, 0.950096, 0.192584, 0.381704, 0.950185, 0.192708, 0.381698, 0.950014, 0.19268, 0.381692, 0.950156, 0.192599, 0.381686, 0.95011, 0.192739, 0.381679, 0.95003, 0.192609, 0.381674, 0.9502, 0.192641, 0.381668, 0.950054, 0.192718, 0.381662, 0.950096, 0.192575, 0.381656, 0.950183, 0.192702, 0.38165, 0.950009, 0.19268, 0.381644, 0.950144, 0.192588, 0.381638, 0.950118, 0.192732, 0.381631, 0.950014, 0.192613, 0.381626, 0.95019, 0.192618, 0.38162, 0.950067, 0.192718, 0.381614, 0.950077, 0.192574, 0.381608, 0.95018, 0.192689, 0.381601, 0.950007, 0.192672, 0.381596, 0.950144, 0.192587, 0.38159, 0.950097, 0.192724, 0.381583, 0.950029, 0.192592, 0.381577, 0.950191, 0.192642, 0.381571, 0.950031, 0.192697, 0.381565, 0.950107, 0.192564, 0.381559, 0.950154, 0.192702, 0.381553, 0.949998, 0.192636, 0.381547, 0.950162, 0.19259, 0.381541, 0.950076, 0.192718, 0.381535, 0.950035, 0.192578, 0.381529, 0.950187, 0.192647, 0.381523, 0.95002, 0.192687, 0.381517, 0.950106, 0.192557, 0.381511, 0.950149, 0.192697, 0.381505, 0.949993, 0.192631, 0.381499, 0.950156, 0.192581, 0.381494, 0.950077, 0.192714, 0.381487, 0.950021, 0.192575, 0.381482, 0.950185, 0.192626, 0.381476, 0.950029, 0.192692, 0.38147, 0.950078, 0.192547, 0.381464, 0.950173, 0.192673, 0.381458, 0.949995, 0.192667, 0.381453, 0.950107, 0.192555, 0.381448, 0.950122, 0.192694, 0.381441, 0.95, 0.192594, 0.381435, 0.950171, 0.192604, 0.381429, 0.95003, 0.192679, 0.381423, 0.950098, 0.19255, 0.381416, 0.950125, 0.192687, 0.381409, 0.949995, 0.192595, 0.381403, 0.950166, 0.192596, 0.381397, 0.950029, 0.192675, 0.381391, 0.950095, 0.192546, 0.381384, 0.95012, 0.192683, 0.381377, 0.949995, 0.192588, 0.381371, 0.950164, 0.192596, 0.381365, 0.950008, 0.192653, 0.381358, 0.950126, 0.192558, 0.381351, 0.950067, 0.192691, 0.381343, 0.950016, 0.192555, 0.381338, 0.950168, 0.192622, 0.381332, 0.950001, 0.192658, 0.381326, 0.950094, 0.192533, 0.38132, 0.950126, 0.192674, 0.381314, 0.949975, 0.192599, 0.381308, 0.950142, 0.192557, 0.381303, 0.950061, 0.19269, 0.381296, 0.949996, 0.192552, 0.381291, 0.950168, 0.192587, 0.381285, 0.950004, 0.192661, 0.381279, 0.950067, 0.19252, 0.381273, 0.950154, 0.192651, 0.381267, 0.949975, 0.192641, 0.381262, 0.950086, 0.192526, 0.381257, 0.950117, 0.192665, 0.381251, 0.949972, 0.192585, 0.381245, 0.950141, 0.192554, 0.38124, 0.950045, 0.192678, 0.381233, 0.950003, 0.192537, 0.381228, 0.950164, 0.192596, 0.381222, 0.950005, 0.192659, 0.381217, 0.950044, 0.192511, 0.381211, 0.950164, 0.192625, 0.381205, 0.949987, 0.192656, 0.381201, 0.950037, 0.192511, 0.381195, 0.950163, 0.19262, 0.38119, 0.949988, 0.192654, 0.381185, 0.950036, 0.192508, 0.381179, 0.950164, 0.192616, 0.381174, 0.949989, 0.192655, 0.381169, 0.950027, 0.192508, 0.381164, 0.950164, 0.192608, 0.381158, 0.949992, 0.192655, 0.381153, 0.950022, 0.192507, 0.381148, 0.950163, 0.192603, 0.381143, 0.949993, 0.192654, 0.381138, 0.950019, 0.192505, 0.381132, 0.950161, 0.192599, 0.381127, 0.949992, 0.192653, 0.381122, 0.950017, 0.192504, 0.381117, 0.95016, 0.192596, 0.381111, 0.949991, 0.192651, 0.381106, 0.950015, 0.192502, 0.381101, 0.950159, 0.192594, 0.381096, 0.949991, 0.192649, 0.381091, 0.950012, 0.1925, 0.381085, 0.950157, 0.192591, 0.38108, 0.94999, 0.192647, 0.381075, 0.95001, 0.192498, 0.38107, 0.950156, 0.192587, 0.381065, 0.94999, 0.192646, 0.38106, 0.950006, 0.192497, 0.381054, 0.950155, 0.192583, 0.381049, 0.94999, 0.192645, 0.381044, 0.950003, 0.192495, 0.381039, 0.950154, 0.19258, 0.381033, 0.94999, 0.192643, 0.381028, 0.95, 0.192494, 0.381023, 0.950152, 0.192576, 0.381018, 0.94999, 0.192642, 0.381013, 0.949997, 0.192492, 0.381007, 0.950151, 0.192572, 0.381002, 0.949982, 0.192636, 0.380997, 0.950002, 0.192488, 0.380992, 0.95015, 0.192575, 0.380986, 0.94998, 0.192635, 0.380981, 0.949999, 0.192485, 0.380976, 0.95015, 0.19257, 0.380971, 0.949987, 0.192637, 0.380966, 0.949987, 0.192487, 0.380961, 0.950148, 0.192556, 0.380956, 0.949996, 0.192639, 0.380951, 0.949976, 0.19249, 0.380945, 0.950145, 0.192544, 0.380941, 0.950003, 0.192639, 0.380935, 0.949968, 0.192492, 0.38093, 0.950141, 0.192535, 0.380925, 0.949975, 0.192623, 0.380919, 0.950001, 0.192475, 0.380913, 0.950142, 0.192571, 0.380908, 0.949971, 0.192624, 0.380903, 0.94999, 0.192474, 0.380898, 0.950144, 0.192556, 0.380893, 0.949984, 0.19263, 0.380888, 0.949969, 0.192479, 0.380883, 0.950141, 0.192531, 0.380878, 0.950005, 0.192634, 0.380873, 0.949947, 0.192489, 0.380868, 0.95013, 0.192505, 0.380863, 0.950032, 0.192635, 0.380858, 0.949925, 0.192508, 0.380853, 0.950106, 0.19248, 0.380849, 0.950066, 0.192629, 0.380844, 0.949912, 0.19254, 0.380839, 0.950072, 0.192461, 0.380834, 0.950099, 0.192614, 0.380829, 0.949919, 0.192578, 0.380824, 0.950028, 0.192453, 0.38082, 0.950126, 0.192589, 0.380814, 0.949941, 0.192604, 0.38081, 0.949984, 0.192455, 0.380805, 0.950142, 0.192537, 0.3808, 0.949991, 0.192628, 0.380796, 0.949927, 0.19248, 0.380791, 0.950113, 0.192474, 0.380787, 0.950063, 0.192626, 0.380782, 0.949899, 0.192545, 0.380777, 0.950043, 0.192442, 0.380773, 0.950128, 0.192584, 0.380768, 0.949945, 0.192611, 0.380764, 0.949948, 0.192454, 0.380759, 0.950131, 0.192486, 0.380755, 0.949994, 0.192626, 0.380749, 0.949928, 0.192464, 0.380744, 0.950129, 0.192482, 0.38074, 0.950034, 0.192628, 0.380735, 0.949887, 0.192519, 0.38073, 0.95007, 0.192436, 0.380726, 0.95012, 0.192593, 0.380721, 0.949932, 0.192607, 0.380717, 0.949931, 0.192446, 0.380713, 0.950119, 0.192459, 0.380709, 0.950079, 0.19262, 0.380704, 0.949894, 0.192577, 0.380701, 0.949965, 0.192425, 0.380696, 0.950143, 0.192484, 0.380693, 0.949973, 0.192624, 0.380687, 0.94989, 0.192468, 0.380683, 0.950102, 0.192437, 0.380678, 0.950108, 0.192604, 0.380674, 0.949917, 0.192604, 0.38067, 0.949909, 0.192438, 0.380666, 0.950101, 0.19243, 0.380663, 0.950118, 0.192599, 0.380659, 0.949928, 0.192615, 0.380655, 0.949883, 0.19245, 0.380651, 0.950083, 0.192413, 0.380648, 0.950145, 0.192576, 0.380644, 0.949963, 0.192633, 0.38064, 0.949847, 0.192492, 0.380637, 0.950056, 0.192395, 0.380633, 0.950157, 0.192569, 0.380629, 0.949929, 0.192629, 0.380625, 0.949839, 0.192472, 0.380621, 0.950005, 0.192379, 0.380618, 0.950172, 0.192471, 0.380615, 0.949989, 0.192648, 0.38061, 0.949843, 0.192439, 0.380605, 0.950113, 0.192394, 0.380601, 0.950169, 0.192581, 0.380597, 0.94994, 0.192648, 0.380594, 0.949817, 0.192451, 0.38059, 0.95008, 0.192366, 0.380586, 0.95019, 0.192565, 0.380582, 0.949931, 0.192655, 0.380578, 0.949802, 0.192441, 0.380574, 0.950083, 0.192352, 0.380571, 0.950204, 0.192564, 0.380567, 0.949929, 0.192665, 0.380563, 0.949789, 0.192426, 0.380559, 0.950093, 0.19234, 0.380555, 0.950219, 0.192564, 0.380551, 0.94993, 0.192677, 0.380547, 0.949801, 0.192381, 0.380543, 0.950144, 0.192345, 0.380539, 0.950223, 0.192586, 0.380535, 0.949935, 0.19269, 0.380532, 0.949768, 0.192386, 0.380527, 0.950131, 0.192319, 0.380523, 0.950249, 0.192571, 0.38052, 0.949934, 0.192704, 0.380516, 0.949733, 0.192393, 0.380512, 0.950105, 0.192288, 0.380508, 0.950273, 0.19256, 0.380504, 0.949931, 0.192718, 0.3805, 0.949701, 0.192396, 0.380496, 0.950084, 0.192261, 0.380493, 0.950297, 0.192556, 0.380489, 0.949932, 0.192736, 0.380485, 0.949664, 0.192405, 0.380481, 0.950055, 0.192231, 0.380477, 0.950326, 0.192544, 0.380473, 0.949942, 0.192756, 0.380469, 0.949622, 0.192428, 0.380465, 0.950015, 0.192202, 0.380462, 0.950356, 0.192525, 0.380458, 0.949957, 0.192778, 0.380454, 0.949585, 0.192434, 0.38045, 0.949997, 0.192174, 0.380446, 0.950389, 0.192494, 0.380442, 0.949984, 0.192802, 0.380438, 0.949545, 0.19244, 0.380434, 0.949982, 0.192143, 0.380431, 0.950421, 0.192466, 0.380426, 0.95001, 0.192827, 0.380422, 0.949503, 0.192467, 0.380418, 0.949951, 0.192112, 0.380415, 0.950452, 0.192431, 0.380411, 0.950038, 0.192851, 0.380406, 0.949465, 0.192515, 0.380403, 0.949908, 0.192082, 0.380399, 0.950487, 0.192418, 0.380395, 0.950048, 0.192878, 0.380391, 0.949427, 0.192542, 0.380387, 0.949872, 0.192052, 0.380383, 0.950513, 0.192366, 0.380379, 0.950086, 0.192901, 0.380375, 0.949427, 0.192641, 0.380372, 0.949526, 0.192155, 0.380369, 0.950022, 0.192008, 0.380367, 0.950569, 0.192427, 0.380363, 0.950079, 0.192934, 0.380359, 0.949346, 0.192589, 0.380355, 0.949798, 0.191986, 0.380352, 0.950513, 0.192185, 0.380348, 0.950497, 0.192773, 0.380345, 0.949905, 0.192974, 0.380342, 0.949271, 0.192545, 0.380339, 0.949754, 0.191944, 0.380336, 0.950588, 0.192164, 0.380332, 0.95055, 0.192813, 0.380328, 0.949898, 0.193032, 0.380326, 0.949194, 0.192585, 0.380323, 0.949681, 0.191887, 0.38032, 0.950544, 0.191979, 0.380317, 0.95076, 0.192683, 0.380313, 0.950007, 0.193122, 0.38031, 0.949059, 0.192591, 0.380307, 0.949634, 0.191785, 0.380304, 0.95063, 0.19185, 0.380301, 0.950911, 0.192757, 0.380297, 0.950022, 0.193259, 0.380294, 0.948874, 0.192669, 0.380291, 0.94921, 0.191793, 0.380289, 0.950096, 0.191529, 0.380287, 0.951157, 0.192026, 0.380284, 0.950966, 0.193119, 0.380279, 0.949874, 0.193479, 0.380277, 0.948673, 0.192928, 0.380275, 0.948577, 0.192006, 0.380273, 0.949356, 0.191404, 0.380272, 0.950619, 0.191265, 0.38027, 0.951709, 0.192268, 0.380266, 0.950964, 0.193604, 0.380261, 0.949266, 0.193745, 0.380259, 0.947933, 0.192638, 0.380257, 0.948532, 0.191328, 0.380256, 0.949818, 0.19081, 0.380255, 0.951958, 0.191278, 0.380251, 0.952342, 0.192911, 0.380246, 0.951173, 0.194145, 0.380243, 0.948651, 0.194091, 0.380241, 0.947164, 0.192879, 0.380239, 0.947372, 0.191411, 0.380238, 0.948522, 0.190552, 0.380238, 0.950334, 0.19007, 0.380237, 0.952764, 0.190789, 0.380233, 0.953334, 0.192606, 0.380228, 0.952411, 0.19422, 0.380223, 0.949906, 0.195012, 0.380221, 0.948042, 0.19446, 0.38022, 0.946356, 0.193171, 0.380219, 0.946155, 0.191693, 0.380218, 0.947235, 0.190459, 0.380218, 0.949207, 0.189534, 0.380217, 0.952478, 0.189363, 0.380215, 0.954488, 0.191487, 0.380208, 0.95376, 0.194171, 0.3802, 0.950744, 0.195763, 0.380195, 0.948319, 0.195319, 0.380196, 0.946038, 0.194028, 0.380194, 0.945018, 0.191495, 0.380193, 0.947593, 0.18926, 0.380192, 0.950548, 0.188259, 0.380191, 0.954137, 0.188593, 0.380188, 0.955808, 0.19082, 0.380182, 0.955432, 0.193548, 0.380173, 0.952922, 0.195999, 0.380162, 0.950378, 0.196455, 0.380161, 0.947031, 0.195402, 0.380162, 0.944968, 0.194129, 0.380161, 0.943762, 0.191569, 0.380159, 0.945772, 0.189328, 0.380159, 0.948364, 0.187975, 0.380158, 0.951939, 0.186998, 0.380157, 0.956097, 0.188037, 0.380152, 0.957096, 0.192365, 0.380139, 0.954577, 0.195973, 0.380123, 0.950909, 0.197036, 0.380117, 0.948092, 0.196326, 0.38012, 0.945443, 0.195048, 0.380118, 0.943465, 0.193577, 0.380116, 0.942784, 0.191924, 0.380116, 0.944289, 0.189598, 0.380115, 0.946649, 0.188073, 0.380115, 0.950982, 0.186355, 0.380113, 0.95536, 0.186186, 0.380111, 0.957843, 0.188329, 0.380105, 0.958229, 0.191448, 0.380096, 0.956644, 0.194967, 0.380081, 0.953714, 0.197037, 0.380068, 0.95029, 0.19733, 0.380065, 0.947309, 0.196295, 0.380069, 0.943134, 0.193853, 0.380065, 0.942173, 0.192179, 0.380065, 0.943379, 0.189774, 0.380064, 0.945621, 0.188158, 0.380063, 0.949922, 0.186163, 0.380062, 0.954405, 0.185273, 0.38006, 0.957471, 0.186339, 0.380057, 0.958973, 0.19001, 0.380047, 0.957542, 0.194539, 0.380031, 0.954555, 0.197059, 0.380015, 0.950819, 0.197632, 0.380008, 0.948553, 0.197013, 0.380012, 0.945768, 0.19576, 0.380013, 0.943086, 0.19415, 0.38001, 0.941776, 0.191722, 0.380009, 0.943614, 0.189166, 0.380008, 0.946081, 0.187581, 0.380007, 0.949331, 0.18605, 0.380006, 0.953033, 0.184945, 0.380005, 0.957734, 0.185758, 0.380001, 0.959421, 0.189861, 0.379991, 0.958091, 0.194276, 0.379975, 0.953661, 0.197599, 0.379953, 0.95112, 0.19781, 0.379949, 0.948545, 0.197138, 0.379954, 0.945933, 0.195967, 0.379955, 0.943304, 0.194513, 0.379952, 0.941671, 0.19279, 0.379951, 0.941826, 0.190736, 0.37995, 0.94317, 0.189251, 0.37995, 0.945573, 0.187639, 0.379949, 0.950093, 0.185514, 0.379947, 0.955549, 0.184472, 0.379945, 0.958485, 0.18587, 0.379942, 0.959718, 0.189138, 0.379934, 0.95868, 0.193716, 0.379919, 0.953575, 0.197764, 0.379892, 0.950846, 0.197885, 0.379889, 0.948443, 0.197181, 0.379894, 0.945724, 0.195956, 0.379894, 0.943103, 0.194503, 0.379891, 0.941412, 0.19262, 0.37989, 0.941885, 0.190326, 0.37989, 0.943556, 0.188762, 0.379889, 0.946133, 0.187167, 0.379888, 0.949498, 0.185573, 0.379887, 0.953764, 0.184299, 0.379886, 0.958025, 0.185033, 0.379883, 0.959118, 0.186226, 0.37988, 0.772117, 0.109791, 0.289135, 0.774351, 0.106428, 0.289136, 0.778415, 0.0972009, 0.28914, 0.78086, 0.0874113, 0.289144, 0.781656, 0.0773622, 0.289146, 0.779669, 0.0685789, 0.289148, 0.774619, 0.0615839, 0.28915, 0.767257, 0.0546788, 0.289152, 0.759105, 0.0487297, 0.289153, 0.750065, 0.0442733, 0.289153, 0.740207, 0.0422383, 0.289152, 0.730181, 0.0431265, 0.28915, 0.720842, 0.0468566, 0.289148, 0.713312, 0.0535076, 0.289147, 0.708352, 0.0622598, 0.289146, 0.706115, 0.072075, 0.289145, 0.706702, 0.0821201, 0.289143, 0.710366, 0.091486, 0.289142, 0.716449, 0.099517, 0.289141, 0.724412, 0.105665, 0.289142, 0.733742, 0.109489, 0.289143, 0.743511, 0.112039, 0.289145, 0.753422, 0.113972, 0.289148, 0.763445, 0.113848, 0.289152, 0.770867, 0.108786, 0.289157, 0.775897, 0.100067, 0.289161, 0.778966, 0.0904579, 0.289165, 0.780397, 0.0804748, 0.289167, 0.779094, 0.0705236, 0.28917, 0.774385, 0.0628852, 0.289172, 0.767244, 0.0557558, 0.289174, 0.759196, 0.0496671, 0.289175, 0.750218, 0.0450888, 0.289174, 0.74038, 0.0429603, 0.289173, 0.730352, 0.0438019, 0.289171, 0.721031, 0.0475714, 0.28917, 0.71356, 0.0542878, 0.289169, 0.708706, 0.0630993, 0.289167, 0.706639, 0.0729508, 0.289166, 0.707496, 0.0829731, 0.289164, 0.711484, 0.092207, 0.289163, 0.717827, 0.100034, 0.289162, 0.726071, 0.105796, 0.289163, 0.73553, 0.109294, 0.289165, 0.745365, 0.111576, 0.289167, 0.755351, 0.113043, 0.28917, 0.765152, 0.111278, 0.289176, 0.772082, 0.104091, 0.289181, 0.776229, 0.0949053, 0.289184, 0.778556, 0.0850903, 0.289188, 0.778733, 0.0750268, 0.28919, 0.775043, 0.0657263, 0.289193, 0.768429, 0.0581163, 0.289195, 0.760664, 0.0516712, 0.289196, 0.751939, 0.0466219, 0.289196, 0.742243, 0.043917, 0.289194, 0.732187, 0.0441954, 0.289193, 0.722686, 0.0474897, 0.289191, 0.714889, 0.0538218, 0.289189, 0.70969, 0.0624291, 0.289188, 0.707339, 0.0722139, 0.289187, 0.70797, 0.0822511, 0.289185, 0.711822, 0.09154, 0.289184, 0.718118, 0.0994013, 0.289183, 0.726368, 0.105153, 0.289184, 0.735849, 0.108588, 0.289186, 0.745724, 0.110686, 0.289188, 0.755758, 0.111723, 0.289192, 0.765304, 0.108967, 0.289197, 0.771713, 0.101273, 0.289202, 0.775504, 0.0919337, 0.289206, 0.777373, 0.0820259, 0.289209, 0.776501, 0.0720226, 0.289212, 0.772072, 0.0638166, 0.289214, 0.76517, 0.0564654, 0.289215, 0.757147, 0.0503484, 0.289216, 0.748044, 0.046039, 0.289215, 0.738109, 0.0444596, 0.289214, 0.728169, 0.0460034, 0.289212, 0.719276, 0.0506764, 0.28921, 0.712619, 0.0582005, 0.289208, 0.708781, 0.0674968, 0.289207, 0.707916, 0.0775206, 0.289206, 0.710325, 0.0872759, 0.289204, 0.715678, 0.0958014, 0.289203, 0.723164, 0.102522, 0.289203, 0.732314, 0.106732, 0.289205, 0.742121, 0.109108, 0.289207, 0.752141, 0.110323, 0.28921, 0.762011, 0.108747, 0.289216, 0.769289, 0.101931, 0.289221, 0.773556, 0.0928074, 0.289225, 0.775723, 0.082962, 0.289228, 0.775172, 0.072932, 0.289231, 0.77066, 0.0639669, 0.289233, 0.763805, 0.0565739, 0.289235, 0.755746, 0.0505113, 0.289235, 0.746529, 0.0464601, 0.289234, 0.736538, 0.0453135, 0.289232, 0.726696, 0.0473733, 0.28923, 0.719503, 0.0515068, 0.289228, 0.854209, 0.105055, 0.523704, 0.85494, 0.109026, 0.523705, 0.855186, 0.119102, 0.523707, 0.852907, 0.1289, 0.523706, 0.847155, 0.137094, 0.5237, 0.84081, 0.140635, 0.523688, 0.830939, 0.142653, 0.523668, 0.820869, 0.142216, 0.523666, 0.811039, 0.139978, 0.523666, 0.802289, 0.135039, 0.523668, 0.795774, 0.127385, 0.523673, 0.79213, 0.118017, 0.523678, 0.791729, 0.107969, 0.523685, 0.794586, 0.0983324, 0.523689, 0.800569, 0.0902703, 0.523691, 0.809398, 0.0855764, 0.523694, 0.819417, 0.0844949, 0.523695, 0.829452, 0.0854346, 0.523696, 0.838816, 0.089089, 0.523699, 0.84618, 0.0958995, 0.523701, 0.850439, 0.105, 0.523703, 0.851752, 0.114982, 0.523701, 0.850253, 0.124931, 0.523696, 0.845215, 0.133576, 0.523687, 0.836465, 0.138385, 0.523672, 0.827019, 0.139814, 0.523661, 0.817003, 0.138701, 0.523662, 0.807634, 0.135052, 0.523663, 0.800226, 0.128283, 0.523667, 0.795922, 0.119213, 0.523672, 0.795197, 0.109194, 0.523678, 0.798141, 0.0995993, 0.523683, 0.804772, 0.092113, 0.523686, 0.814191, 0.0887078, 0.523689, 0.824261, 0.0883033, 0.523689, 0.834041, 0.0906282, 0.523692, 0.842152, 0.0965076, 0.523697, 0.847061, 0.105255, 0.523697, 0.848566, 0.115197, 0.523695, 0.846789, 0.125085, 0.523689, 0.840958, 0.133169, 0.52368, 0.832929, 0.136746, 0.523669, 0.824526, 0.137679, 0.523667, 0.814614, 0.135936, 0.523668, 0.805857, 0.131033, 0.523671, 0.799815, 0.123035, 0.523676, 0.797509, 0.113272, 0.523681, 0.79918, 0.103385, 0.523687, 0.805068, 0.0953217, 0.523691, 0.814271, 0.0914088, 0.523693, 0.824324, 0.0908379, 0.523694, 0.834032, 0.0933897, 0.523698, 0.841633, 0.0998851, 0.523702, 0.845579, 0.109104, 0.523701, 0.845905, 0.119147, 0.523696, 0.842322, 0.128488, 0.523688, 0.834331, 0.134415, 0.523678, 0.824935, 0.136175, 0.523676, 0.815019, 0.134531, 0.523679, 0.806413, 0.12939, 0.523683, 0.800827, 0.121078, 0.523687, 0.799318, 0.111169, 0.523693, 0.802207, 0.101595, 0.523698, 0.809622, 0.094963, 0.523702, 0.819412, 0.092706, 0.523702, 0.829421, 0.0936308, 0.523704, 0.838087, 0.0985964, 0.52371, 0.843194, 0.107198, 0.523711, 0.84427, 0.117176, 0.523705, 0.841189, 0.12669, 0.523695, 0.833884, 0.132841, 0.523687, 0.824486, 0.134862, 0.523686, 0.814616, 0.133028, 0.523691, 0.806357, 0.12737, 0.523696, 0.801588, 0.118576, 0.523701, 0.801331, 0.108571, 0.523707, 0.806003, 0.0997768, 0.523712, 0.814857, 0.0951993, 0.523714, 0.824889, 0.0945539, 0.523714, 0.834351, 0.0977917, 0.523717, 0.840742, 0.105444, 0.523721, 0.842695, 0.115268, 0.523717, 0.840109, 0.124922, 0.523706, 0.832747, 0.131596, 0.523699, 0.823743, 0.133554, 0.5237, 0.814471, 0.1316, 0.523706, 0.806557, 0.125496, 0.523712, 0.802672, 0.116295, 0.523718, 0.803843, 0.106384, 0.523725, 0.81036, 0.0989167, 0.523729, 0.820024, 0.0962657, 0.523729, 0.829961, 0.0975691, 0.523729, 0.837801, 0.103681, 0.523734, 0.841011, 0.113132, 0.523733, 0.83916, 0.122941, 0.523724, 0.833254, 0.129495, 0.523719, 0.825548, 0.132125, 0.523719, 0.815645, 0.130716, 0.523726, 0.807663, 0.124731, 0.523733, 0.804114, 0.11542, 0.523741, 0.806183, 0.105687, 0.523748, 0.806603, 0.104997, 0.523748, 0.796074, 0.224402, 0.325692, 0.983787, 0.0783486, 0.327627, 0.984591, 0.0778054, 0.32765, 0.985338, 0.0773065, 0.327678, 0.987501, 0.0767078, 0.327746, 0.989176, 0.0765812, 0.327779, 0.990251, 0.0765771, 0.327803, 0.991031, 0.0769286, 0.32783, 0.991437, 0.0776668, 0.327852, 0.991674, 0.0782714, 0.327866, 0.991803, 0.0786107, 0.32788, 0.99193, 0.0789709, 0.327916, 0.991972, 0.079132, 0.328012, 0.991983, 0.0791581, 0.328165, 0.991963, 0.0790984, 0.328289, 0.991992, 0.0791484, 0.328414, 0.991968, 0.0790864, 0.328539, 0.991993, 0.0791352, 0.328665, 0.991971, 0.0790727, 0.328792, 0.991993, 0.079121, 0.32892, 0.991973, 0.0790585, 0.329048, 0.991994, 0.0791065, 0.329177, 0.991976, 0.0790441, 0.329307, 0.991993, 0.0790916, 0.329439, 0.991977, 0.0790293, 0.329571, 0.991993, 0.0790762, 0.329704, 0.991979, 0.0790142, 0.329838, 0.991991, 0.0790603, 0.329973, 0.99198, 0.0789986, 0.33011, 0.991989, 0.0790437, 0.330248, 0.991982, 0.0789817, 0.330386, 0.991985, 0.0790265, 0.330525, 0.991983, 0.0789645, 0.330664, 0.99198, 0.0790083, 0.330805, 0.991984, 0.0789468, 0.330945, 0.991974, 0.0789892, 0.331086, 0.991984, 0.0789288, 0.331227, 0.991967, 0.0789691, 0.331369, 0.991983, 0.0789102, 0.33151, 0.991961, 0.0789477, 0.331652, 0.991981, 0.0788909, 0.331793, 0.991954, 0.0789263, 0.331935, 0.991977, 0.0788709, 0.332075, 0.991946, 0.078905, 0.332215, 0.991971, 0.0788502, 0.332354, 0.991938, 0.0788839, 0.332492, 0.991965, 0.0788288, 0.332629, 0.991928, 0.0788617, 0.332766, 0.991956, 0.0788065, 0.332902, 0.991918, 0.0788388, 0.333037, 0.991947, 0.0787834, 0.333172, 0.991906, 0.0788152, 0.333305, 0.991935, 0.0787592, 0.333438, 0.991892, 0.0787907, 0.333569, 0.991922, 0.0787339, 0.3337, 0.991876, 0.078765, 0.33383, 0.991906, 0.0787073, 0.33396, 0.991858, 0.078738, 0.334087, 0.991888, 0.078679, 0.334215, 0.991838, 0.0787092, 0.33434, 0.991868, 0.0786487, 0.334466, 0.991814, 0.0786783, 0.334589, 0.991844, 0.078616, 0.334714, 0.991787, 0.0786447, 0.334834, 0.991815, 0.0785801, 0.334957, 0.991755, 0.0786074, 0.335074, 0.991782, 0.0785399, 0.335195, 0.991717, 0.0785651, 0.335309, 0.991741, 0.0784937, 0.335427, 0.991671, 0.0785154, 0.335538, 0.99169, 0.0784384, 0.335653, 0.991612, 0.0784536, 0.335759, 0.991623, 0.0783681, 0.335868, 0.991533, 0.0783693, 0.335968, 0.991524, 0.0782687, 0.336067, 0.991412, 0.0782334, 0.336155, 0.99134, 0.0780953, 0.336235, 0.991202, 0.0779592, 0.336288, 0.99112, 0.0777786, 0.336322, 0.990992, 0.0773876, 0.336372, 0.990684, 0.0767137, 0.336433, 0.990171, 0.0762419, 0.336478, 0.989499, 0.0760664, 0.336517, 0.988725, 0.0760244, 0.336554, 0.987304, 0.0760087, 0.336609, 0.985291, 0.0760059, 0.336638, 0.981865, 0.0760042, 0.336655, 0.979839, 0.0760037, 0.336661, 0.972545, 0.0730118, 0.336682, 0.97061, 0.0727926, 0.336684, 0.96873, 0.0723844, 0.336685, 0.966845, 0.0722456, 0.336686, 0.964648, 0.0718464, 0.336686, 0.96291, 0.0711559, 0.336687, 0.960619, 0.070824, 0.336688, 0.958928, 0.0705747, 0.336689, 0.957761, 0.0700155, 0.33669, 0.956438, 0.0694694, 0.336691, 0.95446, 0.069153, 0.336692, 0.952201, 0.0686837, 0.336692, 0.950014, 0.067887, 0.336693, 0.94777, 0.0676689, 0.336694, 0.944762, 0.067864, 0.336695, 0.942064, 0.0686901, 0.336696, 0.939386, 0.0692542, 0.336698, 0.935923, 0.0699817, 0.3367, 0.934125, 0.070767, 0.336701, 0.932063, 0.0712281, 0.336701, 0.929952, 0.0711422, 0.336702, 0.928353, 0.0707831, 0.336703, 0.925767, 0.0696684, 0.336706, 0.922348, 0.0690863, 0.336709, 0.918862, 0.0688776, 0.336708, 0.916796, 0.0685761, 0.336708, 0.914559, 0.0672829, 0.336708, 0.912311, 0.0660134, 0.336708, 0.910115, 0.0651267, 0.336708, 0.908263, 0.0641291, 0.336708, 0.906039, 0.0630968, 0.336707, 0.903362, 0.0621281, 0.33671, 0.900409, 0.062084, 0.336714, 0.897446, 0.0622472, 0.336715, 0.892536, 0.062489, 0.336715, 0.886461, 0.0628735, 0.336715, 0.882997, 0.0634297, 0.336715, 0.880386, 0.0639905, 0.336714, 0.877552, 0.0643154, 0.336714, 0.87455, 0.0647063, 0.336713, 0.870687, 0.0655544, 0.336714, 0.867639, 0.0661924, 0.336715, 0.864021, 0.0667748, 0.336716, 0.861269, 0.0671024, 0.336716, 0.858102, 0.0668979, 0.336715, 0.854323, 0.0663954, 0.336717, 0.850739, 0.066658, 0.33672, 0.848486, 0.0691323, 0.336726, 0.847909, 0.0723886, 0.336729, 0.847945, 0.0758732, 0.336731, 0.849021, 0.0859138, 0.336735, 0.850069, 0.0959582, 0.336738, 0.850427, 0.106048, 0.33674, 0.849896, 0.116131, 0.336739, 0.848523, 0.126133, 0.336737, 0.846469, 0.136021, 0.336735, 0.845035, 0.145996, 0.336733, 0.847111, 0.152776, 0.336731, 0.852042, 0.157858, 0.336729, 0.857499, 0.161698, 0.33673, 0.865056, 0.165203, 0.336731, 0.873701, 0.170401, 0.336731, 0.882031, 0.176105, 0.336729, 0.891356, 0.179875, 0.336726, 0.901352, 0.181272, 0.336722, 0.911433, 0.181744, 0.336718, 0.921391, 0.180189, 0.336713, 0.927084, 0.17809, 0.33671, 0.931603, 0.174611, 0.336709, 0.933239, 0.169282, 0.336711, 0.932649, 0.164047, 0.336714, 0.930802, 0.154118, 0.33672, 0.929505, 0.144105, 0.336728, 0.929115, 0.134017, 0.336733, 0.929894, 0.123956, 0.336737, 0.932384, 0.114185, 0.336738, 0.936781, 0.105112, 0.336734, 0.942939, 0.0971337, 0.336729, 0.950615, 0.090587, 0.336726, 0.955657, 0.0866393, 0.336727, 0.958147, 0.0835419, 0.33673, 0.958275, 0.0806938, 0.336733, 0.9565, 0.0784456, 0.336736, 0.953624, 0.0766562, 0.336738, 0.949416, 0.0750297, 0.33674, 0.94508, 0.0742219, 0.336743, 0.93964, 0.0743759, 0.336746, 0.933285, 0.0750863, 0.336749, 0.929171, 0.0746612, 0.33675, 0.922927, 0.072979, 0.33675, 0.917328, 0.0717876, 0.33675, 0.912031, 0.0695146, 0.33675, 0.909038, 0.0684391, 0.33675, 0.906698, 0.068005, 0.33675, 0.904038, 0.0683684, 0.336749, 0.901914, 0.0686, 0.33675, 0.900587, 0.0682771, 0.33675, 0.899139, 0.0673688, 0.336749, 0.897097, 0.0667464, 0.336748, 0.895038, 0.0665063, 0.336747, 0.892379, 0.0664226, 0.336747, 0.885433, 0.0669208, 0.336746, 0.879174, 0.0681551, 0.336745, 0.869342, 0.0704524, 0.336744, 0.863589, 0.0717107, 0.336741, 0.858204, 0.0741619, 0.336741, 0.855092, 0.0786262, 0.336742, 0.854091, 0.0846419, 0.336744, 0.854115, 0.0947383, 0.336746, 0.854133, 0.104836, 0.336748, 0.853496, 0.114914, 0.336748, 0.852295, 0.124941, 0.336746, 0.85074, 0.13492, 0.336744, 0.850072, 0.144976, 0.336742, 0.852489, 0.152248, 0.33674, 0.857559, 0.157856, 0.336739, 0.864031, 0.161917, 0.336739, 0.872711, 0.167067, 0.336739, 0.881032, 0.172789, 0.336738, 0.890185, 0.17698, 0.336736, 0.900116, 0.178745, 0.336733, 0.910052, 0.179306, 0.336729, 0.920038, 0.177951, 0.336724, 0.926615, 0.175175, 0.336722, 0.929848, 0.171276, 0.336721, 0.930471, 0.165569, 0.336723, 0.929758, 0.15959, 0.336726, 0.928323, 0.149593, 0.336733, 0.927438, 0.139535, 0.336739, 0.927398, 0.129439, 0.336743, 0.928585, 0.11942, 0.336746, 0.931524, 0.109774, 0.336744, 0.936143, 0.100805, 0.336739, 0.942208, 0.092745, 0.336733, 0.946254, 0.0881918, 0.336729, 0.948116, 0.0854074, 0.336729, 0.948377, 0.0828609, 0.336729, 0.946168, 0.0805713, 0.336729, 0.943253, 0.0794518, 0.336731, 0.938239, 0.0786939, 0.336733, 0.932142, 0.0782389, 0.336736, 0.925595, 0.0765773, 0.336737, 0.919424, 0.0747785, 0.336737, 0.915113, 0.0734345, 0.336737, 0.910996, 0.0719117, 0.336736, 0.90642, 0.0708441, 0.336736, 0.903938, 0.0706927, 0.336736, 0.901338, 0.0703145, 0.336737, 0.899628, 0.069599, 0.336737, 0.897907, 0.0688094, 0.336736, 0.895654, 0.0682219, 0.336736, 0.893151, 0.0679469, 0.336735, 0.889899, 0.0679017, 0.336735, 0.883323, 0.0686563, 0.336734, 0.875463, 0.070521, 0.336733, 0.874088, 0.0708643, 0.336733, 0.874832, 0.260507, 0.248775, 0.966285, 0.0664153, 0.425624, 0.775869, 0.112389, 0.499624, 0.776038, 0.108355, 0.499627, 0.778143, 0.0984956, 0.499637, 0.781862, 0.0891153, 0.499646, 0.787028, 0.0804529, 0.499649, 0.79396, 0.0731534, 0.499647, 0.802972, 0.0687773, 0.49965, 0.813017, 0.0683831, 0.499659, 0.823044, 0.069584, 0.499659, 0.832976, 0.0713983, 0.499657, 0.842456, 0.0748003, 0.49966, 0.850383, 0.0809783, 0.499667, 0.85614, 0.0892407, 0.499676, 0.85956, 0.0987132, 0.499683, 0.860615, 0.10874, 0.499695, 0.860105, 0.118819, 0.499705, 0.857824, 0.128638, 0.49971, 0.853206, 0.137578, 0.499711, 0.845749, 0.144279, 0.49971, 0.83626, 0.147588, 0.499697, 0.826199, 0.14836, 0.499693, 0.81611, 0.148032, 0.499693, 0.806246, 0.145993, 0.499696, 0.797488, 0.141061, 0.499701, 0.790599, 0.133714, 0.499709, 0.78572, 0.124903, 0.499717, 0.783443, 0.115101, 0.499724, 0.784026, 0.105049, 0.499733, 0.787097, 0.0954525, 0.49974, 0.792307, 0.0868284, 0.499744, 0.799705, 0.0800253, 0.499745, 0.809146, 0.0766891, 0.49975, 0.819233, 0.0766674, 0.499752, 0.829214, 0.0781192, 0.499751, 0.838606, 0.0817437, 0.499751, 0.846346, 0.0881479, 0.499755, 0.851375, 0.0968505, 0.499761, 0.853735, 0.106645, 0.499764, 0.853828, 0.116726, 0.499763, 0.851794, 0.126594, 0.49976, 0.847014, 0.135431, 0.499754, 0.840312, 0.140786, 0.499739, 0.831505, 0.143625, 0.499719, 0.821433, 0.144195, 0.499717, 0.811425, 0.143021, 0.499717, 0.802251, 0.138927, 0.49972, 0.795054, 0.131909, 0.499726, 0.790419, 0.122983, 0.499732, 0.788807, 0.113054, 0.499738, 0.790222, 0.103091, 0.499744, 0.7944, 0.0939328, 0.499749, 0.801214, 0.086564, 0.49975, 0.810544, 0.0829421, 0.499754, 0.82062, 0.0825778, 0.499755, 0.830513, 0.0844608, 0.499756, 0.839411, 0.0891287, 0.49976, 0.845809, 0.0968511, 0.499763, 0.849053, 0.106372, 0.499765, 0.849498, 0.116432, 0.499763, 0.847261, 0.126247, 0.499757, 0.841801, 0.134636, 0.49975, 0.834611, 0.138807, 0.499735, 0.824738, 0.140708, 0.499729, 0.814671, 0.140173, 0.499729, 0.80529, 0.136615, 0.499731, 0.798038, 0.129678, 0.499735, 0.793834, 0.120557, 0.49974, 0.793054, 0.110535, 0.499747, 0.795542, 0.100793, 0.499753, 0.801211, 0.092512, 0.499756, 0.809972, 0.0877186, 0.499759, 0.819996, 0.0867788, 0.499761, 0.829876, 0.0886688, 0.499764, 0.838501, 0.093786, 0.499769, 0.84412, 0.102085, 0.499772, 0.846339, 0.111892, 0.499771, 0.845474, 0.121916, 0.499766, 0.841214, 0.130984, 0.49976, 0.833003, 0.136664, 0.499749, 0.823135, 0.13855, 0.499749, 0.813116, 0.137554, 0.499749, 0.804197, 0.133, 0.499752, 0.79804, 0.125086, 0.499756, 0.795473, 0.115383, 0.499762, 0.796542, 0.105393, 0.499769, 0.801153, 0.0964842, 0.499773, 0.809299, 0.0907253, 0.499777, 0.819239, 0.0892433, 0.49978, 0.829131, 0.0910224, 0.499782, 0.837605, 0.096357, 0.499788, 0.842752, 0.104952, 0.49979, 0.844314, 0.114881, 0.499787, 0.84245, 0.12475, 0.49978, 0.836467, 0.132718, 0.499771, 0.827227, 0.136593, 0.499769, 0.817169, 0.136786, 0.499771, 0.807668, 0.133598, 0.499773, 0.80061, 0.126502, 0.499777, 0.797256, 0.117053, 0.499782, 0.797793, 0.107027, 0.499789, 0.799689, 0.101853, 0.499792, 0.755585, 0.00888497, 0.474311, 0.838226, 0.13074, 0.292042, 0.836882, 0.134549, 0.292041, 0.835163, 0.138918, 0.292041, 0.833373, 0.144121, 0.29204, 0.833581, 0.147513, 0.29204, 0.835683, 0.150123, 0.29204, 0.839727, 0.153035, 0.29204, 0.843833, 0.155856, 0.292039, 0.849036, 0.159882, 0.292038, 0.855145, 0.164236, 0.292039, 0.861955, 0.16778, 0.29204, 0.870131, 0.172522, 0.292041, 0.875071, 0.175931, 0.292042, 0.88294, 0.18063, 0.292039, 0.890904, 0.183528, 0.292035, 0.899074, 0.185057, 0.292032, 0.907174, 0.185937, 0.292029, 0.917181, 0.184916, 0.292024, 0.926413, 0.180934, 0.292021, 0.929656, 0.178439, 0.29202, 0.933081, 0.173019, 0.292021, 0.933116, 0.166018, 0.292022, 0.931679, 0.156022, 0.292027, 0.931116, 0.145943, 0.292033, 0.93178, 0.135873, 0.292037, 0.933759, 0.125978, 0.292041, 0.937326, 0.116545, 0.292043, 0.942693, 0.108011, 0.292042, 0.949808, 0.100875, 0.292041, 0.958318, 0.0954682, 0.292041, 0.967607, 0.0915241, 0.292044, 0.977398, 0.0891262, 0.292049, 0.987425, 0.0896458, 0.292055, 0.993455, 0.0922346, 0.292057, 0.935334, 0.067683, 0.286396, 0.925234, 0.067683, 0.286397, 0.915224, 0.0667416, 0.286395, 0.913721, 0.0660087, 0.286395, 0.912358, 0.0652805, 0.286395, 0.910298, 0.0642684, 0.286396, 0.908677, 0.0633894, 0.286397, 0.907061, 0.0624714, 0.286396, 0.905284, 0.0618311, 0.286397, 0.903118, 0.061535, 0.286398, 0.899801, 0.0615198, 0.2864, 0.896451, 0.0615694, 0.2864, 0.892843, 0.0614704, 0.2864, 0.889769, 0.0610942, 0.286401, 0.88773, 0.0609687, 0.286402, 0.885896, 0.0611755, 0.286402, 0.883581, 0.0621446, 0.286402, 0.881903, 0.0630404, 0.286403, 0.880145, 0.0635439, 0.286404, 0.877296, 0.0639489, 0.286404, 0.874267, 0.0643476, 0.286403, 0.869907, 0.0651033, 0.286403, 0.866573, 0.0660678, 0.286404, 0.862994, 0.0670253, 0.286404, 0.86007, 0.0676412, 0.286404, 0.857097, 0.068634, 0.286405, 0.854585, 0.0711574, 0.286407, 0.853045, 0.0748647, 0.286408, 0.851818, 0.0797637, 0.28641, 0.850861, 0.0862606, 0.286411, 0.850563, 0.0963509, 0.286413, 0.850609, 0.10645, 0.286414, 0.850201, 0.11654, 0.286413, 0.849621, 0.126623, 0.286412, 0.849938, 0.136703, 0.286411, 0.853164, 0.146215, 0.286409, 0.858895, 0.154509, 0.286409, 0.866366, 0.161267, 0.28641, 0.875, 0.166496, 0.286409, 0.88393, 0.171211, 0.286408, 0.893243, 0.175098, 0.286405, 0.903073, 0.177334, 0.286404, 0.913143, 0.177101, 0.286401, 0.922279, 0.174007, 0.286399, 0.926028, 0.16932, 0.286398, 0.926942, 0.163532, 0.286399, 0.926708, 0.153437, 0.286402, 0.926749, 0.14334, 0.286407, 0.92774, 0.133294, 0.28641, 0.929824, 0.123418, 0.286413, 0.933275, 0.113938, 0.286414, 0.938277, 0.105178, 0.286413, 0.944651, 0.0973578, 0.28641, 0.951893, 0.0903205, 0.286409, 0.954867, 0.0871775, 0.28641, 0.956713, 0.0827578, 0.286414, 0.95438, 0.0790796, 0.286417, 0.949908, 0.0771588, 0.286418, 0.944548, 0.0760381, 0.28642, 0.936855, 0.0748733, 0.286422, 0.929271, 0.0737944, 0.286423, 0.922981, 0.0729691, 0.286424, 0.916347, 0.0713007, 0.286423, 0.910641, 0.0688628, 0.286423, 0.905824, 0.0668269, 0.286423, 0.904356, 0.0661071, 0.286421, 0.90329, 0.0655171, 0.28642, 0.90211, 0.065286, 0.28642, 0.898788, 0.0652136, 0.286418, 0.895464, 0.0651096, 0.286417, 0.891372, 0.0650261, 0.286416, 0.88742, 0.0653284, 0.286416, 0.882346, 0.0664115, 0.286417, 0.872493, 0.0685973, 0.286416, 0.866112, 0.0710368, 0.286416, 0.860455, 0.0743674, 0.286416, 0.856827, 0.0796045, 0.286416, 0.854271, 0.0893325, 0.286418, 0.853854, 0.0994179, 0.28642, 0.853705, 0.109516, 0.28642, 0.853312, 0.119608, 0.286419, 0.853277, 0.129704, 0.286418, 0.854884, 0.139648, 0.286416, 0.85908, 0.148806, 0.286415, 0.865446, 0.156602, 0.286415, 0.873629, 0.162494, 0.286415, 0.882392, 0.167513, 0.286414, 0.891562, 0.171726, 0.286411, 0.901299, 0.174337, 0.28641, 0.911366, 0.174382, 0.286407, 0.918542, 0.172398, 0.286405, 0.922851, 0.168445, 0.286404, 0.924481, 0.162054, 0.286405, 0.924638, 0.155246, 0.286406, 0.924708, 0.145148, 0.286411, 0.925485, 0.135082, 0.286414, 0.927212, 0.125135, 0.286417, 0.930105, 0.115467, 0.286418, 0.934438, 0.106356, 0.286417, 0.940019, 0.0979463, 0.286414, 0.946035, 0.0898377, 0.28641, 0.947488, 0.0866222, 0.286409, 0.947079, 0.0836625, 0.286409, 0.944685, 0.0814776, 0.28641, 0.940519, 0.0797354, 0.28641, 0.934271, 0.0781129, 0.286411, 0.92729, 0.0764856, 0.286412, 0.920409, 0.0749665, 0.286412, 0.912146, 0.0720979, 0.286412, 0.902478, 0.0692322, 0.286412, 0.900176, 0.0686768, 0.286412, 0.897416, 0.0679954, 0.286413, 0.89326, 0.0676959, 0.286412, 0.888415, 0.0679443, 0.286412, 0.880757, 0.0693269, 0.286412, 0.87305, 0.0713237, 0.286412, 0.866085, 0.0744138, 0.286412, 0.859996, 0.0800751, 0.286412, 0.856956, 0.08771, 0.286413, 0.85597, 0.0977453, 0.286415, 0.85575, 0.107842, 0.286416, 0.8554, 0.117936, 0.286415, 0.855427, 0.128032, 0.286413, 0.856905, 0.138004, 0.286412, 0.860727, 0.147324, 0.28641, 0.866875, 0.155287, 0.28641, 0.874926, 0.161361, 0.286411, 0.883616, 0.166501, 0.286409, 0.892839, 0.170594, 0.286407, 0.902651, 0.172878, 0.286405, 0.912697, 0.172319, 0.286403, 0.919208, 0.169449, 0.286401, 0.922485, 0.16364, 0.286401, 0.923159, 0.157363, 0.286402, 0.923306, 0.149036, 0.286404, 0.965421, 0.142559, 0.506648, 0.961426, 0.143055, 0.506658, 0.952025, 0.139798, 0.506689, 0.945668, 0.132095, 0.506713, 0.943841, 0.122271, 0.506724, 0.947612, 0.113101, 0.506729, 0.956272, 0.108258, 0.506739, 0.96612, 0.109563, 0.506751, 0.973615, 0.116136, 0.506761, 0.976394, 0.125698, 0.506772, 0.973502, 0.135231, 0.506786, 0.965694, 0.141336, 0.506807, 0.955817, 0.14086, 0.506835, 0.948058, 0.134607, 0.506865, 0.94466, 0.125222, 0.506881, 0.946868, 0.115547, 0.506889, 0.954776, 0.109607, 0.506899, 0.964682, 0.109999, 0.506912, 0.97248, 0.116178, 0.506923, 0.975404, 0.125681, 0.506935, 0.972376, 0.135153, 0.50695, 0.964241, 0.14076, 0.506972, 0.954465, 0.139325, 0.507003, 0.947454, 0.132258, 0.507032, 0.945366, 0.122515, 0.507046, 0.949516, 0.11356, 0.507055, 0.958659, 0.109811, 0.507068, 0.968099, 0.112835, 0.507082, 0.973855, 0.120929, 0.507094, 0.973653, 0.130858, 0.507108, 0.967468, 0.13858, 0.507128, 0.957719, 0.139845, 0.507156, 0.94951, 0.134266, 0.50719, 0.945973, 0.124962, 0.507209, 0.948704, 0.115473, 0.50722, 0.957296, 0.110657, 0.507233, 0.966925, 0.112914, 0.507248, 0.973017, 0.120736, 0.507261, 0.972946, 0.130651, 0.507276, 0.966619, 0.138225, 0.507297, 0.95683, 0.138899, 0.507327, 0.949086, 0.132706, 0.50736, 0.946507, 0.12311, 0.507379, 0.950718, 0.114232, 0.507391, 0.960086, 0.111221, 0.507407, 0.969022, 0.115449, 0.507421, 0.97313, 0.12445, 0.507435, 0.970498, 0.133989, 0.507454, 0.962058, 0.138961, 0.507479, 0.952674, 0.135974, 0.507514, 0.947395, 0.127573, 0.507541, 0.948514, 0.117767, 0.507556, 0.956437, 0.112012, 0.507571, 0.96612, 0.113821, 0.507587, 0.972067, 0.121709, 0.507602, 0.971289, 0.131562, 0.50762, 0.963945, 0.138049, 0.507644, 0.95426, 0.136542, 0.507677, 0.948166, 0.128735, 0.507709, 0.948467, 0.118872, 0.507726, 0.954669, 0.113043, 0.50774, 0.964482, 0.113482, 0.507757, 0.971203, 0.120701, 0.507772, 0.97118, 0.130568, 0.50779, 0.964223, 0.137449, 0.507815, 0.954524, 0.136214, 0.507849, 0.948454, 0.128408, 0.507881, 0.949053, 0.118581, 0.5079, 0.956942, 0.112859, 0.507917, 0.966478, 0.115202, 0.507934, 0.971536, 0.123649, 0.507951, 0.96922, 0.133218, 0.507971, 0.961638, 0.137557, 0.507996, 0.952445, 0.134159, 0.508033, 0.948161, 0.125254, 0.508061, 0.951402, 0.116045, 0.50808, 0.960734, 0.113198, 0.508098, 0.969052, 0.118425, 0.508115, 0.971054, 0.128052, 0.508133, 0.965408, 0.136031, 0.508158, 0.955692, 0.136035, 0.508192, 0.949205, 0.128615, 0.508227, 0.949714, 0.118817, 0.508248, 0.956403, 0.113723, 0.508265, 0.965973, 0.11575, 0.508283, 0.970869, 0.124255, 0.508301, 0.967932, 0.13361, 0.508323, 0.960704, 0.13689, 0.508348, 0.951872, 0.132682, 0.508386, 0.948723, 0.123347, 0.508414, 0.95202, 0.116337, 0.508431, 0.961456, 0.114001, 0.50845, 0.969226, 0.119968, 0.508468, 0.969898, 0.12975, 0.508488, 0.962778, 0.136326, 0.508516, 0.953377, 0.133822, 0.508553, 0.948972, 0.125022, 0.508586, 0.952745, 0.116094, 0.508608, 0.96233, 0.114536, 0.508628, 0.969493, 0.121199, 0.508647, 0.969043, 0.130978, 0.508668, 0.96747, 0.133223, 0.508675, 0.787396, 0.132605, 0.389424, 0.78595, 0.128836, 0.389427, 0.784283, 0.118909, 0.389434, 0.785106, 0.10886, 0.389442, 0.787472, 0.0990473, 0.389449, 0.790693, 0.0894775, 0.389454, 0.794588, 0.0801616, 0.389457, 0.799147, 0.0711527, 0.389458, 0.802892, 0.0658045, 0.38946, 0.807104, 0.0632448, 0.389465, 0.812591, 0.0628621, 0.389469, 0.819969, 0.0643959, 0.389472, 0.829742, 0.0669346, 0.389474, 0.839423, 0.0697551, 0.389479, 0.844729, 0.0741602, 0.389486, 0.847624, 0.0797632, 0.389492, 0.850589, 0.0894039, 0.389498, 0.851972, 0.0993989, 0.389502, 0.852069, 0.109494, 0.389503, 0.85123, 0.119555, 0.389502, 0.849345, 0.12947, 0.389499, 0.846095, 0.139021, 0.389496, 0.841018, 0.147727, 0.389492, 0.839195, 0.150093, 0.389491, 0.837357, 0.152743, 0.389489, 0.836968, 0.154786, 0.389488, 0.838058, 0.156455, 0.389486, 0.84048, 0.158262, 0.389485, 0.843328, 0.160145, 0.389483, 0.847752, 0.163098, 0.389481, 0.854151, 0.166335, 0.389479, 0.860593, 0.168567, 0.389483, 0.867609, 0.171068, 0.389487, 0.871338, 0.173464, 0.389488, 0.874206, 0.177021, 0.389488, 0.87763, 0.180025, 0.389487, 0.881579, 0.182632, 0.389485, 0.886314, 0.184546, 0.389481, 0.891531, 0.185693, 0.389478, 0.900187, 0.186715, 0.389473, 0.905599, 0.187333, 0.38947, 0.91105, 0.187967, 0.389464, 0.917824, 0.18826, 0.389457, 0.927818, 0.187092, 0.389447, 0.934635, 0.184681, 0.389443, 0.939881, 0.182188, 0.38944, 0.944671, 0.178847, 0.38944, 0.94776, 0.174334, 0.389446, 0.947139, 0.168855, 0.389456, 0.944389, 0.163262, 0.389467, 0.940975, 0.157148, 0.389476, 0.936664, 0.148021, 0.38949, 0.933657, 0.138391, 0.389501, 0.932442, 0.128382, 0.389509, 0.933501, 0.118365, 0.389511, 0.93715, 0.108981, 0.389509, 0.94304, 0.100807, 0.389504, 0.950769, 0.0943491, 0.389501, 0.959802, 0.0898756, 0.389503, 0.969598, 0.0875141, 0.389514, 0.979656, 0.0878527, 0.389534, 0.989634, 0.089409, 0.389551, 0.992556, 0.0908364, 0.389563, 0.994511, 0.0935197, 0.38957, 0.996283, 0.0963496, 0.389586, 0.813433, 0.0157294, 0.369291
-    ]);
-    geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
 
-    var colors = [];
+function onMouseMove( event ) {
+    // 将鼠标位置归一化为设备坐标。x 和 y 方向的取值范围是 (-1 to +1)
+    mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
+    mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+    // 通过摄像机和鼠标位置更新射线
+    raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
 
-    for (let i =0; i<positions.length; i++)
-        colors.push(1); 
+    // 查看相机发出的光线是否击中了我们的网格物体之一（计算物体和射线的焦点）
+    // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
+    // const intersects = raycaster.intersectObject( mesh );
+    // 该方法返回一个包含有交叉部分的数组: [ { distance, point, face, faceIndex, object }, ... ]
+    // {射线投射原点和相交部分之间的距离,  相交部分的点（世界坐标）, 相交的面, 面索引, 相交的物体, 相交部分的点的UV坐标}
 
-    geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
-
-
-
-    // var indices = new Uint16Array([
-    //     114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229
-    // ]);
-
-    var indices = new Uint16Array([
-        230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371
-    ]);
-    geometry.setIndex(new THREE.BufferAttribute(indices, 1) );
-
-    var materiral = new THREE.LineBasicMaterial({
-        transparent: true,
-        opacity: 1,
-    });
-
-    // console.log(geometry);
-    var line = new THREE.Line(geometry, materiral);
-    scene.add(line);
-    line.visible = false;
+    // Toggle rotation bool for meshes that we clicked
+    // if ( intersects.length > 0 ) {
+    // 	helper.position.set( 0, 0, 0 );
+    // 	helper.lookAt( intersects[ 0 ].face.normal );
+    // 	helper.position.copy( intersects[ 0 ].point );
+    // }
 }
