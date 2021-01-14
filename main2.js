@@ -101,9 +101,9 @@ function init() {
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
     camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
-    camera.position.z = 1000;
-    camera.position.x = edgeLen*1.5;
-    camera.position.y = edgeWid*1.5;
+    camera.position.z = 3000;
+    camera.position.x = edgeLen*0;
+    camera.position.y = edgeWid*0;
 
 
     controls = new OrbitControls( camera, renderer.domElement );
@@ -142,7 +142,8 @@ function init() {
     var ambient = new THREE.AmbientLight(0xffffff);
     scene.add(ambient);
 
-    container.addEventListener( 'mousemove', onMouseMove, false );
+    // container.addEventListener( 'mousemove', onMouseMove, false );
+    container.addEventListener( 'click', onMouseClick, false);
 
     stats = new Stats();
     container.appendChild( stats.dom );
@@ -156,6 +157,27 @@ function onWindowResize() {
     camera.aspect = renderWidth / renderHeight;
     camera.updateProjectionMatrix();
     renderer.setSize( renderWidth, renderHeight );
+}
+
+function loadDepth(){
+    var depth_path = ("./depth.json");
+    var json_data;
+    $.ajax({
+        url: depth_path,//json文件位置
+        type: "GET",//请求方式为get
+        dataType: "json", //返回数据格式为json
+        async: false,  // 设置成同步
+        success: function(res) {//请求成功完成后要执行的方法 
+            json_data = res;
+            depth_array = json_data["depth"];
+
+            // 反向映射
+            for(let i=0; i<depth_array.length; i++){
+                re_depth.set(depth_array[i], i);
+            }
+            console.log(re_depth);
+        }
+    })
 }
 
 /*
@@ -188,28 +210,6 @@ function generateMountainHeight( width, height ) {
     // console.log(data)
     return data;
 }
-
-function loadDepth(){
-    var depth_path = ("./depth.json");
-    var json_data;
-    $.ajax({
-        url: depth_path,//json文件位置
-        type: "GET",//请求方式为get
-        dataType: "json", //返回数据格式为json
-        async: false,  // 设置成同步
-        success: function(res) {//请求成功完成后要执行的方法 
-            json_data = res;
-            depth_array = json_data["depth"];
-
-            // 反向映射
-            for(let i=0; i<depth_array.length; i++){
-                re_depth.set(depth_array[i], i);
-            }
-            console.log(re_depth);
-        }
-    })
-}
-
 
 /*
     生成地形顶点纹理数据？？
@@ -620,7 +620,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_5000.vtk"));
+            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_1000.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -1365,15 +1365,36 @@ function DyChange(k){
 
 
 function onMouseMove( event ) {
+    
     // 将鼠标位置归一化为设备坐标。x 和 y 方向的取值范围是 (-1 to +1)
-    mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
-    mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+
+    /*
+        renderer.domElement的clientWidth和clientHeight就是renderer的宽度和高度
+        由于event.clientX, Y表示屏幕上鼠标的绝对位置，所以要减去窗口的偏移，再比上窗口的宽和高
+    */
+    mouse.x = ( (event.clientX-(window.innerWidth-renderWidth)) / renderer.domElement.clientWidth ) * 2 - 1;
+    mouse.y = - ( (event.clientY - (window.innerHeight-renderHeight)) / renderer.domElement.clientHeight ) * 2 + 1;
+
+    // 现在的mouse的二维坐标就是当前鼠标在当前窗口的位置（-1~1)
+    // console.log(mouse)
+
+
     // 通过摄像机和鼠标位置更新射线
     raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
 
     // 查看相机发出的光线是否击中了我们的网格物体之一（计算物体和射线的焦点）
     // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
-    // const intersects = raycaster.intersectObject( mesh );
+
+    // 获取当前指向的第一个的坐标
+    if(curLine != undefined){
+        const intersects = raycaster.intersectObject( curLine );
+        if(intersects.length>0){
+            var curObj = intersects[0];
+            console.log(curObj.point);
+        }
+    }
+    
+
     // 该方法返回一个包含有交叉部分的数组: [ { distance, point, face, faceIndex, object }, ... ]
     // {射线投射原点和相交部分之间的距离,  相交部分的点（世界坐标）, 相交的面, 面索引, 相交的物体, 相交部分的点的UV坐标}
 
@@ -1383,4 +1404,35 @@ function onMouseMove( event ) {
     // 	helper.lookAt( intersects[ 0 ].face.normal );
     // 	helper.position.copy( intersects[ 0 ].point );
     // }
+}
+
+function onMouseClick(event){
+
+    // console.log(event);
+    // 将鼠标位置归一化为设备坐标。x 和 y 方向的取值范围是 (-1 to +1)
+    /*
+        renderer.domElement的clientWidth和clientHeight就是renderer的宽度和高度
+        由于event.clientX, Y表示屏幕上鼠标的绝对位置，所以要减去窗口的偏移，再比上窗口的宽和高
+    */
+   mouse.x = ( (event.clientX-(window.innerWidth-renderWidth)) / renderer.domElement.clientWidth ) * 2 - 1;
+   mouse.y = - ( (event.clientY - (window.innerHeight-renderHeight)) / renderer.domElement.clientHeight ) * 2 + 1;
+
+   // 现在的mouse的二维坐标就是当前鼠标在当前窗口的位置（-1~1)
+   // console.log(mouse)
+
+
+   // 通过摄像机和鼠标位置更新射线
+   raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
+
+   // 查看相机发出的光线是否击中了我们的网格物体之一（计算物体和射线的焦点）
+   // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
+
+   // 获取当前指向的第一个的坐标
+   if(curLine != undefined){
+       const intersects = raycaster.intersectObject( curLine );
+       if(intersects.length>0){
+           var curObj = intersects[0];
+           console.log(curObj.point);
+       }
+   }
 }
