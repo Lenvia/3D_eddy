@@ -168,7 +168,7 @@ function loadDepth(){
         url: depth_path,//json文件位置
         type: "GET",//请求方式为get
         dataType: "json", //返回数据格式为json
-        async: false,  // 设置成同步
+        async: false,  // 异步设置为否
         success: function(res) {//请求成功完成后要执行的方法 
             json_data = res;
             depth_array = json_data["depth"];
@@ -177,7 +177,7 @@ function loadDepth(){
             for(let i=0; i<depth_array.length; i++){
                 re_depth.set(depth_array[i], i);
             }
-            console.log(re_depth);
+            // console.log(re_depth);
         }
     })
 }
