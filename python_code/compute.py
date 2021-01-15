@@ -21,8 +21,9 @@ w4 = 0.01
 days = []
 indices = []
 level_num = []
-lon_set = []
-lat_set = []
+lon_set = []  # 涡旋经度集合
+lat_set = []  # 涡旋纬度集合
+radius_set = []  # 涡旋半径集合
 x_pos = []  # 在paraview上的x坐标
 y_pos = []  # 在paraview上的y坐标
 points = []  # 35层大概需要10万  14层4万
@@ -126,18 +127,21 @@ def search(day1, day2, index1, flag=0):
     lon_index1 = get_lon_index(lon_arr, lon1)  # 经度在数组中索引
     lat_index1 = get_lat_index(lat_arr, lat1)  # 纬度索引
 
-    next_index = -1
-    minDiff = 1e10
+
 
     if flag == 1:
         level_num.append(level1)
         lon_set.append(lon1)
         lat_set.append(lat1)
+        radius_set.append(dia1/2)
 
-
+    next_index = -1
+    next_radi = -1
     next_level = -1
     next_lon = -1
     next_lat = -1
+    minDiff = 1e10
+
     for index2 in range(len(levels2)):  # 对于day2的所有涡旋
         print("day: %d, index2: %d" % (day2, index2))
         lon2 = eddie_census2[2][index2]  # 经度
@@ -174,8 +178,9 @@ def search(day1, day2, index1, flag=0):
             minDiff = curD
             next_index = index2
             next_level = level2
-            next_lon = lon1
+            next_lon = lon2
             next_lat = lat2
+            next_radi = dia2/2
 
 
     if minDiff < 1:
@@ -183,6 +188,7 @@ def search(day1, day2, index1, flag=0):
         level_num.append(next_level)
         lon_set.append(next_lon)
         lat_set.append(next_lat)
+        radius_set.append(next_radi)
         print("-----------------------------------\n")
         search(day2, day2+1, next_index)
     else:  # 没找到，就跳过这一天
@@ -190,6 +196,7 @@ def search(day1, day2, index1, flag=0):
         level_num.append(-1)
         lon_set.append(-1)
         lat_set.append(-1)
+        radius_set.append(-1)
         print("-----------------------------------\n")
         search(day1, day2+1, index1)
 
@@ -198,8 +205,8 @@ def search(day1, day2, index1, flag=0):
     【2】追踪
 '''
 if __name__ == '__main__':
-    start_day = 0
-    start_index = 9
+    start_day = 4
+    start_index = 13
     up_bound = 34
 
     for i in range(start_day):
@@ -207,6 +214,7 @@ if __name__ == '__main__':
         level_num.append(-1)
         lon_set.append(-1)
         lat_set.append(-1)
+        radius_set.append(-1)
 
     indices.append(start_index)
     search(start_day, start_day+1, start_index, 1)  # 开始追踪
@@ -232,36 +240,46 @@ if __name__ == '__main__':
     print("points:\n", points)  # 撒点数
     print("lon_set:\n", lon_set)  # 涡核经度集合
     print("lat_sat:\n", lat_set)  # 涡核纬度集合
+    print("radius_set:\n", radius_set)  # 涡旋半径集合
     print("x_pos:\n", x_pos)
     print("y_pos:\n", y_pos)
 
-    print(len(days), len(indices), len(level_num), len(points), len(lon_set), len(lat_set), len(x_pos), len(y_pos))
+    # print(len(days), len(indices), len(level_num), len(points), len(lon_set), len(lat_set), len(x_pos), len(y_pos))
 
+    identifier = str(start_day) + '-' + str(start_index)
+
+    # 这个track是用来paraview生成的
     track_dict = {"days": days, "indices": indices, "points": points,
                   "x_pos": x_pos, "y_pos": y_pos}
-    site_dict = {"days": days, "indices": indices}
 
-    # 写入追踪字典数据
+    # 写入追踪字典数据，它不生成json数据！
     tarDir = 'track/'
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
-
-    identifier = str(start_day)+'-'+str(start_index)
     file = os.path.join(tarDir, identifier)
     np.save(file, track_dict)
 
+    # 这个是简单的涡旋追踪，是生成json后在js里加载的
+    site_dict = {"days": days, "indices": indices}
     # 写入时间和索引json数据
     site_json = json.dumps(site_dict, sort_keys=False)
-    f = open(os.path.join(tarDir, identifier+'.json'), 'w')
+    f = open(os.path.join(tarDir, identifier+'_track.json'), 'w')
     f.write(site_json)
 
-    # day :   2  3  4  5  6   7  8  9  10 11 12  13  14 15  16 17 18 19 20
-    # index : [1, 2, 1, 1, -1,
-    #                         3, 2, 3, -1,
-    #                                     5, -1, -1,
-    #                                                 5, 0, 5, 6,
-    #                                                             -1, -1, -1]
-    # true : [1, 2, 1, 1, 无,
-    #                         3, 2, 3, 无,
-    #                                     5,  无, 无,  5, 0, 5, 6,
-    #                                                              无, 无, 无]
+    for i in range(len(indices)):
+        if indices[i] == -1:
+            continue
+        info_dict = {
+            "name": str(days[i])+"_"+str(indices[i]),
+            "master": identifier,
+            "lon": lon_set[i],
+            "lat": lat_set[i],
+            "radius": radius_set[i],
+        }
+
+        with open(os.path.join(tarDir, 'eddies.json'), "a") as f:
+            f.write(json.dumps(info_dict))
+
+
+
+

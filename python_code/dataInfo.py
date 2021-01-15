@@ -1,6 +1,8 @@
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
+import json
+import os
 
 filename = 'COMBINED_2011013100.nc'   # .nc文件名
 f = nc.Dataset(filename)   # 读取.nc文件，传入f中。此时f包含了该.nc文件的全部信息
@@ -39,12 +41,10 @@ print()
 
 # 提取 U V W的数据
 # 查看var的信息
-varSet = ['XC', 'XG', 'YC', 'YG']
+varSet = ['Z_MIT40', 'Z_MIT40_bnds']
 # 声明空的np数组
-XC = np.array([], dtype=np.float32)
-XG = np.array([], dtype=np.float32)
-YC = np.array([], dtype=np.float32)
-YG = np.array([], dtype=np.float32)
+z = []
+zb = []
 
 # 赋值
 for i, var in enumerate(varSet):
@@ -55,20 +55,28 @@ for i, var in enumerate(varSet):
     var_data = np.array(var_data)  # 转化为np.array数组
     # print(i, var, '\n')
     if i == 0:
-        XC = var_data
+        z = var_data
     if i == 1:
-        XG = var_data
-    if i == 2:
-        YC = var_data
-    else:
-        YG = var_data
+        zb = var_data
 
-# print(XC[414:425])
-# print(XG)
-# print(YC[55:66])
-# print(YG)
+z = z.tolist()
 
-# print(XC)
-# print(YC)
+print(z)
+print('---------')
+print(zb)
 
-# f.close()  # 关闭文件。如果文件关闭后，再使用f.variabels.items()等操作是行不通的。
+depth_dict = {"depth": z}
+
+# z2 = z
+# z2.append(0)
+#
+# for i in range(50):
+#     print(z2[i+1]-z[i])
+
+# 写入时间和索引json数据
+depth_json = json.dumps(depth_dict, sort_keys=False)
+f = open(os.path.join('depth.json'), 'w')
+f.write(depth_json)
+
+
+f.close()  # 关闭文件。如果文件关闭后，再使用f.variabels.items()等操作是行不通的。
