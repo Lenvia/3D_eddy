@@ -43,7 +43,8 @@ var default_opt;  // 默认设置
 var custom_opt; // 定制设置
 
 
-
+var curLine;
+var currentDay;  // 当前日期
 
 var currentAttr;  // 当前属性
 var upValue;  // 属性上界
@@ -52,6 +53,7 @@ var difValue;  // 上下界差值
 var mid1, mid2, mid3, mid4;  // 中间点
 var keepValue = true;  // 保持设置
 var hideChannel = false; // 隐藏地形
+var pitchMode = false;  // 选中模式（选择涡旋）
 
 // 当前gui颜色面板值
 var currentColor0 = [];
@@ -128,7 +130,7 @@ function init() {
     createSea();
     // createLand();
 
- 
+    createHelper();
 
     // 显示等待条
     showProgressModal("loadingFrames");
@@ -142,7 +144,7 @@ function init() {
     var ambient = new THREE.AmbientLight(0xffffff);
     scene.add(ambient);
 
-    // container.addEventListener( 'mousemove', onMouseMove, false );
+    container.addEventListener( 'mousemove', onMouseMove, false );
     container.addEventListener( 'click', onMouseClick, false);
 
     stats = new Stats();
@@ -180,6 +182,19 @@ function loadDepth(){
     })
 }
 
+function createHelper(){
+    //sphereGeometry(radius, widthSegments, heightSegments)
+    const geometryHelper = new THREE.SphereGeometry(10, 32, 32);
+
+    helper = new THREE.Mesh( geometryHelper, new THREE.MeshBasicMaterial({
+        color: 0xff0000,
+        transparent: true,
+        opacity: 0.5,
+    }));
+    scene.add( helper );
+
+    helper.visible = false;
+}
 /*
     生成地形顶点高度数据
 */
@@ -845,6 +860,7 @@ function setGUI(){
         this.downValue = -1;  // 属性的上界
         this.keepValue = true; // 保持设置
         this.hideChannel = false;  // 是否隐藏海峡地形
+        this.pitchMode = false;  // 选中模式
         this.color0 = [255, 255, 255]; // RGB array
         this.color1 = [255, 255, 255]; // RGB array
         this.color2 = [255, 255, 255]; // RGB array
@@ -940,6 +956,17 @@ function setGUI(){
     // 是否保持？
     gui.add(default_opt, 'keepValue').onChange(function(){
         keepValue = default_opt.keepValue;
+    })
+
+    gui.add(default_opt, 'pitchMode').onChange(function(){
+        pitchMode = default_opt.pitchMode;
+
+        if(pitchMode==false){
+            helper.visible = false;
+        }
+        else{
+            helper.visible = true;
+        }
     })
 
     // 是否隐藏地形
@@ -1365,45 +1392,20 @@ function DyChange(k){
 
 
 function onMouseMove( event ) {
-    
-    // 将鼠标位置归一化为设备坐标。x 和 y 方向的取值范围是 (-1 to +1)
+    if(pitchMode == true){
+        mouse.x = ( (event.clientX-(window.innerWidth-renderWidth)) / renderer.domElement.clientWidth ) * 2 - 1;
+        mouse.y = - ( (event.clientY - (window.innerHeight-renderHeight)) / renderer.domElement.clientHeight ) * 2 + 1;
+        // 通过摄像机和鼠标位置更新射线
+        raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
 
-    /*
-        renderer.domElement的clientWidth和clientHeight就是renderer的宽度和高度
-        由于event.clientX, Y表示屏幕上鼠标的绝对位置，所以要减去窗口的偏移，再比上窗口的宽和高
-    */
-    mouse.x = ( (event.clientX-(window.innerWidth-renderWidth)) / renderer.domElement.clientWidth ) * 2 - 1;
-    mouse.y = - ( (event.clientY - (window.innerHeight-renderHeight)) / renderer.domElement.clientHeight ) * 2 + 1;
-
-    // 现在的mouse的二维坐标就是当前鼠标在当前窗口的位置（-1~1)
-    // console.log(mouse)
-
-
-    // 通过摄像机和鼠标位置更新射线
-    raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
-
-    // 查看相机发出的光线是否击中了我们的网格物体之一（计算物体和射线的焦点）
-    // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
-
-    // 获取当前指向的第一个的坐标
-    if(curLine != undefined){
-        const intersects = raycaster.intersectObject( curLine );
-        if(intersects.length>0){
-            var curObj = intersects[0];
-            console.log(curObj.point);
+        if(curLine != undefined){
+            const intersects = raycaster.intersectObject( curLine );
+            if(intersects.length>0){
+                var curObj = intersects[0];
+                helper.position.copy( curObj.point );
+            }
         }
     }
-    
-
-    // 该方法返回一个包含有交叉部分的数组: [ { distance, point, face, faceIndex, object }, ... ]
-    // {射线投射原点和相交部分之间的距离,  相交部分的点（世界坐标）, 相交的面, 面索引, 相交的物体, 相交部分的点的UV坐标}
-
-    // Toggle rotation bool for meshes that we clicked
-    // if ( intersects.length > 0 ) {
-    // 	helper.position.set( 0, 0, 0 );
-    // 	helper.lookAt( intersects[ 0 ].face.normal );
-    // 	helper.position.copy( intersects[ 0 ].point );
-    // }
 }
 
 function onMouseClick(event){
