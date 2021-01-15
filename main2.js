@@ -44,7 +44,6 @@ var custom_opt; // 定制设置
 
 
 var curLine;
-var currentDay;  // 当前日期
 
 var currentAttr;  // 当前属性
 var upValue;  // 属性上界
@@ -854,7 +853,7 @@ function loadOWArray(){
 function setGUI(){
     gui = new dat.GUI();
     default_opt = new function(){
-        this.currentDay = -1;  // 初始时间为第0天
+        this.currentMainDay = -1;  // 初始时间为第0天
         this.currentAttr = 'OW'; // 初始展示属性为OW
         this.upValue = 1; // 属性的下界
         this.downValue = -1;  // 属性的上界
@@ -878,7 +877,7 @@ function setGUI(){
     */
 
     // 日期相关
-    currentDay = -1;
+    currentMainDay = -1;
     var lastDay = -1;
     var lastLine;  // 当前显示的线，上次显示的线
     var site, last_site;
@@ -892,17 +891,17 @@ function setGUI(){
 
 
     // 切换日期
-    gui.add(default_opt, 'currentDay', exDays).onChange(function(){
+    gui.add(default_opt, 'currentMainDay', exDays).onChange(function(){
         if(lastDay!=-1){  // 清除上次的显示
             last_site = "day"+String(lastDay);
             lastLine = scene.getObjectByName(last_site);
             lastLine.visible = false;
         }
 
-        currentDay = default_opt.currentDay;
-        console.log("currentDay:", currentDay);
+        currentMainDay = default_opt.currentMainDay;
+        console.log("currentMainDay:", currentMainDay);
 
-        site = "day"+String(currentDay);
+        site = "day"+String(currentMainDay);
         
         curLine = scene.getObjectByName(site);
 
@@ -916,7 +915,7 @@ function setGUI(){
 
         console.log(curLine.name);
         curLine.visible = true;
-        lastDay = currentDay;
+        lastDay = currentMainDay;
     });
 
     // 切换属性

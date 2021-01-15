@@ -10,6 +10,7 @@ var biasZ = 2000;  // 海底山脉向下移动（默认为2000，如果生成地
 var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
 
+var currentMainDay;  // （主面板）当前日期
 
 var selected_pos = undefined;  // 被选中的pos，在singleEddy中查询是否有合适的进行显示
 // 更新信号
