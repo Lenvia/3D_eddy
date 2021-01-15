@@ -334,6 +334,11 @@ function xyz2ijk(x, y, z){
 
 function animate() {
     requestAnimationFrame( animate );
+
+    if(selected_pos!= undefined && updateSign){
+        console.log(selected_pos);
+        updateSign = false;
+    }
     render();
     stats.update();
 }

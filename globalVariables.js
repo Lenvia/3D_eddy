@@ -11,3 +11,8 @@ var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
 
 
+var selected_pos = undefined;  // 被选中的pos，在singleEddy中查询是否有合适的进行显示
+// 更新信号
+// 仅selected_pos不为空还不行，必须updateSign也为true才能更新，并且更新后updateSign要设置为false。
+// 当主窗口再次有效点击后才能把updateSign设置为true
+var updateSign = false;

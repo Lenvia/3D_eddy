@@ -1434,7 +1434,9 @@ function onMouseClick(event){
        const intersects = raycaster.intersectObject( curLine );
        if(intersects.length>0){
            var curObj = intersects[0];
-           console.log(curObj.point);
+        //    console.log(curObj.point);
+           selected_pos = curObj.point;
+           updateSign = true;
        }
    }
 }
