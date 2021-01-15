@@ -67,7 +67,7 @@ def geodistance(lon1, lat1, lon2, lat2):
     a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
     distance = 2 * asin(sqrt(a)) * R  # 地球平均半径，6371km
     distance = round(distance, 3)
-    return distance/1000  # 返回km为单位
+    return distance / 1000  # 返回km为单位
 
 
 def get_lon_index(lon_arr, lon1):
@@ -127,13 +127,11 @@ def search(day1, day2, index1, flag=0):
     lon_index1 = get_lon_index(lon_arr, lon1)  # 经度在数组中索引
     lat_index1 = get_lat_index(lat_arr, lat1)  # 纬度索引
 
-
-
     if flag == 1:
         level_num.append(level1)
         lon_set.append(lon1)
         lat_set.append(lat1)
-        radius_set.append(dia1/2)
+        radius_set.append(dia1 / 2)
 
     next_index = -1
     next_radi = -1
@@ -154,11 +152,11 @@ def search(day1, day2, index1, flag=0):
         # 两个涡核的距离
         delta_dis = geodistance(lon1, lat1, lon2, lat2)
         # 两个涡旋半径差
-        delta_r = 0.5*(dia1 - dia2)
+        delta_r = 0.5 * (dia1 - dia2)
 
         # 两个涡旋所有层数，涡度差绝对值的平均值
         temp = np.abs(vorticity1[lon_index1][lat_index1] - vorticity2[lon_index2][lat_index2])
-        delta_xi = np.sum(temp)/len(temp)
+        delta_xi = np.sum(temp) / len(temp)
 
         # 两个涡度所有层数，eke差绝对值的平均值
         temp = np.abs(eke1[lon_index1][lat_index1] - eke2[lon_index2][lat_index2])
@@ -168,9 +166,11 @@ def search(day1, day2, index1, flag=0):
         print("半径差: ", delta_r)
         print("涡度差: ", delta_xi)
         print("eke差: ", delta_eke)
-        print(w1 * (delta_dis/d0)**2, w2 * (delta_r/r0)**2, w3 * (delta_xi/xi0)**2, w4 * (delta_eke/eke0)**2)
+        print(w1 * (delta_dis / d0) ** 2, w2 * (delta_r / r0) ** 2, w3 * (delta_xi / xi0) ** 2,
+              w4 * (delta_eke / eke0) ** 2)
 
-        curD = sqrt(w1 * (delta_dis/d0)**2 + w2 * (delta_r/r0)**2 + w3 * (delta_xi/xi0)**2 + w4 * (delta_eke/eke0)**2)
+        curD = sqrt(w1 * (delta_dis / d0) ** 2 + w2 * (delta_r / r0) ** 2 + w3 * (delta_xi / xi0) ** 2 + w4 * (
+                delta_eke / eke0) ** 2)
         print("D between %d and %d is %f" % (index1, index2, curD))
         print()
 
@@ -180,8 +180,7 @@ def search(day1, day2, index1, flag=0):
             next_level = level2
             next_lon = lon2
             next_lat = lat2
-            next_radi = dia2/2
-
+            next_radi = dia2 / 2
 
     if minDiff < 1:
         indices.append(next_index)
@@ -190,7 +189,7 @@ def search(day1, day2, index1, flag=0):
         lat_set.append(next_lat)
         radius_set.append(next_radi)
         print("-----------------------------------\n")
-        search(day2, day2+1, next_index)
+        search(day2, day2 + 1, next_index)
     else:  # 没找到，就跳过这一天
         indices.append(-1)
         level_num.append(-1)
@@ -198,15 +197,48 @@ def search(day1, day2, index1, flag=0):
         lat_set.append(-1)
         radius_set.append(-1)
         print("-----------------------------------\n")
-        search(day1, day2+1, index1)
+        search(day1, day2 + 1, index1)
+
+
+def write_json(tarDir, obj):
+    # 首先读取已有的json文件中的内容
+    item_list = []
+    with open(os.path.join(tarDir, 'eddies.json'), "r") as f:
+        try:
+            load_dict = json.load(f)
+            num_item = len(load_dict)
+        except:
+            num_item = 0
+        for i in range(num_item):
+            name = load_dict[i]['name']
+            master = load_dict[i]['master']
+            lon = load_dict[i]['lon']
+            lat = load_dict[i]['lat']
+            radius = load_dict[i]['radius']
+
+            item_dict = {
+                "name": name,
+                "master": master,
+                "lon": lon,
+                "lat": lat,
+                "radius": radius,
+            }
+            item_list.append(item_dict)
+
+    # 读取已有内容完毕
+    # 将新传入的dict对象追加至list中
+    item_list.append(obj)
+    # 将追加的内容与原有内容写回（覆盖）原文件
+    with open(os.path.join(tarDir, 'eddies.json'), 'w', encoding='utf-8') as f2:
+        json.dump(item_list, f2, ensure_ascii=False)
 
 
 '''
     【2】追踪
 '''
 if __name__ == '__main__':
-    start_day = 4
-    start_index = 13
+    start_day = 0
+    start_index = 9
     up_bound = 34
 
     for i in range(start_day):
@@ -217,7 +249,7 @@ if __name__ == '__main__':
         radius_set.append(-1)
 
     indices.append(start_index)
-    search(start_day, start_day+1, start_index, 1)  # 开始追踪
+    search(start_day, start_day + 1, start_index, 1)  # 开始追踪
 
     for i in range(len(indices)):
         if indices[i] == -1:
@@ -225,14 +257,14 @@ if __name__ == '__main__':
             y_pos.append(-1)
             points.append(-1)
         else:
-            x_pos.append((lon_set[i]-30.2072)/20)
-            y_pos.append((lat_set[i]-10.0271)/20)
+            x_pos.append((lon_set[i] - 30.2072) / 20)
+            y_pos.append((lat_set[i] - 10.0271) / 20)
 
-            temp = ceil(level_num[i]*2/7)
+            temp = ceil(level_num[i] * 2 / 7)
             if temp < 3:
                 temp = 3
 
-            points.append(temp*10000)
+            points.append(temp * 10000)
 
     print("days:\n", days)  # 天数
     print("indices:\n", indices)  # 图上的第几个涡旋
@@ -263,23 +295,22 @@ if __name__ == '__main__':
     site_dict = {"days": days, "indices": indices}
     # 写入时间和索引json数据
     site_json = json.dumps(site_dict, sort_keys=False)
-    f = open(os.path.join(tarDir, identifier+'_track.json'), 'w')
+    f = open(os.path.join(tarDir, identifier + '_track.json'), 'w')
     f.write(site_json)
+
+    # 如果不存在，先创建个空的
+    if not os.path.exists(os.path.join(tarDir, 'eddies.json')):
+        f = open(os.path.join(tarDir, 'eddies.json'), 'w')
+        f.close()
 
     for i in range(len(indices)):
         if indices[i] == -1:
             continue
         info_dict = {
-            "name": str(days[i])+"_"+str(indices[i]),
+            "name": str(days[i]) + "_" + str(indices[i]),
             "master": identifier,
             "lon": lon_set[i],
             "lat": lat_set[i],
             "radius": radius_set[i],
         }
-
-        with open(os.path.join(tarDir, 'eddies.json'), "a") as f:
-            f.write(json.dumps(info_dict))
-
-
-
-
+        write_json(tarDir, info_dict)

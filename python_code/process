@@ -1,0 +1,26 @@
+## 全局流线绘制
+
+【1】UVW速度场提取
+make_whole_npy.py
+
+【2】npy转vtk
+whole_npy_to_vtk.py
+
+【3】paraview脚本
+create_whole_script.py
+
+
+## 局部涡旋绘制
+
+
+
+
+## 全局属性提取
+提取OW：
+extract_OW.py
+
+提取salt, temperature：
+extract_other_attr.py
+
+
+
