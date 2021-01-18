@@ -10,17 +10,23 @@ whole_npy_to_vtk.py
 create_whole_script.py
 
 
-## 局部涡旋绘制
+## 局部涡旋
 
+【1】全局涡旋识别
+whole_detect.py
 
+【2】涡旋追踪
+# 对于每天，每个涡旋，先检查json中有没有，然后再追踪
+compute.py（代码需要修改）
 
+【3】单个涡旋UVW抽取，生成npy
+make_batch_npy.py（代码需要修改）
 
-## 全局属性提取
-提取OW：
-extract_OW.py
+【4】npy转vtk
+npy_to_vtk.py（代码需要修改）
 
-提取salt, temperature：
-extract_other_attr.py
+【5】paraview脚本
+create_script.py
 
 
 

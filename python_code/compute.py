@@ -28,6 +28,10 @@ x_pos = []  # 在paraview上的x坐标
 y_pos = []  # 在paraview上的y坐标
 points = []  # 35层大概需要10万  14层4万
 
+# 全局数据经纬度跨度
+spanLon = 20
+spanLat = 20
+
 # 默认是60天
 for i in range(60):
     days.append(i)
@@ -215,6 +219,7 @@ def write_json(tarDir, obj):
             lon = load_dict[i]['lon']
             lat = load_dict[i]['lat']
             radius = load_dict[i]['radius']
+            level = load_dict[i]['level']
 
             item_dict = {
                 "name": name,
@@ -222,6 +227,7 @@ def write_json(tarDir, obj):
                 "lon": lon,
                 "lat": lat,
                 "radius": radius,
+                "level": level,
             }
             item_list.append(item_dict)
 
@@ -257,8 +263,9 @@ if __name__ == '__main__':
             y_pos.append(-1)
             points.append(-1)
         else:
-            x_pos.append((lon_set[i] - 30.2072) / 20)
-            y_pos.append((lat_set[i] - 10.0271) / 20)
+            # 原数据经纬度跨度都是20
+            x_pos.append((lon_set[i] - 30.2072) / spanLon)
+            y_pos.append((lat_set[i] - 10.0271) / spanLat)
 
             temp = ceil(level_num[i] * 2 / 7)
             if temp < 3:
@@ -312,5 +319,6 @@ if __name__ == '__main__':
             "lon": lon_set[i],
             "lat": lat_set[i],
             "radius": radius_set[i],
+            "level": int(level_num[i]),
         }
         write_json(tarDir, info_dict)

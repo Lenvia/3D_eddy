@@ -47,35 +47,22 @@ from math import radians, cos, sin, asin, sqrt
 day = sys.argv[1]
 day = int(day)
 
+f = None  # 读取的数据集
 
 # Load netCDF4 data
 def load_netcdf4(filename):  # name of the netCDF data file
     f = nc4.Dataset(filename,'r', format='NETCDF4')  # 'r' stands for read
-    # lon = f.variables['longitude'][:]
-    # lat = f.variables['latitude'][:]
-    # depth = f.variables['depth'][:]
-    # # Load zonal and meridional velocity, in m/s
-    # uvel = f.variables['uo'][:]
-    # vvel = f.variables['vo'][:]
-    # # Load time in hours from 1950-01-01
-    # t = f.variables['time'][:]
-
     # 根据本数据内容提取
-    lon = f.variables['XC'][336:]  # 经度
-    lat = f.variables['YC'][:132]  # 纬度
-    depth = f.variables['Z_MIT40'][:]  # 层数
+    lon = f.variables['XC']  # 经度
+    lat = f.variables['YC']  # 纬度
+    depth = f.variables['Z_MIT40']  # 层数
     # Load zonal and meridional veslocity, in m/s
-    uvel = f.variables['U'][:, :, :132, 336:]  # 纬向速度
-    vvel = f.variables['V'][:, :, :132, 336:]  # 经线速度
-
-    print(uvel.shape)
-    print(vvel.shape)
-
-    # Load time in hours from 1950-01-01
+    uvel = f.variables['U']  # 纬向速度
+    vvel = f.variables['V']  # 经线速度
     t = f.variables['T_AX'][:]  # 时间数组
 
     return (f,lon,lat,depth,uvel,vvel,t)
-    f.close()
+    # f.close()
 
 
 # Eddy detection algorithm
@@ -159,7 +146,7 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
     '''
     执行到这里直接return，下面的R2算法暂时不运行
     '''
-    return (lon, lat, uvel, vvel, vorticity, OW, OW_eddies)
+    # return (lon, lat, uvel, vvel, vorticity, OW, OW_eddies)
 
     ########################################################################
 
@@ -445,6 +432,7 @@ def local_peaks(A,A_start,max_evaluation_points):
     sample = np.random.randint(0,local_min.shape[1],size = np.min((max_evaluation_points,n_minima)))
     print(sample)
 
+
     return local_min[:,sample]
 
 
@@ -480,12 +468,12 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
     pos5 = axes[2,0].imshow(OW_eddies[:,:,k_plot].T, extent=[lon[0],lon[-1],lat[0],lat[-1]], aspect='auto',origin="lower")
     axes[2,0].set_title('Possible eddies ($OW<OW_{start}$)')
 
-    # pos6 = axes[2,1].imshow(intensity_mask[:,:,k_plot].T, extent=[lon[0],lon[-1],lat[0],lat[-1]],aspect='auto',origin="lower",cmap='jet')
-    # axes[2,1].set_title('Circulation ($m^2/s$), $>0$: cyclonic, $<0$: anticyclonic, $=0$: no eddy')
-    # for i in range(0,nEddies):
-    #     text = axes[2,1].annotate(i+1, eddie_census[2:4,i])
-    #     text.set_fontsize('x-small')
-    #     text.set_color('k')
+    pos6 = axes[2,1].imshow(intensity_mask[:,:,k_plot].T, extent=[lon[0],lon[-1],lat[0],lat[-1]],aspect='auto',origin="lower",cmap='jet')
+    axes[2,1].set_title('Circulation ($m^2/s$), $>0$: cyclonic, $<0$: anticyclonic, $=0$: no eddy')
+    for i in range(0,nEddies):
+        text = axes[2,1].annotate(i+1, eddie_census[2:4,i])
+        text.set_fontsize('x-small')
+        text.set_color('k')
 
     # add the colorbar using the figure's method,telling it which mappable we're talking about and which axes object it should be near
     fig.colorbar(pos1, ax=axes[0,0])
@@ -493,17 +481,17 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
     fig.colorbar(pos3, ax=axes[1,0])
     fig.colorbar(pos4, ax=axes[1,1])
     fig.colorbar(pos5, ax=axes[2,0])
-    # fig.colorbar(pos6, ax=axes[2,1])
+    fig.colorbar(pos6, ax=axes[2,1])
 
     origin = datetime.date(1950, 1, 1)
     st =fig.suptitle('Eddy data for the ' + str(julianh2gregorian(day_julian_hours,origin)), fontsize="x-large")
     st.set_y(1.02)
 
     plt.tight_layout()
-    path = 'plot_file_no_R2'
+    path = 'whole_plot_file'
     if not os.path.exists(path):
         os.makedirs(path)
-    plt.savefig('plot_file_no_R2/' + str(day) + '.png')
+    plt.savefig(os.path.join(path, str(day)+'.jpg'))
     # plt.show()
     return plt
 
@@ -567,16 +555,16 @@ if __name__ == '__main__':
 
     k_plot = 0
 
-    lon, lat, uvel, vvel, vorticity, OW, OW_eddies = eddy_detection(lon, lat, depth, uvel, vvel, day, R2_criterion, OW_start, max_evaluation_points, min_eddie_cells)
+    lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, levels = eddy_detection(lon, lat, depth, uvel, vvel, day, R2_criterion, OW_start, max_evaluation_points, min_eddie_cells)
 
     print("successfully detected!")
 
-    tarDir = 'result_no_R2/small' + str(day)
+    tarDir = os.path.join('whole_result', str(day))
 
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
 
-    joblib.dump(t, tarDir + '/t.pkl')
+    joblib.dump(t, 'shared/t.pkl')
     joblib.dump(lon, tarDir + '/lon.pkl')
     joblib.dump(lat, tarDir + '/lat.pkl')
     joblib.dump(uvel, tarDir + '/uvel.pkl')
@@ -584,43 +572,40 @@ if __name__ == '__main__':
     joblib.dump(vorticity, tarDir + '/vorticity.pkl')
     joblib.dump(OW, tarDir + '/OW.pkl')
     joblib.dump(OW_eddies, tarDir + '/OW_eddies.pkl')
-    # joblib.dump(eddie_census, tarDir + '/eddie_census.pkl')
-    # joblib.dump(nEddies, tarDir + '/nEddies.pkl')
-    # joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
-    # joblib.dump(levels, tarDir + '/levels.pkl')
-
-
-    eddie_census = []
-    nEddies = []
-    circulation_mask = []
+    joblib.dump(eddie_census, tarDir + '/eddie_census.pkl')
+    joblib.dump(nEddies, tarDir + '/nEddies.pkl')
+    joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
+    joblib.dump(levels, tarDir + '/levels.pkl')
 
     print("start plot")
     plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
 
-    # '''
-    # characteristics of the detected eddies -->
-    # minOW, circ(m^2/s), lon(º), lat(º), cells, diameter(km)
-    # '''
-    #
-    # # print("all lon")
-    # # print(lon)
-    # # print("all lat")
-    # # print(lat)
-    #
-    # size = len(levels)
-    #
-    # print("lon:")
-    # print(eddie_census[2][:size])
-    # print("lat:")
-    # print(eddie_census[3][:size])
-    # print("cells:")
-    # print(eddie_census[4][:size])
-    # print("diam:")
-    # print(eddie_census[-1][:size])
-    # print("levels:")
-    # print(levels)
-    # print("circulation_mask:")
-    # print(circulation_mask.shape)
+    """
+    ----------------------------------------以上识别完毕--------------------------------------------------------
+    --------------------------------------以下是逐个提取涡旋-----------------------------------------------------
+    """
+
+    '''
+    characteristics of the detected eddies -->
+    minOW, circ(m^2/s), lon(º), lat(º), cells, diameter(km)
+    '''
+
+    size = len(levels)  # 识别出来的涡核的个数
+
+    print("lon:")
+    print(eddie_census[2][:size])
+    print("lat:")
+    print(eddie_census[3][:size])
+    print("cells:")
+    print(eddie_census[4][:size])
+    print("diam:")
+    print(eddie_census[-1][:size])
+    print("levels:")
+    print(levels)
+    print("circulation_mask:")  # 气旋 or 反气旋
+    print(circulation_mask)
+
+    # # 查看一下气旋和反气旋点的数量
     # pos = 0
     # neg = 0
     # for i in range(circulation_mask.shape[0]):
@@ -632,26 +617,133 @@ if __name__ == '__main__':
     #                 neg += 1
     # print(pos)
     # print(neg)
-    #
-    #
-    # functions = Get_new_gps()
-    # index = 0
-    # lonC, latC = [eddie_census[2][index], eddie_census[3][index]]
-    # r = eddie_census[-1][index]/2 * 1e3  # 半径
-    # level = levels[index]  # 层数
-    #
-    # # 计算正南的点
-    # lonSouth, latSouth = functions.get_sou(lonC, latC, r)
-    # # 计算正西的点
-    # lonWest, latWest = functions.get_west(lonC, latC, r)
-    # # 计算正北的点
-    # lonNorth, latNorth = functions.get_nor(lonC, latC, r)
-    # # 计算正东的点
-    # lonEast, latEast = functions.get_east(lonC, latC, r)
-    #
-    # print("原始点的经纬度坐标", lonC, latC)
-    # print("正南%f米坐标点为%f,%f" % (r, lonSouth, latSouth))
-    # print("正西%f米坐标点为%f,%f" % (r, lonWest, latWest))
-    # print("正北%f米坐标点为%f,%f" % (r, lonNorth, latNorth))
-    # print("正东%f米坐标点为%f,%f" % (r, lonEast, latEast))
 
+    '''
+        -----------------------------是否要用 待定 ----------------------------------------------
+    '''
+    '''
+        定位单个涡旋的正方形边界
+    '''
+    functions = Get_new_gps()
+    index = 0
+    lonC, latC = [eddie_census[2][index], eddie_census[3][index]]
+    r = eddie_census[-1][index]/2 * 1e3  # 半径
+    level = levels[index]  # 层数
+
+    # 计算正南的点
+    lonSouth, latSouth = functions.get_sou(lonC, latC, r)
+    # 计算正西的点
+    lonWest, latWest = functions.get_west(lonC, latC, r)
+    # 计算正北的点
+    lonNorth, latNorth = functions.get_nor(lonC, latC, r)
+    # 计算正东的点
+    lonEast, latEast = functions.get_east(lonC, latC, r)
+
+    print("原始点的经纬度坐标", lonC, latC)
+    print("正南%f米坐标点为%f,%f" % (r, lonSouth, latSouth))
+    print("正西%f米坐标点为%f,%f" % (r, lonWest, latWest))
+    print("正北%f米坐标点为%f,%f" % (r, lonNorth, latNorth))
+    print("正东%f米坐标点为%f,%f" % (r, lonEast, latEast))
+
+    # 初始化
+    lon_index1 = 0
+    lon_index2 = len(lon) - 1
+    lat_index1 = 0
+    lat_index2 = len(lat) - 1
+
+    # 找出矩形边界四个角的下标
+    for i in range(len(lon)):
+        if lon[i] > lonWest:
+            lon_index1 = i - 1
+            break
+    for i in range(len(lon)):
+        if lon[i] >= lonEast:
+            lon_index2 = i
+            break
+
+    for i in range(len(lat)):
+        if lat[i] > latSouth:
+            lat_index1 = i - 1
+            break
+
+    for i in range(len(lat)):
+        if lat[i] >= latNorth:
+            lat_index2 = i
+            break
+
+    lon_index1 = max(0, lon_index1 - 2)
+    lon_index2 = min(499, lon_index2 + 2)
+
+    lat_index1 = max(0, lat_index1 - 2)
+    lat_index2 = min(499, lat_index2 + 2)
+
+    len1 = lon_index2 - lon_index1 + 1
+    len2 = lat_index2 - lat_index1 + 1
+
+    print(lon_index1, lon_index2)
+    print(lat_index1, lat_index2)
+
+    '''
+        获取UVW数据
+    '''
+    # 提取 U V W的数据
+    # 查看var的信息
+    varSet = ['U', 'V', 'W']  # UVW
+    # 声明空的np数组
+    U = np.array([], dtype=np.float64)
+    V = np.array([], dtype=np.float64)
+    W = np.array([], dtype=np.float64)
+
+    # 赋值
+    for i, var in enumerate(varSet):
+        var_info = f.variables[var]  # 获取变量信息
+        var_data = f[var][day]  # 获取变量的数据
+        print(var_data.shape)
+        # var_data = np.array(var_data)  # 转化为np.array数组
+        if i == 0:  # U数据
+            U = var_data
+        elif i == 1:  # V数据
+            V = var_data
+        elif i == 2:  # W数据
+            W = var_data
+
+    tarDir = os.path.join("result", str(day)+'_'+str(index))
+    if not os.path.exists(tarDir):
+        os.makedirs(tarDir)
+
+    joblib.dump(U, os.path.join(tarDir, 'Udata.pkl'))
+    joblib.dump(V, os.path.join(tarDir, 'Vdata.pkl'))
+    joblib.dump(W, os.path.join(tarDir, 'Wdata.pkl'))
+
+    '''
+        将这块UVW数据填写进全为0的数组中
+    '''
+    vec = np.zeros(shape=(500, 500, 50, 3))
+    # print(vec.shape)
+
+    print(len1, len2, level)
+    # 只对某一块数据赋值，其他的地方都为0
+    for i in range(lat_index1, lat_index2 + 1):
+        for j in range(lon_index1, lon_index2 + 1):
+            for k in range(level):
+                vec[i][j][k][0] = U[k][i][j]
+                vec[i][j][k][1] = V[k][i][j]
+                vec[i][j][k][2] = W[k][i][j]
+                # print(i, j, k, vec[i][j][k])
+
+    print("lon: ", lon[lon_index1], "~", lon[lon_index2])
+    print("lat: ", lat[lat_index1], "~", lat[lat_index2])
+
+    dict_ = {'x': vec, 'y': 4}  # x表示数据，y表示x的维数
+
+    tarDir = 'npy_file/'
+
+    file = os.path.join(tarDir, 'vec' + str(day) + '_' + str(index) + '.npy')  # vec2_0_1.npy 表示day2的第1个涡旋
+
+    if not os.path.exists(tarDir):
+        os.makedirs(tarDir)
+
+    np.save(file, dict_)
+    print('successfully saved!')
+    # dict_load = np.load(file, allow_pickle=True)
+    # dict_load = dict_load.item()

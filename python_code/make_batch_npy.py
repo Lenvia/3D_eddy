@@ -1,43 +1,6 @@
-"""
-Created on Tue Feb 12 15:03:30 2019
 
-@author: jasaa
-eddy detection functions
-
-eddy_detection:
-    inputs:
-        - filename: name of the netCDF file with the data
-        - day: day number
-        - R2_criterion: Confidence level, usually 90%
-        - OW_start: OW value at which to begin the evaluation of R2
-        - max_evaluation_points: Number of local minima to evaluate using R2 method.
-        Set low (like 20) to see a few R2 eddies quickly.
-        Set high (like 1e5) to find all eddies in domain.
-        - min_eddie_cells: Minimum number of cells required to be identified as an eddie.
-
-    returns a tuple with:
-        - lon: longitude vector (deg)
-        - lat: latitude vector (deg)
-        - uvel: zonal velocity (m/s)
-        - vvel: meridional velocity (m/s)
-        - vorticity (m/s)
-        - nEddies: number of eddies found
-        - eddy_census: characteristics of the detected eddies --> minOW, circ(m^2/s), lon(º), lat(º), cells, diameter(km)
-        - OW: non-dimensional Okubo-Weiss parameter
-        - OW_eddies: OW<OW_start --> cells that could containt the center of an eddy
-        - circulation_mask: map of circulation for cyclonic (circ>0) and anti-cyclonic (circ<0) eddies, circ=0 if the cell is not in an eddy
-"""
-
-# uvel: 纬向速度； vvel: 经线速度； vorticity: 涡度
-
-# import all necesary libraries
-import matplotlib.pyplot as plt
-import math
 import numpy as np
-import scipy.signal as sg
-import pandas as pd
 import netCDF4 as nc4
-import datetime
 import joblib
 import os
 import sys
