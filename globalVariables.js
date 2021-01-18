@@ -80,3 +80,13 @@ function xyz2ijk(x, y, z){
 
     return new Array(i, j, k);
 }
+
+// 经度、纬度、深度转xyz
+function lll2xyz(lon, lat, level){
+    var x = ((lon - 30.2072)/20 -0.5)*edgeLen;  // 20是经度跨度（下面纬度跨度 数据中也是20）
+    var y = ((lat - 10.0271)/20 -0.5)*edgeWid;
+    // var z = -depth_array[level];
+    var z = 0;  // 还是用0吧
+
+    return new Array(x, y, z);
+}

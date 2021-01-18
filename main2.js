@@ -13,10 +13,8 @@ let mesh, texture;  // 山脉网格， 纹理
 var maxH;  // 产生的山脉最大高度
 
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
-const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 
 const renderWidth = 0.6*window.innerWidth, renderHeight = window.innerHeight;
-
 
 
 
@@ -32,6 +30,8 @@ for (var i =0; i<=59; i++){
     exDays.push(i);
 }
 
+var existedSphere = [];  // 场上存在的标记
+
 // 进度条模块
 var progressModal, progressBar, progressLabel, progressBackground;
 var frameLabel;
@@ -40,8 +40,6 @@ var frameLabel;
 // gui参数
 var gui;
 var default_opt;  // 默认设置
-var custom_opt; // 定制设置
-
 
 var curLine;
 
@@ -857,6 +855,11 @@ function setGUI(){
             last_site = "day"+String(lastDay);
             lastLine = scene.getObjectByName(last_site);
             lastLine.visible = false;
+
+            for(let i=0; i<existedSphere.length; i++){
+                existedSphere[i].dispose();
+                scene.remove(existedSphere[i]);
+            }
         }
 
         currentMainDay = default_opt.currentMainDay;
@@ -874,8 +877,10 @@ function setGUI(){
             resetMaterial(curLine);
         }
 
+        
         console.log(curLine.name);
         curLine.visible = true;
+        showCores();  // 显示涡核
         lastDay = currentMainDay;
     });
 
@@ -1048,6 +1053,39 @@ function updateMid(){
     mid3 = downValue+0.6*difValue;
     mid4 = downValue+0.8*difValue;
 }
+
+// 在图中显示涡核
+function showCores(){
+    for(let i=0; i<eddyInfo.length; i++){
+        if(eddyInfo[i]['name'].split('_')[0] != String(currentMainDay))
+            continue;
+        var lon = eddyInfo[i]['lon'];
+        var lat = eddyInfo[i]['lat'];
+        var level = eddyInfo[i]['level'];
+
+        var pos = lll2xyz(lon, lat, level);
+
+        // 在涡核处显示标记
+        const geometrySphere = new THREE.SphereGeometry(20, 32, 32);
+        var sphere = new THREE.Mesh( geometrySphere, new THREE.MeshBasicMaterial({
+            color: 0x0000ff,
+            transparent: true,
+            opacity: 1,
+        }));
+
+        // 直接setPosition好像不行，还是平移吧
+        geometrySphere.translate(pos[0], pos[1], pos[2]);
+
+        
+
+        scene.add( sphere );
+        
+        existedSphere.push(sphere);
+
+        console.log(sphere);
+    }
+}
+
 
 /*
     改变geometry的属性
