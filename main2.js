@@ -121,9 +121,6 @@ function init() {
     var axesHelper = new THREE.AxesHelper(1500);
     scene.add(axesHelper);
 
-    // 加载深度数组
-    loadDepth();
-
     // 创建海底地形和海水
     // createTerrain();
     createSea();
@@ -160,26 +157,9 @@ function onWindowResize() {
     renderer.setSize( renderWidth, renderHeight );
 }
 
-function loadDepth(){
-    var depth_path = ("./depth.json");
-    var json_data;
-    $.ajax({
-        url: depth_path,//json文件位置
-        type: "GET",//请求方式为get
-        dataType: "json", //返回数据格式为json
-        async: false,  // 异步设置为否
-        success: function(res) {//请求成功完成后要执行的方法 
-            json_data = res;
-            depth_array = json_data["depth"];
 
-            // 反向映射
-            for(let i=0; i<depth_array.length; i++){
-                re_depth.set(depth_array[i], i);
-            }
-            // console.log(re_depth);
-        }
-    })
-}
+
+
 
 function createHelper(){
     //sphereGeometry(radius, widthSegments, heightSegments)
@@ -738,25 +718,6 @@ function initLineOpacity(curLine, k){
             mats[curIndex].opacity = 1 - diff*j;
         }
     }
-}
-
-
-/*
-    转换后的xyz到数组i,j,k的映射
-*/
-function xyz2ijk(x, y, z){
-    var orix = x/edgeLen + 0.5;
-    var oriy = y/edgeWid + 0.5;
-    var oriz = -z/scaleHeight;
-
-    // console.log(orix, oriy, oriz);
-
-    var i = Math.floor(orix/0.002);
-    var j = Math.floor(oriy/0.002);
-    var k = re_depth.get(oriz);
-    // console.log(oriz);
-
-    return new Array(i, j, k);
 }
 
 /*

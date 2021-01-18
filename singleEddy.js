@@ -16,8 +16,6 @@ const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 
 const renderWidth = 0.4*window.innerWidth, renderHeight = 0.5*window.innerHeight;
 
-var json_data;  // 各涡旋的数据
-
 
 let helper;  // 鼠标helper
 
@@ -127,114 +125,82 @@ function createSea(){
     加载涡旋n天的形状
 */
 function loadAllEddies(){
-    var eddis_info_path = ("./track/eddies.json");
-    
-    $.ajax({
-        url: eddis_info_path,//json文件位置
-        type: "GET",//请求方式为get
-        dataType: "json", //返回数据格式为json
-        async: false,  // 异步设置为否
-        success: function(res) { //请求成功完成后要执行的方法 
-            json_data = res;
-            // console.log(json_data)
+    let arr = []; //promise返回值的数组
+    for(let i=0; i<eddyInfo.length; i++){
+        // 含有i的都要放在promise里面！！！！
+        arr[i] = new Promise((resolve, reject)=>{
+            var master = eddyInfo[i]['master'];  // 所属涡旋
+            var name = eddyInfo[i]['name'];  // 涡旋识别编号
+            var vtk_path = ("./vtk_folder/".concat(master, '/vtk', name, '.vtk'))
 
-            let arr = []; //promise返回值的数组
-            for(let i=0; i<json_data.length; i++){
-                // 含有i的都要放在promise里面！！！！
-                arr[i] = new Promise((resolve, reject)=>{
-                    var master = json_data[i]['master'];  // 所属涡旋
-                    var name = json_data[i]['name'];  // 涡旋识别编号
-                    var vtk_path = ("./vtk_folder/".concat(master, '/vtk', name, '.vtk'))
+            var loader = new VTKLoader();
 
-                    var loader = new VTKLoader();
-                    // console.log("loading", vtk_path);
+            loader.load( vtk_path, function ( geometry ) {  // 异步加载
+        
+                geometry.translate(-0.5, -0.5, 0);
 
-                    loader.load( vtk_path, function ( geometry ) {  // 异步加载
+                // 不应该翻下去！！！！！！！！！！ 而是z值变负
+                var positions = geometry.attributes.position.array;
+                // 改变顶点高度值
                 
-                        geometry.translate(-0.5, -0.5, 0);
-        
-                        // 不应该翻下去！！！！！！！！！！ 而是z值变负
-                        var positions = geometry.attributes.position.array;
-                        // 改变顶点高度值
-                        
-                        for ( let j = 0;  j < positions.length; j += 3 ) {
-                            // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
-                            positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
-                        }
-        
-                        geometry.scale(edgeLen, edgeWid, scaleHeight);
-        
-        
-                        // 转化为无索引格式，用来分组
-                        geometry = geometry.toNonIndexed();
-        
-                        var vertexNum = geometry.attributes.position.count;
-                        
-                        var opa = []; // 顶点透明度，用来改变线条透明度
-                        for (var i = 0; i<vertexNum; i++){
-                            opa.push(1);  // 默认都是1
-                        }
-                        geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
-        
-                        
-                        var groupId;  // 组号
-        
-                        var mats = [];
-        
-                        for (var i =0; i<vertexNum; i+=2){
-                            groupId = i/2;
-                            geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
-        
-                            let material = new THREE.LineBasicMaterial({
-                                // vertexColors: false,  // 千万不能设置为true！！！！血的教训
-                                transparent: true, // 可定义透明度
-                                opacity: 1,
-                                depthWrite: false, 
-                            });
-                            mats.push(material);
-                        }
-                        var linesG = new THREE.LineSegments(geometry, mats);
-        
-                        //need update 我不知道有没有用，感觉没用
-                        linesG.geometry.colorsNeedUpdate = true;
-                        linesG.geometry.groupsNeedUpdate = true;
-                        linesG.material.needsUpdate = true;
-                        
-                        // initLineOpacity(linesG, 0.5);  // 初始化透明度
-                        linesG.name = name;  // 0_9, 4_10, ...
-                        console.log(name, "加载完毕");
+                for ( let j = 0;  j < positions.length; j += 3 ) {
+                    // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
+                    positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
+                }
 
-                        scene.add(linesG);
-                        linesG.visible = false;
-                        resolve(i);
+                geometry.scale(edgeLen, edgeWid, scaleHeight);
+
+
+                // 转化为无索引格式，用来分组
+                geometry = geometry.toNonIndexed();
+
+                var vertexNum = geometry.attributes.position.count;
+                
+                var opa = []; // 顶点透明度，用来改变线条透明度
+                for (var i = 0; i<vertexNum; i++){
+                    opa.push(1);  // 默认都是1
+                }
+                geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
+                
+                var groupId;  // 组号
+
+                var mats = [];
+
+                for (var i =0; i<vertexNum; i+=2){
+                    groupId = i/2;
+                    geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
+
+                    let material = new THREE.LineBasicMaterial({
+                        // vertexColors: false,  // 千万不能设置为true！！！！血的教训
+                        transparent: true, // 可定义透明度
+                        opacity: 1,
+                        depthWrite: false, 
                     });
-                })
-            }
-            Promise.all(arr).then((res)=>{
-                console.log("局部涡旋加载完毕");
-            })
-        }
+                    mats.push(material);
+                }
+                var linesG = new THREE.LineSegments(geometry, mats);
+
+                //need update 我不知道有没有用，感觉没用
+                linesG.geometry.colorsNeedUpdate = true;
+                linesG.geometry.groupsNeedUpdate = true;
+                linesG.material.needsUpdate = true;
+                
+                // initLineOpacity(linesG, 0.5);  // 初始化透明度
+                linesG.name = name;  // 0_9, 4_10, ...
+                console.log(name, "加载完毕");
+
+                scene.add(linesG);
+                linesG.visible = false;
+                resolve(i);
+            });
+        })
+    }
+    Promise.all(arr).then((res)=>{
+        console.log("局部涡旋加载完毕");
     })
 }
 
 
-/*
-    转换后的xyz到数组i,j,k的映射
-*/
-function xyz2ijk(x, y, z){
-    var orix = x/edgeLen + 0.5;
-    var oriy = y/edgeWid + 0.5;
-    var oriz = -z/scaleHeight;
-
-    // console.log(orix, oriy, oriz);
-
-    var i = Math.floor(orix/0.002);
-    var j = Math.floor(oriy/0.002);
-    var k = re_depth.get(oriz);
-    // console.log(oriz);
-
-    return new Array(i, j, k);
-}
 
 // 传递过来的坐标到经纬度的映射，用来判断距离
 function xy2lonlat(x, y){
@@ -247,15 +213,16 @@ function xy2lonlat(x, y){
     var minDis = 1000; // 最大不会超过800的
     var minName = undefined;
 
-    for(let i=0; i<json_data.length; i++){
-        if(json_data[i]['name'].split('_')[0] != String(currentMainDay))
+    for(let i=0; i<eddyInfo.length; i++){
+        if(eddyInfo[i]['name'].split('_')[0] != String(currentMainDay))
             continue;
-        console.log(json_data[i]['name']);
-        var currentDis = getDisdance(lon, lat, json_data[i]['lon'], json_data[i]['lat']);
-        console.log(currentDis);
+        
+        var currentDis = getDisdance(lon, lat, eddyInfo[i]['lon'], eddyInfo[i]['lat']);
+        console.log(eddyInfo[i]['name'], currentDis);
+        
         if(minDis>currentDis){
             minDis = currentDis;
-            minName = json_data[i]['name'];
+            minName = eddyInfo[i]['name'];
         }
     }
 
