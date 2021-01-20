@@ -51,6 +51,7 @@ var mid1, mid2, mid3, mid4;  // 中间点
 var keepValue = true;  // 保持设置
 var hideChannel = false; // 隐藏地形
 var pitchMode = false;  // 选中模式（选择涡旋）
+var dynamic = false;  // 默认不准动
 
 // 当前gui颜色面板值
 var currentColor0 = [];
@@ -123,6 +124,7 @@ function init() {
     // createTerrain();
     createSea();
     // createLand();
+    createChannel();
 
     createHelper();
 
@@ -411,7 +413,7 @@ function createLand(){
         scene.add( mesh );
 
 
-        createChannel();
+        
         
     });
 }
@@ -666,7 +668,7 @@ function loadEddiesForDays(){
                     let material = new THREE.LineBasicMaterial({
                         // vertexColors: false,  // 千万不能设置为true！！！！血的教训
                         transparent: true, // 可定义透明度
-                        opacity: 0,
+                        opacity: 1,
                         depthWrite: false, 
                     });
                     mats.push(material);
@@ -678,7 +680,6 @@ function loadEddiesForDays(){
                 linesG.geometry.groupsNeedUpdate = true;
                 linesG.material.needsUpdate = true;
                 
-                initLineOpacity(linesG, 0.5);  // 初始化透明度
                 linesG.name = "day"+String(d);  // day0, day1, ...
                 scene.add(linesG);
                 linesG.visible = false;
@@ -819,6 +820,7 @@ function setGUI(){
         this.keepValue = true; // 保持设置
         this.hideChannel = false;  // 是否隐藏海峡地形
         this.pitchMode = false;  // 选中模式
+        this.dynamic = false;  // 是否让全局涡旋运动
         this.color0 = [255, 255, 255]; // RGB array
         this.color1 = [255, 255, 255]; // RGB array
         this.color2 = [255, 255, 255]; // RGB array
@@ -857,9 +859,9 @@ function setGUI(){
             lastLine.visible = false;
 
             for(let i=0; i<existedSphere.length; i++){
-                existedSphere[i].dispose();
                 scene.remove(existedSphere[i]);
             }
+            existedSphere.length = 0;  // 清空数组
         }
 
         currentMainDay = default_opt.currentMainDay;
@@ -880,7 +882,7 @@ function setGUI(){
         
         console.log(curLine.name);
         curLine.visible = true;
-        showCores();  // 显示涡核
+        // showCores();  // 显示涡核
         lastDay = currentMainDay;
     });
 
@@ -943,12 +945,37 @@ function setGUI(){
 
         // 不隐藏
         if(hideChannel==false){
-            surface.visible = true;
-            channel.visible = true;
+            if(surface!=undefined)
+                surface.visible = true;
+            if(channel!=undefined)
+                channel.visible = true;
         }
         else{
-            surface.visible = false;
-            channel.visible = false;
+            if(surface!=undefined)
+                surface.visible = false;
+            if(channel!=undefined)
+                channel.visible = false;
+        }
+    })
+
+    // 是否隐藏地形
+    gui.add(default_opt, 'dynamic').onChange(function(){
+        dynamic = default_opt.dynamic;
+
+        if(dynamic==true){
+            initLineOpacity(curLine, 0.5);  // 初始化透明度
+        }
+        else{  // 将所有透明度设置为1
+            opa0_ctrl.setValue(1.0);
+            opa1_ctrl.setValue(1.0);
+            opa2_ctrl.setValue(1.0);
+            opa3_ctrl.setValue(1.0);
+            opa4_ctrl.setValue(1.0);
+
+            for(var i=0; i<curLine.material.length; i++){
+                curLine.material[i].opacity = 1.0;
+            }
+            getCurrentValue();  // 更新current
         }
     })
 
@@ -1066,17 +1093,15 @@ function showCores(){
         var pos = lll2xyz(lon, lat, level);
 
         // 在涡核处显示标记
-        const geometrySphere = new THREE.SphereGeometry(20, 32, 32);
+        const geometrySphere = new THREE.SphereGeometry(10, 32, 32);
         var sphere = new THREE.Mesh( geometrySphere, new THREE.MeshBasicMaterial({
             color: 0x0000ff,
             transparent: true,
-            opacity: 1,
+            opacity: 0.5,
         }));
 
         // 直接setPosition好像不行，还是平移吧
         geometrySphere.translate(pos[0], pos[1], pos[2]);
-
-        
 
         scene.add( sphere );
         
@@ -1357,7 +1382,8 @@ function printColor(){
 function animate() {
     requestAnimationFrame( animate );
     render();
-    DyChange(0.5);
+    if(dynamic)  // 只有dynamic为true时才渲染
+        DyChange(0.5);
     stats.update();
 }
 
@@ -1428,13 +1454,15 @@ function onMouseClick(event){
    // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
 
    // 获取当前指向的第一个的坐标
-   if(curLine != undefined){
-       const intersects = raycaster.intersectObject( curLine );
-       if(intersects.length>0){
-           var curObj = intersects[0];
-        //    console.log(curObj.point);
-           selected_pos = curObj.point;
-           updateSign = true;
-       }
-   }
+    if(curLine != undefined){
+        const intersects = raycaster.intersectObject( curLine );
+        if(intersects.length>0){
+            var curObj = intersects[0];
+            // console.log(curObj.point);
+            if(pitchMode == true){
+                selected_pos = curObj.point;
+                updateSign = true;
+            }
+        }
+    }
 }
