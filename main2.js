@@ -920,12 +920,17 @@ function setGUI(){
         resetMaterial(curLine);
     });
 
+    /*
+        控制
+    */
+    var modeFolder = gui.addFolder('mode');
+
     // 是否保持？
-    gui.add(default_opt, 'keepValue').onChange(function(){
+    modeFolder.add(default_opt, 'keepValue').onChange(function(){
         keepValue = default_opt.keepValue;
     })
 
-    gui.add(default_opt, 'pitchMode').onChange(function(){
+    modeFolder.add(default_opt, 'pitchMode').onChange(function(){
         pitchMode = default_opt.pitchMode;
 
         if(pitchMode==false){
@@ -937,7 +942,7 @@ function setGUI(){
     })
 
     // 是否隐藏地形
-    gui.add(default_opt, 'hideChannel').onChange(function(){
+    modeFolder.add(default_opt, 'hideChannel').onChange(function(){
         hideChannel = default_opt.hideChannel;
 
         var channel = scene.getObjectByName("channel");
@@ -958,8 +963,8 @@ function setGUI(){
         }
     })
 
-    // 是否隐藏地形
-    gui.add(default_opt, 'dynamic').onChange(function(){
+    // 是否运动
+    modeFolder.add(default_opt, 'dynamic').onChange(function(){
         dynamic = default_opt.dynamic;
 
         if(dynamic==true){
