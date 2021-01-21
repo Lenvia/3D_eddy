@@ -1,6 +1,6 @@
 #container{
 	position: absolute;
-	right: 0px;
+	left: 0px;
 	top: 0px;
 	width: 60%;
 	height: 100%;
@@ -9,8 +9,8 @@
 
 #container2{
 	position: absolute;
-	left: 0px;
-	bottom: 0px;
+	right: 0px;
+	top: 0px;
 	width: 40%;
 	height: 50%;
 	background-color: #1b76dd;

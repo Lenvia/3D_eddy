@@ -1422,10 +1422,10 @@ function DyChange(k){
 
 function onMouseMove( event ) {
     if(pitchMode == true){
-        mouse.x = ( (event.clientX-(window.innerWidth-renderWidth)) / renderer.domElement.clientWidth ) * 2 - 1;
-        mouse.y = - ( (event.clientY - (window.innerHeight-renderHeight)) / renderer.domElement.clientHeight ) * 2 + 1;
+        getMouseXY(event);  // 得到鼠标的位置
         // 通过摄像机和鼠标位置更新射线
         raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
+
 
         if(curLine != undefined){
             const intersects = raycaster.intersectObject( curLine );
@@ -1445,8 +1445,7 @@ function onMouseClick(event){
         renderer.domElement的clientWidth和clientHeight就是renderer的宽度和高度
         由于event.clientX, Y表示屏幕上鼠标的绝对位置，所以要减去窗口的偏移，再比上窗口的宽和高
     */
-   mouse.x = ( (event.clientX-(window.innerWidth-renderWidth)) / renderer.domElement.clientWidth ) * 2 - 1;
-   mouse.y = - ( (event.clientY - (window.innerHeight-renderHeight)) / renderer.domElement.clientHeight ) * 2 + 1;
+   getMouseXY(event);
 
    // 现在的mouse的二维坐标就是当前鼠标在当前窗口的位置（-1~1)
    // console.log(mouse)
@@ -1470,4 +1469,9 @@ function onMouseClick(event){
             }
         }
     }
+}
+
+function getMouseXY(event){
+    mouse.x = ( (event.clientX) / renderer.domElement.clientWidth ) * 2 - 1;
+    mouse.y = - ( (event.clientY ) / renderer.domElement.clientHeight ) * 2 + 1;
 }
