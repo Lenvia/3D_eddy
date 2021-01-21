@@ -1,3 +1,6 @@
+/* id 选择器以 "#" 来定义。 */
+/* 类选择器以一个点号显示 */
+
 #container{
 	position: absolute;
 	left: 0px;
@@ -79,3 +82,8 @@
 }
 
 
+#gui1{
+	position: absolute;
+	right: 0px;
+	top: 0px;
+}

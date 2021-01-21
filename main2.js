@@ -146,6 +146,10 @@ function init() {
     stats = new Stats();
     container.appendChild( stats.dom );
 
+    var guiContainer1 = document.getElementById('gui1');
+    guiContainer1.appendChild(gui.domElement);
+    container.appendChild(guiContainer1);
+
     // 窗口缩放时触发
     window.addEventListener( 'resize', onWindowResize, false );
 
@@ -811,7 +815,8 @@ function loadOWArray(){
     设置交互GUI
 */
 function setGUI(){
-    gui = new dat.GUI();
+    gui = new dat.GUI({ autoPlace: false });
+
     default_opt = new function(){
         this.currentMainDay = -1;  // 初始时间为第0天
         this.currentAttr = 'OW'; // 初始展示属性为OW
@@ -1074,6 +1079,9 @@ function setGUI(){
     // 播放
     // gui.add(func_opt, 'play');
     gui.add(func_opt, 'reset');
+
+    console.log(gui);
+    
 }
 
 
