@@ -19,26 +19,15 @@ w3 = 0.05
 w4 = 0.01
 
 days = []
-indices = []
-level_num = []
-lon_set = []  # 涡旋经度集合
-lat_set = []  # 涡旋纬度集合
-radius_set = []  # 涡旋半径集合
-x_pos = []  # 在paraview上的x坐标
-y_pos = []  # 在paraview上的y坐标
-z_pos = []  # 在paraview上的z坐标
-seedR = []  # paraview球的半径
-points = []  # 35层大概需要10万  14层4万
 
 # 全局数据经纬度跨度
 spanLon = 20
 spanLat = 20
+up_bound = 34
 
 # 默认是60天
 for i in range(60):
     days.append(i)
-
-up_bound = -1
 
 
 def load_common(tar_dir):
@@ -46,6 +35,10 @@ def load_common(tar_dir):
     lon_arr = joblib.load(tar_dir + '/lon.pkl')
     lat_arr = joblib.load(tar_dir + '/lat.pkl')
     return t, lon_arr, lat_arr
+
+
+sharedDir = 'shared'
+t, lon_arr, lat_arr = load_common(sharedDir)  # 经纬度只要存储一份就够了，都是共享的
 
 
 def load_pkl(tar_dir):
@@ -94,25 +87,17 @@ def get_lat_index(lat_arr, lat1):
     return lat_index
 
 
-def search(day1, day2, index1, flag=0):
+def search(day1, day2, index1, indices, level_num, lon_set, lat_set, radius_set, flag=0):
     if day2 > up_bound:
         return
 
     tarDir1 = 'result/small' + str(day1)
     tarDir2 = 'result/small' + str(day2)
-    t, lon_arr, lat_arr = load_common(tarDir1)
 
     uvel1, vvel1, vorticity1, OW1, OW_eddies1, eddie_census1, nEddies1, circulation_mask1, levels1 = load_pkl(tarDir1)
     uvel2, vvel2, vorticity2, OW2, OW_eddies2, eddie_census2, nEddies2, circulation_mask2, levels2 = load_pkl(tarDir2)
     eke1 = 0.5 * (uvel1 ** 2 + vvel1 ** 2)
     eke2 = 0.5 * (uvel2 ** 2 + vvel2 ** 2)
-
-    # print(lon_arr.shape)  # 164
-    # print(lat_arr.shape)  # 132
-    # print(uvel1.shape)  # (164, 132, 50)
-    # print(vvel1.shape)  # (164, 132, 50)
-    # print(vorticity1.shape)  # (164, 132, 50)
-    # print(circulation_mask1.shape)  # (164, 132, 50)
 
     '''
     dis, radius, vorticity, eke
@@ -122,9 +107,6 @@ def search(day1, day2, index1, flag=0):
     eke需要经纬度下标
     '''
 
-    # print(eddie_census1[-1])
-    # print(eddie_census2[-1])
-
     # index1 = 2  # day1时间第几个涡旋
     lon1 = eddie_census1[2][index1]  # 涡核经度
     lat1 = eddie_census1[3][index1]  # 涡核纬度
@@ -133,7 +115,7 @@ def search(day1, day2, index1, flag=0):
     lon_index1 = get_lon_index(lon_arr, lon1)  # 经度在数组中索引
     lat_index1 = get_lat_index(lat_arr, lat1)  # 纬度索引
 
-    if flag == 1:
+    if flag == 1:  # 第一轮运行，需要把当天的添加进去；后面的就不用了，因为本天会添加下一天的
         level_num.append(level1)
         lon_set.append(lon1)
         lat_set.append(lat1)
@@ -177,10 +159,9 @@ def search(day1, day2, index1, flag=0):
 
         curD = sqrt(w1 * (delta_dis / d0) ** 2 + w2 * (delta_r / r0) ** 2 + w3 * (delta_xi / xi0) ** 2 + w4 * (
                 delta_eke / eke0) ** 2)
-        print("D between %d and %d is %f" % (index1, index2, curD))
-        print()
+        print("D between %d and %d is %f\n" % (index1, index2, curD))
 
-        if curD < minDiff:
+        if curD < minDiff:  # 更新当前差异最小值
             minDiff = curD
             next_index = index2
             next_level = level2
@@ -195,15 +176,15 @@ def search(day1, day2, index1, flag=0):
         lat_set.append(next_lat)
         radius_set.append(next_radi)
         print("-----------------------------------\n")
-        search(day2, day2 + 1, next_index)
-    else:  # 没找到，就跳过这一天
+        search(day2, day2 + 1, next_index,  indices, level_num, lon_set, lat_set, radius_set)
+    else:  # # 如果最小值仍然超过阈值 说明没有合适的候选。没找到，就跳过这一天
         indices.append(-1)
         level_num.append(-1)
         lon_set.append(-1)
         lat_set.append(-1)
         radius_set.append(-1)
         print("-----------------------------------\n")
-        search(day1, day2 + 1, index1)
+        search(day1, day2 + 1, index1,  indices, level_num, lon_set, lat_set, radius_set)
 
 
 def write_json(tarDir, obj):
@@ -241,14 +222,21 @@ def write_json(tarDir, obj):
         json.dump(item_list, f2, ensure_ascii=False)
 
 
-'''
-    【2】追踪
-'''
-if __name__ == '__main__':
-    start_day = 0
-    start_index = 9
-    up_bound = 34
+# 对于 start_day _ start_index 的涡旋进行追踪，并保存涡旋信息到json
+def track_eddy(start_day, start_index):
+    # 初始化
+    indices = []
+    level_num = []
+    lon_set = []  # 涡旋经度集合
+    lat_set = []  # 涡旋纬度集合
+    radius_set = []  # 涡旋半径集合
+    x_pos = []  # 在paraview上的x坐标
+    y_pos = []  # 在paraview上的y坐标
+    z_pos = []  # 在paraview上的z坐标
+    seedR = []  # paraview球的半径
+    points = []  # 35层大概需要10万  14层4万
 
+    # 把该日期前的位置补齐，即在此天之前没追踪到
     for i in range(start_day):
         indices.append(-1)
         level_num.append(-1)
@@ -257,7 +245,9 @@ if __name__ == '__main__':
         radius_set.append(-1)
 
     indices.append(start_index)
-    search(start_day, start_day + 1, start_index, 1)  # 开始追踪
+    # 开始追踪
+    # （当前天，目标天，当前index，索引数组，层数数组，涡核经度数组，涡核纬度数组，涡旋半径数组，flag只有在第一轮时才为1）
+    search(start_day, start_day + 1, start_index, indices, level_num, lon_set, lat_set, radius_set, 1)
 
     for i in range(len(indices)):
         if indices[i] == -1:
@@ -271,8 +261,8 @@ if __name__ == '__main__':
             x_pos.append((lon_set[i] - 30.2072) / spanLon)
             y_pos.append((lat_set[i] - 10.0271) / spanLat)
             # 比如有40层，中心位置应该在13层左右， 然后球半径应该是26层
-            z_pos.append(level_num[i]/50/3)  # 中心位置设置在1/3高度处
-            seedR.append(2*level_num[i]/50/3)  # 半径设置为2/3深度
+            z_pos.append(2 * level_num[i] / 50 / 3)  # 中心位置设置在2/3高度处（因为靠近底部才是第0层）
+            seedR.append(level_num[i] / 50 / 3)  # 半径设置为1/3深度
 
             temp = ceil(level_num[i] * 2 / 7)
             if temp < 3:
@@ -296,9 +286,9 @@ if __name__ == '__main__':
 
     identifier = str(start_day) + '-' + str(start_index)
 
-    # 这个track是用来paraview生成的
+    # ------------------------------------生成paraview所需数据-------------------------------------------
     track_dict = {"days": days, "indices": indices, "points": points,
-                  "x_pos": x_pos, "y_pos": y_pos, "z_pos":z_pos, "seedR":seedR}
+                  "x_pos": x_pos, "y_pos": y_pos, "z_pos": z_pos, "seedR": seedR}
 
     # 写入追踪字典数据，它不生成json数据！
     tarDir = 'track/'
@@ -307,6 +297,7 @@ if __name__ == '__main__':
     file = os.path.join(tarDir, identifier)
     np.save(file, track_dict)
 
+    # ------------------------------------生成json格式 主涡旋 追踪数据-------------------------------------------
     # 这个是简单的涡旋追踪，是生成json后在js里加载的
     site_dict = {"days": days, "indices": indices}
     # 写入时间和索引json数据
@@ -314,6 +305,7 @@ if __name__ == '__main__':
     f = open(os.path.join(tarDir, identifier + '_track.json'), 'w')
     f.write(site_json)
 
+    # ------------------------------------更新json所有涡旋信息-------------------------------------------
     # 如果不存在，先创建个空的
     if not os.path.exists(os.path.join(tarDir, 'eddies.json')):
         f = open(os.path.join(tarDir, 'eddies.json'), 'w')
@@ -331,3 +323,13 @@ if __name__ == '__main__':
             "level": int(level_num[i]),
         }
         write_json(tarDir, info_dict)
+
+
+'''
+    【2】追踪
+'''
+if __name__ == '__main__':
+    start_day = 0
+    start_index = 9
+
+    track_eddy(start_day, start_index)

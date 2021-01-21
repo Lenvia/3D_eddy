@@ -27,7 +27,7 @@ U = np.array([], dtype=np.float64)
 V = np.array([], dtype=np.float64)
 W = np.array([], dtype=np.float64)
 
-for day in range(2):
+for day in range(2, 5):
     # 赋值
     for i, var in enumerate(varSet):
         var_info = f.variables[var]  # 获取变量信息

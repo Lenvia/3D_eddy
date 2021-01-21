@@ -89,8 +89,13 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
     st.set_y(1.02)
 
     plt.tight_layout()
-    plt.savefig('plot_file/' + str(day) + '.png')
-    # plt.show()
+
+    tarDir = 'plot_file2'
+    if not os.path.exists(tarDir):
+        os.makedirs(tarDir)
+
+    plt.savefig('plot_file2/' + str(day) + '.png')
+    plt.show()
 
     return plt
 
@@ -160,7 +165,7 @@ def plot_eddies2(day_julian_hours,lon,lat,OW,k_plot):
     st.set_y(1.02)
 
     plt.tight_layout()
-    plt.savefig('plot_file/' + str(day) + '.png')
+    plt.savefig('plot_file2/' + str(day) + '.png')
     plt.show()
 
     return plt
@@ -190,29 +195,29 @@ def load_netcdf4(filename):  # name of the netCDF data file
 
 
 if __name__ == '__main__':
-    k_plot = 10
+    k_plot = 0
 
 
-    # tarDir = os.path.join("result", "small"+str(day))
+    tarDir = os.path.join("result2", "small"+str(day))
 
-    (f, lon, lat, depth, t) = load_netcdf4('COMBINED_2011013100.nc')
+    # (f, lon, lat, depth, t) = load_netcdf4('COMBINED_2011013100.nc')
 
-    # t = joblib.load(tarDir + '/t.pkl')
-    # lon = joblib.load(tarDir + '/lon.pkl')
-    # lat = joblib.load(tarDir + '/lat.pkl')
-    # uvel = joblib.load(tarDir + '/uvel.pkl')
-    # vvel = joblib.load(tarDir + '/vvel.pkl')
-    # vorticity = joblib.load(tarDir + '/vorticity.pkl')
-    OW = joblib.load('whole_attributes_pkl_file/OW/OW_0.pkl')
-    # OW_eddies = joblib.load(tarDir + '/OW_eddies.pkl')
-    # eddie_census = joblib.load(tarDir + '/eddie_census.pkl')
-    # nEddies = joblib.load(tarDir + '/nEddies.pkl')
-    # circulation_mask = joblib.load(tarDir + '/circulation_mask.pkl')
-    # levels = joblib.load(tarDir + '/levels.pkl')
+    t = joblib.load(tarDir + '/t.pkl')
+    lon = joblib.load(tarDir + '/lon.pkl')
+    lat = joblib.load(tarDir + '/lat.pkl')
+    uvel = joblib.load(tarDir + '/uvel.pkl')
+    vvel = joblib.load(tarDir + '/vvel.pkl')
+    vorticity = joblib.load(tarDir + '/vorticity.pkl')
+    OW = joblib.load(tarDir + '/OW.pkl')
+    OW_eddies = joblib.load(tarDir + '/OW_eddies.pkl')
+    eddie_census = joblib.load(tarDir + '/eddie_census.pkl')
+    nEddies = joblib.load(tarDir + '/nEddies.pkl')
+    circulation_mask = joblib.load(tarDir + '/circulation_mask.pkl')
+    levels = joblib.load(tarDir + '/levels.pkl')
 
     # print("start plot")
-    # plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
-    plt = plot_eddies2(t[day], lon, lat, OW, k_plot)
+    plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
+    # plt = plot_eddies2(t[day], lon, lat, OW, k_plot)
     # '''
     # characteristics of the detected eddies -->
     # minOW, circ(m^2/s), lon(º), lat(º), cells, diameter(km)

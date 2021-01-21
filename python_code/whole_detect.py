@@ -422,15 +422,15 @@ def local_peaks(A,A_start,max_evaluation_points):
 # Using the scipy.signal.fing_peaks function with flattened array and unravelling it, probably much faster.
     A_flat = A.flatten()
     peaks = sg.find_peaks(-A_flat,height=-A_start)
-    print(peaks)
+    # print(peaks)
     n_minima = len(peaks[0])
-    print(n_minima)
+    # print(n_minima)
     local_min = np.asarray(np.unravel_index(peaks[0],A.shape))
-    print(local_min)
-    print(local_min.shape)
-    print(local_min.shape[1])
+    # print(local_min)
+    # print(local_min.shape)
+    # print(local_min.shape[1])
     sample = np.random.randint(0,local_min.shape[1],size = np.min((max_evaluation_points,n_minima)))
-    print(sample)
+    # print(sample)
 
 
     return local_min[:,sample]
@@ -550,8 +550,8 @@ if __name__ == '__main__':
     # capture
     R2_criterion = 0.9
     OW_start = -0.2
-    max_evaluation_points = 200
-    min_eddie_cells = 3
+    max_evaluation_points = 1000
+    min_eddie_cells = 4
 
     k_plot = 0
 
@@ -564,7 +564,10 @@ if __name__ == '__main__':
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
 
-    joblib.dump(t, 'shared/t.pkl')
+    if not os.path.exists("shared"):
+        os.makedirs("shared")
+
+
     joblib.dump(lon, tarDir + '/lon.pkl')
     joblib.dump(lat, tarDir + '/lat.pkl')
     joblib.dump(uvel, tarDir + '/uvel.pkl')
@@ -576,6 +579,8 @@ if __name__ == '__main__':
     joblib.dump(nEddies, tarDir + '/nEddies.pkl')
     joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
     joblib.dump(levels, tarDir + '/levels.pkl')
+
+    joblib.dump(t, 'shared/t.pkl')
 
     print("start plot")
     plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
@@ -624,126 +629,23 @@ if __name__ == '__main__':
     '''
         定位单个涡旋的正方形边界
     '''
-    functions = Get_new_gps()
-    index = 0
-    lonC, latC = [eddie_census[2][index], eddie_census[3][index]]
-    r = eddie_census[-1][index]/2 * 1e3  # 半径
-    level = levels[index]  # 层数
-
-    # 计算正南的点
-    lonSouth, latSouth = functions.get_sou(lonC, latC, r)
-    # 计算正西的点
-    lonWest, latWest = functions.get_west(lonC, latC, r)
-    # 计算正北的点
-    lonNorth, latNorth = functions.get_nor(lonC, latC, r)
-    # 计算正东的点
-    lonEast, latEast = functions.get_east(lonC, latC, r)
-
-    print("原始点的经纬度坐标", lonC, latC)
-    print("正南%f米坐标点为%f,%f" % (r, lonSouth, latSouth))
-    print("正西%f米坐标点为%f,%f" % (r, lonWest, latWest))
-    print("正北%f米坐标点为%f,%f" % (r, lonNorth, latNorth))
-    print("正东%f米坐标点为%f,%f" % (r, lonEast, latEast))
-
-    # 初始化
-    lon_index1 = 0
-    lon_index2 = len(lon) - 1
-    lat_index1 = 0
-    lat_index2 = len(lat) - 1
-
-    # 找出矩形边界四个角的下标
-    for i in range(len(lon)):
-        if lon[i] > lonWest:
-            lon_index1 = i - 1
-            break
-    for i in range(len(lon)):
-        if lon[i] >= lonEast:
-            lon_index2 = i
-            break
-
-    for i in range(len(lat)):
-        if lat[i] > latSouth:
-            lat_index1 = i - 1
-            break
-
-    for i in range(len(lat)):
-        if lat[i] >= latNorth:
-            lat_index2 = i
-            break
-
-    lon_index1 = max(0, lon_index1 - 2)
-    lon_index2 = min(499, lon_index2 + 2)
-
-    lat_index1 = max(0, lat_index1 - 2)
-    lat_index2 = min(499, lat_index2 + 2)
-
-    len1 = lon_index2 - lon_index1 + 1
-    len2 = lat_index2 - lat_index1 + 1
-
-    print(lon_index1, lon_index2)
-    print(lat_index1, lat_index2)
-
-    '''
-        获取UVW数据
-    '''
-    # 提取 U V W的数据
-    # 查看var的信息
-    varSet = ['U', 'V', 'W']  # UVW
-    # 声明空的np数组
-    U = np.array([], dtype=np.float64)
-    V = np.array([], dtype=np.float64)
-    W = np.array([], dtype=np.float64)
-
-    # 赋值
-    for i, var in enumerate(varSet):
-        var_info = f.variables[var]  # 获取变量信息
-        var_data = f[var][day]  # 获取变量的数据
-        print(var_data.shape)
-        # var_data = np.array(var_data)  # 转化为np.array数组
-        if i == 0:  # U数据
-            U = var_data
-        elif i == 1:  # V数据
-            V = var_data
-        elif i == 2:  # W数据
-            W = var_data
-
-    tarDir = os.path.join("result", str(day)+'_'+str(index))
-    if not os.path.exists(tarDir):
-        os.makedirs(tarDir)
-
-    joblib.dump(U, os.path.join(tarDir, 'Udata.pkl'))
-    joblib.dump(V, os.path.join(tarDir, 'Vdata.pkl'))
-    joblib.dump(W, os.path.join(tarDir, 'Wdata.pkl'))
-
-    '''
-        将这块UVW数据填写进全为0的数组中
-    '''
-    vec = np.zeros(shape=(500, 500, 50, 3))
-    # print(vec.shape)
-
-    print(len1, len2, level)
-    # 只对某一块数据赋值，其他的地方都为0
-    for i in range(lat_index1, lat_index2 + 1):
-        for j in range(lon_index1, lon_index2 + 1):
-            for k in range(level):
-                vec[i][j][k][0] = U[k][i][j]
-                vec[i][j][k][1] = V[k][i][j]
-                vec[i][j][k][2] = W[k][i][j]
-                # print(i, j, k, vec[i][j][k])
-
-    print("lon: ", lon[lon_index1], "~", lon[lon_index2])
-    print("lat: ", lat[lat_index1], "~", lat[lat_index2])
-
-    dict_ = {'x': vec, 'y': 4}  # x表示数据，y表示x的维数
-
-    tarDir = 'npy_file/'
-
-    file = os.path.join(tarDir, 'vec' + str(day) + '_' + str(index) + '.npy')  # vec2_0_1.npy 表示day2的第1个涡旋
-
-    if not os.path.exists(tarDir):
-        os.makedirs(tarDir)
-
-    np.save(file, dict_)
-    print('successfully saved!')
-    # dict_load = np.load(file, allow_pickle=True)
-    # dict_load = dict_load.item()
+    # functions = Get_new_gps()
+    # index = 0
+    # lonC, latC = [eddie_census[2][index], eddie_census[3][index]]
+    # r = eddie_census[-1][index]/2 * 1e3  # 半径
+    # level = levels[index]  # 层数
+    #
+    # # 计算正南的点
+    # lonSouth, latSouth = functions.get_sou(lonC, latC, r)
+    # # 计算正西的点
+    # lonWest, latWest = functions.get_west(lonC, latC, r)
+    # # 计算正北的点
+    # lonNorth, latNorth = functions.get_nor(lonC, latC, r)
+    # # 计算正东的点
+    # lonEast, latEast = functions.get_east(lonC, latC, r)
+    #
+    # print("原始点的经纬度坐标", lonC, latC)
+    # print("正南%f米坐标点为%f,%f" % (r, lonSouth, latSouth))
+    # print("正西%f米坐标点为%f,%f" % (r, lonWest, latWest))
+    # print("正北%f米坐标点为%f,%f" % (r, lonNorth, latNorth))
+    # print("正东%f米坐标点为%f,%f" % (r, lonEast, latEast))

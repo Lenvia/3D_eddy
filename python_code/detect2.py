@@ -159,7 +159,7 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
     '''
     执行到这里直接return，下面的R2算法暂时不运行
     '''
-    return (lon, lat, uvel, vvel, vorticity, OW, OW_eddies)
+    # return (lon, lat, uvel, vvel, vorticity, OW, OW_eddies)
 
     ########################################################################
 
@@ -480,12 +480,12 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
     pos5 = axes[2,0].imshow(OW_eddies[:,:,k_plot].T, extent=[lon[0],lon[-1],lat[0],lat[-1]], aspect='auto',origin="lower")
     axes[2,0].set_title('Possible eddies ($OW<OW_{start}$)')
 
-    # pos6 = axes[2,1].imshow(intensity_mask[:,:,k_plot].T, extent=[lon[0],lon[-1],lat[0],lat[-1]],aspect='auto',origin="lower",cmap='jet')
-    # axes[2,1].set_title('Circulation ($m^2/s$), $>0$: cyclonic, $<0$: anticyclonic, $=0$: no eddy')
-    # for i in range(0,nEddies):
-    #     text = axes[2,1].annotate(i+1, eddie_census[2:4,i])
-    #     text.set_fontsize('x-small')
-    #     text.set_color('k')
+    pos6 = axes[2,1].imshow(intensity_mask[:,:,k_plot].T, extent=[lon[0],lon[-1],lat[0],lat[-1]],aspect='auto',origin="lower",cmap='jet')
+    axes[2,1].set_title('Circulation ($m^2/s$), $>0$: cyclonic, $<0$: anticyclonic, $=0$: no eddy')
+    for i in range(0,nEddies):
+        text = axes[2,1].annotate(i+1, eddie_census[2:4,i])
+        text.set_fontsize('x-small')
+        text.set_color('k')
 
     # add the colorbar using the figure's method,telling it which mappable we're talking about and which axes object it should be near
     fig.colorbar(pos1, ax=axes[0,0])
@@ -493,18 +493,21 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
     fig.colorbar(pos3, ax=axes[1,0])
     fig.colorbar(pos4, ax=axes[1,1])
     fig.colorbar(pos5, ax=axes[2,0])
-    # fig.colorbar(pos6, ax=axes[2,1])
+    fig.colorbar(pos6, ax=axes[2,1])
 
     origin = datetime.date(1950, 1, 1)
     st =fig.suptitle('Eddy data for the ' + str(julianh2gregorian(day_julian_hours,origin)), fontsize="x-large")
     st.set_y(1.02)
 
     plt.tight_layout()
-    path = 'plot_file_no_R2'
-    if not os.path.exists(path):
-        os.makedirs(path)
-    plt.savefig('plot_file_no_R2/' + str(day) + '.png')
-    # plt.show()
+
+    tarDir = 'plot_file2'
+    if not os.path.exists(tarDir):
+        os.makedirs(tarDir)
+
+    plt.savefig('plot_file2/' + str(day) + '.png')
+    plt.show()
+
     return plt
 
 
@@ -562,16 +565,17 @@ if __name__ == '__main__':
     # capture
     R2_criterion = 0.9
     OW_start = -0.2
-    max_evaluation_points = 200
-    min_eddie_cells = 3
+    max_evaluation_points = 400
+    min_eddie_cells = 4
 
     k_plot = 0
 
-    lon, lat, uvel, vvel, vorticity, OW, OW_eddies = eddy_detection(lon, lat, depth, uvel, vvel, day, R2_criterion, OW_start, max_evaluation_points, min_eddie_cells)
+    lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, levels = eddy_detection(
+        lon, lat, depth, uvel, vvel, day, R2_criterion, OW_start, max_evaluation_points, min_eddie_cells)
 
     print("successfully detected!")
 
-    tarDir = 'result_no_R2/small' + str(day)
+    tarDir = 'result2/small' + str(day)
 
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
@@ -584,15 +588,10 @@ if __name__ == '__main__':
     joblib.dump(vorticity, tarDir + '/vorticity.pkl')
     joblib.dump(OW, tarDir + '/OW.pkl')
     joblib.dump(OW_eddies, tarDir + '/OW_eddies.pkl')
-    # joblib.dump(eddie_census, tarDir + '/eddie_census.pkl')
-    # joblib.dump(nEddies, tarDir + '/nEddies.pkl')
-    # joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
-    # joblib.dump(levels, tarDir + '/levels.pkl')
-
-
-    eddie_census = []
-    nEddies = []
-    circulation_mask = []
+    joblib.dump(eddie_census, tarDir + '/eddie_census.pkl')
+    joblib.dump(nEddies, tarDir + '/nEddies.pkl')
+    joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
+    joblib.dump(levels, tarDir + '/levels.pkl')
 
     print("start plot")
     plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
