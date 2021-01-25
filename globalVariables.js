@@ -6,6 +6,13 @@ const edgeLen = 3000;  // 地形（海水、山脉）长度
 const edgeWid = edgeLen;  // 地形宽度
 const scaleHeight = 0.5; //缩放高度
 
+// 主界面变量
+var is3d = false;
+var sea;  // 海
+var channel;  // 峡谷地形
+var surface;  // 表面陆地
+var land_2d;  // 2d
+
 var biasZ = 2000;  // 海底山脉向下移动（默认为2000，如果生成地形这个值会更新）
 var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
@@ -89,4 +96,33 @@ function lll2xyz(lon, lat, level){
     var z = 0;  // 还是用0吧
 
     return new Array(x, y, z);
+}
+
+
+function changeView(){
+    if(is3d){
+        is3d = false;  // 切换成2d
+
+        if(sea!=undefined)
+            sea.visible = false;
+        if(surface!=undefined)
+            surface.visible = false;
+        if(channel!=undefined)
+            channel.visible = false;
+        if(land_2d!=undefined)
+            land_2d.visible = true;
+
+    }
+    else{
+        is3d = true;
+
+        if(sea!=undefined)
+            sea.visible = true;
+        if(surface!=undefined)
+            surface.visible = true;
+        if(channel!=undefined)
+            channel.visible = true;
+        if(land_2d!=undefined)
+            land_2d.visible = false;
+    }
 }

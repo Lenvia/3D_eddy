@@ -9,13 +9,12 @@ THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 
 var container, stats;  // 容器，状态监控器
 var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
-let mesh, texture;  // 山脉网格， 纹理
+
 var maxH;  // 产生的山脉最大高度
 
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 
 const renderWidth = 0.6*window.innerWidth, renderHeight = window.innerHeight;
-
 
 
 let helper;  // 鼠标helper
@@ -41,7 +40,9 @@ var frameLabel;
 var gui;
 var default_opt;  // 默认设置
 
-var curLine;
+// 本界面唯一变量
+var curLine;  // 当前流线
+
 
 var currentAttr;  // 当前属性
 var upValue;  // 属性上界
@@ -101,7 +102,7 @@ function init() {
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
     camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
-    camera.position.z = 3000;
+    camera.position.z = 5000;
     camera.position.x = edgeLen*0;
     camera.position.y = edgeWid*0;
 
@@ -120,11 +121,10 @@ function init() {
     var axesHelper = new THREE.AxesHelper(1500);
     scene.add(axesHelper);
 
-    // 创建海底地形和海水
-    // createTerrain();
     createSea();
-    // createLand();
+    createLand();
     createChannel();
+    create2d();
 
     createHelper();
 
@@ -149,6 +149,9 @@ function init() {
     var guiContainer1 = document.getElementById('gui1');
     guiContainer1.appendChild(gui.domElement);
     container.appendChild(guiContainer1);
+
+    var exContainer = document.getElementById('ex23d');
+    container.appendChild(exContainer);
 
     // 窗口缩放时触发
     window.addEventListener( 'resize', onWindowResize, false );
@@ -178,156 +181,11 @@ function createHelper(){
 
     helper.visible = false;
 }
-/*
-    生成地形顶点高度数据
-*/
-function generateMountainHeight( width, height ) {
-    // 总的顶点数据量width * height
-    const size = width * height, data = new Uint8Array( size );
-    // ImprovedNoise来实现地形高度数据的随机生成。perlin —— 柏林噪声
-    const perlin = new ImprovedNoise();
 
-    // const z = Math.random() * 100; // z值不同 每次执行随机出来的地形效果不同
-    const z = 100;  // 这里不是控制高度的，而是整体地形。 如果z值固定，每次刷新都是一样的山脉（但内部高度不一样）
-
-    // 控制地面显示效果  可以尝试0.01  0.1  1等不值
-    // 0.1凹凸不平的地面效果  1山脉地形效果
-    let quality = 1;
-
-    for ( let j = 0; j < 4; j ++ ) {
-        for ( let i = 0; i < size; i ++ ) {
-            // x的值0 1 2 3 4 5 6...
-            const x = i % width, y = ~ ~ ( i / width );  //~表示按位取反 两个~就是按位取反后再取反。 ~~相当于Math.floor(),效率高一点
-            // 通过噪声生成数据
-            data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z ) * quality * 1.25 );
-        }
-        // 循环执行的时候，quality累乘  乘的系数是1  显示效果平面
-        quality *= 5;
-    }
-
-    // console.log(data)
-    return data;
-}
-
-/*
-    生成地形顶点纹理数据？？
-*/
-function generateMountainTexture( data, width, height ) {
-    // bake lighting into texture
-    let context, image, imageData, shade;
-
-    const vector3 = new THREE.Vector3( 0, 0, 0 );
-
-    const sun = new THREE.Vector3( 1, 1, 1 );
-    sun.normalize();
-
-    const canvas = document.createElement( 'canvas' );  // 创建一个画布对象
-    canvas.width = width;
-    canvas.height = height;
-
-    context = canvas.getContext( '2d' );  // getContext() 方法可返回一个对象，该对象提供了用于在画布上绘图的方法和属性。
-    context.fillStyle = '#000';  // 设置或返回用于填充绘画的颜色、渐变或模式
-    context.fillRect( 0, 0, width, height );  // 绘制“被填充”的矩形。 左上角坐标，宽度，高度
-
-    // 返回 ImageData 对象，该对象为画布上指定的矩形复制像素数据
-    // 每个像素需要占用4位数据，分别是r,g,b,alpha透明通道
-    image = context.getImageData( 0, 0, canvas.width, canvas.height );
-    imageData = image.data;  // 仍然指向同一个地址
-    // 光影效果
-    // j的总范围也就是[0, width * height)
-    for ( let i = 0, j = 0, l = imageData.length; i < l; i += 4, j ++ ) {
-        vector3.x = data[ j - 2 ] - data[ j + 2 ];
-        vector3.y = data[ j - width * 2 ] - data[ j + width * 2 ];
-        vector3.z = 2;
-        vector3.normalize();
-
-        // 阴影？
-        shade = vector3.dot( sun );
-
-        // 山体颜色
-        imageData[ i ] = ( 96 + shade * 128 ) * ( 0.5 + data[ j ] * 0.007 ) * 0;
-        imageData[ i + 1 ] = ( 32 + shade * 96 ) * ( 0.5 + data[ j ] * 0.007 ) * 0.3;
-        imageData[ i + 2 ] = ( shade * 96 ) * ( 0.5 + data[ j ] * 0.007 ) * 0.7;
-
-    }
-
-    // 用于将ImagaData对象的数据填写到canvas中，起到覆盖canvas中
-    context.putImageData( image, 0, 0 );  // (img对象, 左上角x, 左上角y)
-
-    // Scaled 4x
-    // 我不是很懂为什么要乘4，只要保证canvasScaled和下面context的倍数相同，整体问题不大
-    const canvasScaled = document.createElement( 'canvas' );
-    var zoomDegree = 4;  // 缩放倍数
-    canvasScaled.width = width * zoomDegree;
-    canvasScaled.height = height * zoomDegree;
-
-    context = canvasScaled.getContext( '2d' );
-    context.scale( zoomDegree, zoomDegree );  // 宽度、高度缩放倍数
-    context.drawImage( canvas, 0, 0 );
-
-    image = context.getImageData( 0, 0, canvasScaled.width, canvasScaled.height );  //(x,y,width,height)
-    imageData = image.data;
-
-    // 这里不太明白，我注释掉之后没啥变化？
-    for ( let i = 0, l = imageData.length; i < l; i += 4 ) {
-        const v = ~ ~ ( Math.random() * 5 );  
-        imageData[ i ] += v;
-        imageData[ i + 1 ] += v;
-        imageData[ i + 2 ] += v;
-    }
-    context.putImageData( image, 0, 0 );
-    return canvasScaled;
-}
 
 /*
     设置海底、海水、陆地
 */
-
-function createTerrain(){
-    // 地形顶点高度数据
-    const data = generateMountainHeight( worldWidth, worldDepth );
-
-    // 创建一个平面地形，行列两个方向顶点数据分别为width，height
-    // PlaneBufferGeometry(width, height, widthSegments, heightSegments) 后两个参数是分段数
-    const geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, worldWidth - 1, worldDepth - 1 );
-
-    // 访问几何体的顶点位置坐标数据（数组大小为 点的个数*3）
-    const positions = geometry.attributes.position.array;
-    // console.log(positions);
-
-    // 改变顶点高度值
-    maxH = data[0] * 10;
-    for ( let i = 0, j = 0, l = positions.length; i < l; i ++, j += 3 ) {
-        positions[ j + 2 ] = data[ i ] * 10;
-        if(maxH < positions[j + 2])  // 找出最高的
-            maxH = positions[j + 2]
-    }
-
-    biasZ = 1.5*maxH;
-    console.log("maxH:", maxH);
-
-    // 不执行computeVertexNormals，没有顶点法向量数据
-    geometry.computeFaceNormals(); // needed for helper
-
-    // 设置海底！
-    
-    geometry.translate(0, 0, -biasZ);
-
-    // generateMountainTexture返回一个画布对象
-    texture = new THREE.CanvasTexture( generateMountainTexture( data, worldWidth, worldDepth ) );
-    // wrapS/wrapT 纹理在水平和垂直方向的扩展方式
-    texture.wrapS = THREE.ClampToEdgeWrapping;  // 纹理边缘像素会被拉伸，以填满剩下的空间。
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    const material = new THREE.MeshBasicMaterial( { 
-        map: texture,
-        transparent: true,
-        opacity: 0.3,  // 纹理透明度 
-        depthWrite: false, 
-    } );
-
-    mesh = new THREE.Mesh( geometry, material);
-    scene.add( mesh );
-}
 
 function createSea(){
     // 海水箱子的长、宽
@@ -343,10 +201,14 @@ function createSea(){
     }); //材质对象Material
 
     geometry2.translate(0, 0, -biasZ/2);
-    var mesh2 = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
-    mesh2.position.set(0,0,0);
-    // console.log(mesh2);
-    scene.add(mesh2); //网格模型添加到场景中
+    sea = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
+    sea.position.set(0,0,0);
+    sea.name = "sea";
+    scene.add(sea); //网格模型添加到场景中
+
+    if(!is3d){  // 如果当前模式不是3d，隐藏
+        sea.visible = false;
+    }
 }
 
 function createLand(){
@@ -368,8 +230,6 @@ function createLand(){
         var planeGeometry = new THREE.BufferGeometry();
         var indices = [];
         var positions = [];  // 上平面
-        // var positions2 = [];  // 内部竖直
-        // var positions3 = [];  // 外部竖直
 
         var rowNum, colNum;  // 行、列数量
         rowNum = arr.length; colNum = arr[0].length;
@@ -412,13 +272,13 @@ function createLand(){
             opacity: 0.9,
         } );
     
-        var mesh = new THREE.Mesh( planeGeometry, material);
-        mesh.name = "surface";
-        scene.add( mesh );
+        surface = new THREE.Mesh( planeGeometry, material);
+        surface.name = "surface";
+        scene.add( surface );
 
-
-        
-        
+        if(!is3d){  // 如果当前模式不是3d，隐藏
+            surface.visible = false;
+        }
     });
 }
 
@@ -562,12 +422,38 @@ function createChannel(){
             depthWrite: false,
         } );
     
-        var mesh = new THREE.Mesh( heightGeometry, material);
-        mesh.name = "channel";
-        scene.add( mesh );
-        // mesh.visible = false;
+        channel = new THREE.Mesh( heightGeometry, material);
+        channel.name = "channel";
+        scene.add( channel );
+
+        if(!is3d){  // 如果当前模式不是3d，隐藏
+            channel.visible = false;
+        }
     })
 }
+
+// 2D地图形式
+function create2d(){
+    var texture = THREE.ImageUtils.loadTexture('./images/2d_material/4.png', {}, function() {
+        render();
+    });
+
+    var geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, worldWidth - 1, worldDepth - 1 );
+    var material = new THREE.MeshLambertMaterial({
+        map: texture
+    });
+
+    geometry.translate(0, 0, 2);
+    land_2d = new THREE.Mesh( geometry, material);
+    land_2d.name = "land_2d";
+    scene.add( land_2d );
+
+    if(is3d){  // 如果是3d模式，隐藏这个
+        land_2d.visible = false;
+    }
+}
+
+
 
 /*
     显示等待条
@@ -949,9 +835,6 @@ function setGUI(){
     // 是否隐藏地形
     modeFolder.add(default_opt, 'hideChannel').onChange(function(){
         hideChannel = default_opt.hideChannel;
-
-        var channel = scene.getObjectByName("channel");
-        var surface = scene.getObjectByName("surface");
 
         // 不隐藏
         if(hideChannel==false){

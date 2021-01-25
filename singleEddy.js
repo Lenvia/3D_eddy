@@ -48,7 +48,7 @@ function init() {
     container.appendChild( renderer.domElement );
 
     scene = new THREE.Scene();
-    // scene.background = new THREE.Color( 0xbfd1e5 );  // 浅蓝色
+    scene.background = new THREE.Color( 0x1b76dd );  // 深蓝色
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
     camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
@@ -219,7 +219,7 @@ function xy2lonlat(x, y){
         
         var currentDis = getDisdance(lon, lat, eddyInfo[i]['lon'], eddyInfo[i]['lat']);
         console.log(eddyInfo[i]['name'], currentDis);
-        
+
         if(minDis>currentDis){
             minDis = currentDis;
             minName = eddyInfo[i]['name'];
