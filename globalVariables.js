@@ -7,7 +7,7 @@ const edgeWid = edgeLen;  // 地形宽度
 const scaleHeight = 0.5; //缩放高度
 
 // 主界面变量
-var is3d = false;
+var is3d = true;
 var sea;  // 海
 var channel;  // 峡谷地形
 var surface;  // 表面陆地
@@ -18,6 +18,13 @@ var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
 
 var currentMainDay;  // （主面板）当前日期
+
+var appearFolder;
+var attrFolder;
+var colorFolder;
+var opaFolder;
+
+
 
 var selected_pos = undefined;  // 被选中的pos，在singleEddy中查询是否有合适的进行显示
 // 更新信号
@@ -112,6 +119,11 @@ function changeView(){
         if(land_2d!=undefined)
             land_2d.visible = true;
 
+        appearFolder.domElement.style="display:none;";
+        colorFolder.domElement.style="display:none;";
+        opaFolder.domElement.style="display:none;";
+        attrFolder.domElement.style="display:none;";
+
     }
     else{
         is3d = true;
@@ -124,5 +136,10 @@ function changeView(){
             channel.visible = true;
         if(land_2d!=undefined)
             land_2d.visible = false;
+        
+        appearFolder.domElement.style="display:";
+        colorFolder.domElement.style="display:";
+        opaFolder.domElement.style="display:";
+        attrFolder.domElement.style="display:";
     }
 }

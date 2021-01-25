@@ -50,7 +50,8 @@ var downValue;  // 属性下界
 var difValue;  // 上下界差值
 var mid1, mid2, mid3, mid4;  // 中间点
 var keepValue = true;  // 保持设置
-var hideChannel = false; // 隐藏地形
+var hideChannel = false; // 隐藏海峡
+var hideSurface = false;  // 隐藏陆地
 var pitchMode = false;  // 选中模式（选择涡旋）
 var dynamic = false;  // 默认不准动
 
@@ -122,7 +123,7 @@ function init() {
     scene.add(axesHelper);
 
     createSea();
-    createLand();
+    // createLand();
     createChannel();
     create2d();
 
@@ -440,7 +441,8 @@ function create2d(){
 
     var geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, worldWidth - 1, worldDepth - 1 );
     var material = new THREE.MeshLambertMaterial({
-        map: texture
+        map: texture,
+        side:THREE.DoubleSide,
     });
 
     geometry.translate(0, 0, 2);
@@ -710,6 +712,7 @@ function setGUI(){
         this.downValue = -1;  // 属性的上界
         this.keepValue = true; // 保持设置
         this.hideChannel = false;  // 是否隐藏海峡地形
+        this.hideSurface = false; // 是否隐藏陆地
         this.pitchMode = false;  // 选中模式
         this.dynamic = false;  // 是否让全局涡旋运动
         this.color0 = [255, 255, 255]; // RGB array
@@ -777,8 +780,21 @@ function setGUI(){
         lastDay = currentMainDay;
     });
 
+    gui.add(default_opt, 'pitchMode').onChange(function(){
+        pitchMode = default_opt.pitchMode;
+
+        if(pitchMode==false){
+            helper.visible = false;
+        }
+        else{
+            helper.visible = true;
+        }
+    })
+
+
+    attrFolder = gui.addFolder('attribute');
     // 切换属性
-    gui.add(default_opt, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
+    attrFolder.add(default_opt, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
         currentAttr = default_opt.currentAttr;
         console.log("currentAttr:", currentAttr);
 
@@ -788,7 +804,7 @@ function setGUI(){
     });
 
     // 设置上界
-    gui.add(default_opt, 'upValue').onChange(function(){
+    attrFolder.add(default_opt, 'upValue').onChange(function(){
         upValue = default_opt.upValue;
         console.log("upValue:", upValue);
 
@@ -800,7 +816,7 @@ function setGUI(){
     });
 
     // 设置下界
-    gui.add(default_opt, 'downValue').onChange(function(){
+    attrFolder.add(default_opt, 'downValue').onChange(function(){
         downValue = default_opt.downValue;
         console.log("downValue:", downValue);
 
@@ -814,45 +830,45 @@ function setGUI(){
     /*
         控制
     */
-    var modeFolder = gui.addFolder('mode');
+    appearFolder = gui.addFolder('appearance');
 
     // 是否保持？
-    modeFolder.add(default_opt, 'keepValue').onChange(function(){
+    appearFolder.add(default_opt, 'keepValue').onChange(function(){
         keepValue = default_opt.keepValue;
     })
 
-    modeFolder.add(default_opt, 'pitchMode').onChange(function(){
-        pitchMode = default_opt.pitchMode;
-
-        if(pitchMode==false){
-            helper.visible = false;
-        }
-        else{
-            helper.visible = true;
-        }
-    })
-
     // 是否隐藏地形
-    modeFolder.add(default_opt, 'hideChannel').onChange(function(){
+    appearFolder.add(default_opt, 'hideChannel').onChange(function(){
         hideChannel = default_opt.hideChannel;
 
         // 不隐藏
         if(hideChannel==false){
-            if(surface!=undefined)
-                surface.visible = true;
             if(channel!=undefined)
                 channel.visible = true;
         }
         else{
-            if(surface!=undefined)
-                surface.visible = false;
             if(channel!=undefined)
                 channel.visible = false;
         }
     })
 
+    appearFolder.add(default_opt, 'hideSurface').onChange(function(){
+        hideSurface = default_opt.hideSurface;
+
+        // 不隐藏
+        if(hideSurface==false){
+            if(surface!=undefined)
+                surface.visible = true;
+        }
+        else{
+            if(surface!=undefined)
+                surface.visible = false;
+        }
+    })
+
+
     // 是否运动
-    modeFolder.add(default_opt, 'dynamic').onChange(function(){
+    appearFolder.add(default_opt, 'dynamic').onChange(function(){
         dynamic = default_opt.dynamic;
 
         if(dynamic==true){
@@ -872,16 +888,22 @@ function setGUI(){
         }
     })
 
+    // console.log(appearFolder);
+
     /*
         交互颜色
     */
-    var colorFolder = gui.addFolder('color');
+    colorFolder = gui.addFolder('color');
     // color0
     color0_ctrl = colorFolder.addColor(default_opt, 'color0').onFinishChange(function(){
         currentColor0 = default_opt.color0;
         assignColor(curLine, currentColor0, 0);  // 设置geometry的color
         updateColor(curLine);  // 更新material
     });
+
+    // console.log(color0_ctrl);
+
+
     
 
     // color1
@@ -911,11 +933,12 @@ function setGUI(){
         updateColor(curLine);  // 更新material
     });
 
+    
 
     /*
         交互透明度
     */
-    var opaFolder = gui.addFolder('opacity');
+    opaFolder = gui.addFolder('opacity');
     
     // opacity0
     opa0_ctrl = opaFolder.add(default_opt, 'opacity0', 0, 1, 0.05).onFinishChange(function(){
@@ -963,7 +986,9 @@ function setGUI(){
     // gui.add(func_opt, 'play');
     gui.add(func_opt, 'reset');
 
-    console.log(gui);
+    // console.log(gui);
+
+    changeView();  // 先使用一遍视图
     
 }
 

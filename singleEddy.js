@@ -187,7 +187,7 @@ function loadAllEddies(){
                 
                 // initLineOpacity(linesG, 0.5);  // 初始化透明度
                 linesG.name = name;  // 0_9, 4_10, ...
-                console.log(name, "加载完毕");
+                // console.log(name, "加载完毕");
 
                 scene.add(linesG);
                 linesG.visible = false;
