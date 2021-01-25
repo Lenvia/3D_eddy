@@ -271,8 +271,8 @@ if __name__ == '__main__':
             x_pos.append((lon_set[i] - 30.2072) / spanLon)
             y_pos.append((lat_set[i] - 10.0271) / spanLat)
             # 比如有40层，中心位置应该在13层左右， 然后球半径应该是26层
-            z_pos.append(level_num[i]/50/3)  # 中心位置设置在1/3高度处
-            seedR.append(2*level_num[i]/50/3)  # 半径设置为2/3深度
+            z_pos.append(2*level_num[i]/50/3)  # 中心位置设置在2/3高度处（因为靠近底部才是平面）
+            seedR.append(level_num[i]/50/3)  # 半径设置为1/3深度
 
             temp = ceil(level_num[i] * 2 / 7)
             if temp < 3:

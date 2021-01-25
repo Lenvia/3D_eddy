@@ -1,7 +1,7 @@
 import numpy as np
 import joblib
 
-OW = joblib.load('whole_attributes_pkl_file/OW/OW_0.pkl')
+OW = joblib.load('../whole_attributes_pkl_file/OW/OW_0.pkl')
 
 cnt = 0
 

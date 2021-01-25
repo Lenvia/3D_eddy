@@ -47,24 +47,34 @@ from math import radians, cos, sin, asin, sqrt
 day = sys.argv[1]
 day = int(day)
 
-f = None  # 读取的数据集
 
 # Load netCDF4 data
 def load_netcdf4(filename):  # name of the netCDF data file
     f = nc4.Dataset(filename,'r', format='NETCDF4')  # 'r' stands for read
+    # lon = f.variables['longitude'][:]
+    # lat = f.variables['latitude'][:]
+    # depth = f.variables['depth'][:]
+    # # Load zonal and meridional velocity, in m/s
+    # uvel = f.variables['uo'][:]
+    # vvel = f.variables['vo'][:]
+    # # Load time in hours from 1950-01-01
+    # t = f.variables['time'][:]
+
     # 根据本数据内容提取
-    lon = f.variables['XC'][:]  # 经度
-    lat = f.variables['YC'][:]  # 纬度
+    lon = f.variables['XC'][336:]  # 经度
+    lat = f.variables['YC'][:132]  # 纬度
     depth = f.variables['Z_MIT40'][:]  # 层数
     # Load zonal and meridional veslocity, in m/s
-    uvel = f.variables['U'][:]  # 纬向速度
-    vvel = f.variables['V'][:]  # 经线速度
+    uvel = f.variables['U'][:, :, :132, 336:]  # 纬向速度
+    vvel = f.variables['V'][:, :, :132, 336:]  # 经线速度
+
+    print(lon)
+
+    # Load time in hours from 1950-01-01
     t = f.variables['T_AX'][:]  # 时间数组
 
-    # print(lon)
     return (f,lon,lat,depth,uvel,vvel,t)
-    # return (f, depth, uvel, vvel)
-    # f.close()
+    f.close()
 
 
 # Eddy detection algorithm
@@ -424,16 +434,15 @@ def local_peaks(A,A_start,max_evaluation_points):
 # Using the scipy.signal.fing_peaks function with flattened array and unravelling it, probably much faster.
     A_flat = A.flatten()
     peaks = sg.find_peaks(-A_flat,height=-A_start)
-    # print(peaks)
+    print(peaks)
     n_minima = len(peaks[0])
-    # print(n_minima)
+    print(n_minima)
     local_min = np.asarray(np.unravel_index(peaks[0],A.shape))
-    # print(local_min)
-    # print(local_min.shape)
-    # print(local_min.shape[1])
+    print(local_min)
+    print(local_min.shape)
+    print(local_min.shape[1])
     sample = np.random.randint(0,local_min.shape[1],size = np.min((max_evaluation_points,n_minima)))
-    # print(sample)
-
+    print(sample)
 
     return local_min[:,sample]
 
@@ -490,11 +499,14 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
     st.set_y(1.02)
 
     plt.tight_layout()
-    path = 'whole_plot_file'
-    if not os.path.exists(path):
-        os.makedirs(path)
-    plt.savefig(os.path.join(path, str(day)+'.jpg'))
-    # plt.show()
+
+    tarDir = 'plot_file2'
+    if not os.path.exists(tarDir):
+        os.makedirs(tarDir)
+
+    plt.savefig('plot_file2/' + str(day) + '.png')
+    plt.show()
+
     return plt
 
 
@@ -549,34 +561,27 @@ class Get_new_gps():
 
 if __name__ == '__main__':
     (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('COMBINED_2011013100.nc')
-
-    sharedDir = 'shared'
-    if not os.path.exists(sharedDir):
-        os.makedirs(sharedDir)
-
-    joblib.dump(t, sharedDir+'/t.pkl')
-    joblib.dump(lon, sharedDir + '/lon.pkl')
-    joblib.dump(lat, sharedDir + '/lat.pkl')
-
     # capture
     R2_criterion = 0.9
     OW_start = -0.2
-    max_evaluation_points = 1000
+    max_evaluation_points = 400
     min_eddie_cells = 3
+
     k_plot = 0
 
-    print("start")
-
-    lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, levels = eddy_detection(lon, lat, depth, uvel, vvel, day, R2_criterion, OW_start, max_evaluation_points, min_eddie_cells)
+    lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, levels = eddy_detection(
+        lon, lat, depth, uvel, vvel, day, R2_criterion, OW_start, max_evaluation_points, min_eddie_cells)
 
     print("successfully detected!")
 
-
-    tarDir = os.path.join('whole_result', str(day))
+    tarDir = 'result2/small' + str(day)
 
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
 
+    joblib.dump(t, tarDir + '/t.pkl')
+    joblib.dump(lon, tarDir + '/lon.pkl')
+    joblib.dump(lat, tarDir + '/lat.pkl')
     joblib.dump(uvel, tarDir + '/uvel.pkl')
     joblib.dump(vvel, tarDir + '/vvel.pkl')
     joblib.dump(vorticity, tarDir + '/vorticity.pkl')
@@ -587,72 +592,5 @@ if __name__ == '__main__':
     joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
     joblib.dump(levels, tarDir + '/levels.pkl')
 
-
-
     print("start plot")
     plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
-
-    """
-    ----------------------------------------以上识别完毕--------------------------------------------------------
-    --------------------------------------以下是逐个提取涡旋-----------------------------------------------------
-    """
-
-    '''
-    characteristics of the detected eddies -->
-    minOW, circ(m^2/s), lon(º), lat(º), cells, diameter(km)
-    '''
-
-    size = len(levels)  # 识别出来的涡核的个数
-
-    print("lon:")
-    print(eddie_census[2][:size])
-    print("lat:")
-    print(eddie_census[3][:size])
-    print("cells:")
-    print(eddie_census[4][:size])
-    print("diam:")
-    print(eddie_census[-1][:size])
-    print("levels:")
-    print(levels)
-    print("circulation_mask:")  # 气旋 or 反气旋
-    print(circulation_mask)
-
-    # # 查看一下气旋和反气旋点的数量
-    # pos = 0
-    # neg = 0
-    # for i in range(circulation_mask.shape[0]):
-    #     for j in range(circulation_mask.shape[1]):
-    #         for k in range(circulation_mask.shape[2]):
-    #             if circulation_mask[i][j][k] > 0:
-    #                 pos += 1
-    #             elif circulation_mask[i][j][k] < 2e-10:
-    #                 neg += 1
-    # print(pos)
-    # print(neg)
-
-    '''
-        -----------------------------是否要用 待定 ----------------------------------------------
-    '''
-    '''
-        定位单个涡旋的正方形边界
-    '''
-    # functions = Get_new_gps()
-    # index = 0
-    # lonC, latC = [eddie_census[2][index], eddie_census[3][index]]
-    # r = eddie_census[-1][index]/2 * 1e3  # 半径
-    # level = levels[index]  # 层数
-    #
-    # # 计算正南的点
-    # lonSouth, latSouth = functions.get_sou(lonC, latC, r)
-    # # 计算正西的点
-    # lonWest, latWest = functions.get_west(lonC, latC, r)
-    # # 计算正北的点
-    # lonNorth, latNorth = functions.get_nor(lonC, latC, r)
-    # # 计算正东的点
-    # lonEast, latEast = functions.get_east(lonC, latC, r)
-    #
-    # print("原始点的经纬度坐标", lonC, latC)
-    # print("正南%f米坐标点为%f,%f" % (r, lonSouth, latSouth))
-    # print("正西%f米坐标点为%f,%f" % (r, lonWest, latWest))
-    # print("正北%f米坐标点为%f,%f" % (r, lonNorth, latNorth))
-    # print("正东%f米坐标点为%f,%f" % (r, lonEast, latEast))

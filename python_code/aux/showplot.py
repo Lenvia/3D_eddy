@@ -198,7 +198,7 @@ if __name__ == '__main__':
     k_plot = 0
 
 
-    tarDir = os.path.join("result2", "small"+str(day))
+    tarDir = os.path.join("../result2", "small" + str(day))
 
     # (f, lon, lat, depth, t) = load_netcdf4('COMBINED_2011013100.nc')
 
@@ -216,7 +216,7 @@ if __name__ == '__main__':
     levels = joblib.load(tarDir + '/levels.pkl')
 
     # print("start plot")
-    plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
+    # plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
     # plt = plot_eddies2(t[day], lon, lat, OW, k_plot)
     # '''
     # characteristics of the detected eddies -->
@@ -227,21 +227,21 @@ if __name__ == '__main__':
     # # print(lon)
     # # print("all lat")
     # # print(lat)
-    #
-    # size = len(levels)
-    #
+
+    size = len(levels)
+
     # print("lon:")
     # print(eddie_census[2][:size])
     # print("lat:")
     # print(eddie_census[3][:size])
-    # print("cells:")
-    # print(eddie_census[4][:size])
-    # print("diam:")
-    # print(eddie_census[-1][:size])
-    # print("levels:")
-    # print(levels)
-    # print("circulation_mask:")
-    # print(circulation_mask.shape)
+    print("cells:")
+    print(eddie_census[4][:size])
+    print("diam:")
+    print(eddie_census[-1][:size])
+    print("levels:")
+    print(levels)
+    print("circulation_mask:")
+    print(circulation_mask.shape)
     # pos = 0
     # neg = 0
     # for i in range(circulation_mask.shape[0]):

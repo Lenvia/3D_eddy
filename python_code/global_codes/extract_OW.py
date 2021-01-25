@@ -212,7 +212,7 @@ def deriv1_central_diff_3D(a,x,y):
 
 
 if __name__ == '__main__':
-    (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('COMBINED_2011013100.nc')
+    (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('../COMBINED_2011013100.nc')
     # capture
     OW_start = -0.2
 
@@ -220,7 +220,7 @@ if __name__ == '__main__':
 
     print("successfully detected!")
 
-    tarDir = os.path.join("whole_attributes_pkl_file", 'whole_attributes_txt_file/OW')
+    tarDir = os.path.join("../whole_attributes_pkl_file", 'whole_attributes_txt_file/OW')
 
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)

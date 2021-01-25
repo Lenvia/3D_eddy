@@ -65,11 +65,10 @@ def load_netcdf4(filename):  # name of the netCDF data file
     lat = f.variables['YC'][:132]  # 纬度
     depth = f.variables['Z_MIT40'][:]  # 层数
     # Load zonal and meridional veslocity, in m/s
-    uvel = f.variables['U'][:, :, :132, 336:]  # 纬向速度
-    vvel = f.variables['V'][:, :, :132, 336:]  # 经线速度
+    uvel = f.variables['U'][day, :, :132, 336:]  # 纬向速度
+    vvel = f.variables['V'][day, :, :132, 336:]  # 经线速度
 
-    print(uvel.shape)
-    print(vvel.shape)
+    print(lon)
 
     # Load time in hours from 1950-01-01
     t = f.variables['T_AX'][:]  # 时间数组
@@ -88,8 +87,8 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
 
     # We transpose the data to fit with the algorithm provided, the correct order is uvel(lon,lat,depth) while the original from the netCDF is uvel(time,lat,lon,depth)
     # (50, 500, 500)->(500, 500, 50) 即 (depth, lat, lon) -> (lon, lat, depth)
-    uvel = uvel[day,:,:,:].transpose(2, 1, 0)
-    vvel = vvel[day,:,:,:].transpose(2, 1, 0)
+    uvel = uvel[:,:,:].transpose(2, 1, 0)
+    vvel = vvel[:,:,:].transpose(2, 1, 0)
 
     # Since they are masked arrays (in the mask, True = NaN value), we can fill the masked values with 0.0 to describe land
     uvel.set_fill_value(0.0)
@@ -183,7 +182,7 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
     ########################################################################
     print('Beginning R2 algorithm\n')
     # Set a maximum number of cells to search through, for initializing arrays.
-    max_eddy_cells_search = 50000
+    max_eddy_cells_search = 100000
 
     # Initialize variables for eddy census
     iEddie = 0
@@ -566,7 +565,7 @@ if __name__ == '__main__':
     R2_criterion = 0.9
     OW_start = -0.2
     max_evaluation_points = 400
-    min_eddie_cells = 4
+    min_eddie_cells = 3
 
     k_plot = 0
 
@@ -595,62 +594,3 @@ if __name__ == '__main__':
 
     print("start plot")
     plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
-
-    # '''
-    # characteristics of the detected eddies -->
-    # minOW, circ(m^2/s), lon(º), lat(º), cells, diameter(km)
-    # '''
-    #
-    # # print("all lon")
-    # # print(lon)
-    # # print("all lat")
-    # # print(lat)
-    #
-    # size = len(levels)
-    #
-    # print("lon:")
-    # print(eddie_census[2][:size])
-    # print("lat:")
-    # print(eddie_census[3][:size])
-    # print("cells:")
-    # print(eddie_census[4][:size])
-    # print("diam:")
-    # print(eddie_census[-1][:size])
-    # print("levels:")
-    # print(levels)
-    # print("circulation_mask:")
-    # print(circulation_mask.shape)
-    # pos = 0
-    # neg = 0
-    # for i in range(circulation_mask.shape[0]):
-    #     for j in range(circulation_mask.shape[1]):
-    #         for k in range(circulation_mask.shape[2]):
-    #             if circulation_mask[i][j][k] > 0:
-    #                 pos += 1
-    #             elif circulation_mask[i][j][k] < 2e-10:
-    #                 neg += 1
-    # print(pos)
-    # print(neg)
-    #
-    #
-    # functions = Get_new_gps()
-    # index = 0
-    # lonC, latC = [eddie_census[2][index], eddie_census[3][index]]
-    # r = eddie_census[-1][index]/2 * 1e3  # 半径
-    # level = levels[index]  # 层数
-    #
-    # # 计算正南的点
-    # lonSouth, latSouth = functions.get_sou(lonC, latC, r)
-    # # 计算正西的点
-    # lonWest, latWest = functions.get_west(lonC, latC, r)
-    # # 计算正北的点
-    # lonNorth, latNorth = functions.get_nor(lonC, latC, r)
-    # # 计算正东的点
-    # lonEast, latEast = functions.get_east(lonC, latC, r)
-    #
-    # print("原始点的经纬度坐标", lonC, latC)
-    # print("正南%f米坐标点为%f,%f" % (r, lonSouth, latSouth))
-    # print("正西%f米坐标点为%f,%f" % (r, lonWest, latWest))
-    # print("正北%f米坐标点为%f,%f" % (r, lonNorth, latNorth))
-    # print("正东%f米坐标点为%f,%f" % (r, lonEast, latEast))
-

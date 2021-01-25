@@ -12,7 +12,7 @@ import sys
 from sympy import *
 from math import radians, cos, sin, asin, sqrt
 
-filename = 'COMBINED_2011013100.nc'  # .nc文件名
+filename = '../COMBINED_2011013100.nc'  # .nc文件名
 f = nc4.Dataset(filename)  # 读取.nc文件，传入f中。此时f包含了该.nc文件的全部信息
 
 all_vars = f.variables.keys()  # 获取所有变量名称
@@ -44,8 +44,8 @@ for day in range(2):
     salt = salt.transpose((2, 1, 0))
     print(temp.shape)
 
-    tarDir1 = os.path.join("whole_attributes_pkl_file", 'TEMP')
-    tarDir2 = os.path.join("whole_attributes_pkl_file", 'SALT')
+    tarDir1 = os.path.join("../whole_attributes_pkl_file", 'TEMP')
+    tarDir2 = os.path.join("../whole_attributes_pkl_file", 'SALT')
 
     if not os.path.exists(tarDir1):
         os.makedirs(tarDir1)
@@ -58,8 +58,8 @@ for day in range(2):
     temp_arr_reshaped = temp.reshape(temp.shape[0], -1)
     salt_arr_reshaped = salt.reshape(salt.shape[0], -1)
 
-    tarDir1 = os.path.join("whole_attributes_txt_file", 'TEMP')
-    tarDir2 = os.path.join("whole_attributes_txt_file", 'SALT')
+    tarDir1 = os.path.join("../whole_attributes_txt_file", 'TEMP')
+    tarDir2 = os.path.join("../whole_attributes_txt_file", 'SALT')
 
     if not os.path.exists(tarDir1):
         os.makedirs(tarDir1)

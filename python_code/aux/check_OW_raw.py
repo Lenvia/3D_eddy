@@ -289,7 +289,7 @@ def dataframe_eddies(eddie_census,nEddies):
 
 
 if __name__ == '__main__':
-    (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('COMBINED_2011013100.nc')
+    (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('../COMBINED_2011013100.nc')
     # capture
     R2_criterion = 0.9
     OW_start = -0.2
