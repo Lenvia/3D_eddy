@@ -32,10 +32,6 @@ eddy_detection:
 
 # import all necesary libraries
 import matplotlib.pyplot as plt
-import math
-import numpy as np
-import scipy.signal as sg
-import pandas as pd
 import netCDF4 as nc4
 import datetime
 import joblib
@@ -90,11 +86,11 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
 
     plt.tight_layout()
 
-    tarDir = 'plot_file2'
+    tarDir = '../plot_file2'
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
 
-    plt.savefig('plot_file2/' + str(day) + '.png')
+    plt.savefig(os.path.join(tarDir, str(day) + '.png'))
     plt.show()
 
     return plt
