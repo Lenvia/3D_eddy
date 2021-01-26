@@ -770,14 +770,7 @@ function setGUI(){
                 last_site = "day"+String(lastDay);
                 lastLine = scene.getObjectByName(last_site);
                 lastLine.visible = false;
-
-                for(let i=0; i<existedSphere.length; i++){
-                    scene.remove(existedSphere[i]);
-                }
-                existedSphere.length = 0;  // 清空数组
             }
-            
-
             site = "day"+String(currentMainDay);
             
             curLine = scene.getObjectByName(site);
@@ -794,8 +787,6 @@ function setGUI(){
                 curLine.visible = true;
             }
             
-
-            // showCores();  // 显示涡核
             lastDay = currentMainDay;
         }
         else{  // 2d视图
@@ -803,6 +794,13 @@ function setGUI(){
                 curLine.visible = false;
             land_2d.material.map = textures_2d[currentMainDay];
         }
+
+        removeCores();
+        if(currentMainDay!=-1){
+            showCores();  // 显示当日涡核
+        }
+        
+        
     });
 
     gui.add(default_opt, 'pitchMode').onChange(function(){
@@ -1056,6 +1054,13 @@ function showCores(){
 
         console.log(sphere);
     }
+}
+
+function removeCores(){
+    for(let i=0; i<existedSphere.length; i++){
+        scene.remove(existedSphere[i]);
+    }
+    existedSphere.length = 0;  // 清空数组
 }
 
 
@@ -1386,12 +1391,21 @@ function onMouseMove( event ) {
         raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
 
 
-        if(curLine != undefined){
-            const intersects = raycaster.intersectObject( curLine );
-            if(intersects.length>0){
-                var curObj = intersects[0];
-                helper.position.copy( curObj.point );
+        var intersects;
+        if(is3d){
+            if(curLine != undefined){
+                intersects = raycaster.intersectObject( curLine );
+                
             }
+        }
+        else{
+            if(land_2d!=undefined){
+                intersects = raycaster.intersectObject( land_2d );
+            }
+        }
+        if(intersects.length>0){
+            var curObj = intersects[0];
+            helper.position.copy( curObj.point );
         }
     }
 }
@@ -1404,30 +1418,40 @@ function onMouseClick(event){
         renderer.domElement的clientWidth和clientHeight就是renderer的宽度和高度
         由于event.clientX, Y表示屏幕上鼠标的绝对位置，所以要减去窗口的偏移，再比上窗口的宽和高
     */
-   getMouseXY(event);
+    getMouseXY(event);
 
-   // 现在的mouse的二维坐标就是当前鼠标在当前窗口的位置（-1~1)
-   // console.log(mouse)
+    // 现在的mouse的二维坐标就是当前鼠标在当前窗口的位置（-1~1)
+    // console.log(mouse)
 
 
-   // 通过摄像机和鼠标位置更新射线
-   raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
+    // 通过摄像机和鼠标位置更新射线
+    raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
 
-   // 查看相机发出的光线是否击中了我们的网格物体之一（计算物体和射线的焦点）
-   // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
+    // 查看相机发出的光线是否击中了我们的网格物体之一（计算物体和射线的焦点）
+    // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
 
-   // 获取当前指向的第一个的坐标
-    if(curLine != undefined){
-        const intersects = raycaster.intersectObject( curLine );
-        if(intersects.length>0){
-            var curObj = intersects[0];
-            // console.log(curObj.point);
-            if(pitchMode == true){
-                selected_pos = curObj.point;
-                updateSign = true;
-            }
+    var intersects;
+    // 获取当前指向的第一个的坐标
+    if(is3d){
+        if(curLine != undefined){
+            intersects = raycaster.intersectObject( curLine );
+            
         }
     }
+    else{
+        if(land_2d!=undefined){
+            intersects = raycaster.intersectObject( land_2d );
+        }
+    }
+
+    if(intersects.length>0){
+        var curObj = intersects[0];
+        if(pitchMode == true){
+            selected_pos = curObj.point;
+            updateSign = true;
+        }
+    }
+    
 }
 
 function getMouseXY(event){

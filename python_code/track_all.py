@@ -23,7 +23,7 @@ days = []
 # 全局数据经纬度跨度
 spanLon = 20
 spanLat = 20
-up_bound = 34
+up_bound = 4
 
 # 默认是60天
 for i in range(60):
@@ -91,8 +91,8 @@ def search(day1, day2, index1, indices, level_num, lon_set, lat_set, radius_set,
     if day2 > up_bound:
         return
 
-    tarDir1 = 'result/small' + str(day1)
-    tarDir2 = 'result/small' + str(day2)
+    tarDir1 = 'whole_result/' + str(day1)
+    tarDir2 = 'whole_result/' + str(day2)
 
     uvel1, vvel1, vorticity1, OW1, OW_eddies1, eddie_census1, nEddies1, circulation_mask1, levels1 = load_pkl(tarDir1)
     uvel2, vvel2, vorticity2, OW2, OW_eddies2, eddie_census2, nEddies2, circulation_mask2, levels2 = load_pkl(tarDir2)
@@ -150,12 +150,12 @@ def search(day1, day2, index1, indices, level_num, lon_set, lat_set, radius_set,
         temp = np.abs(eke1[lon_index1][lat_index1] - eke2[lon_index2][lat_index2])
         delta_eke = np.sum(temp) / len(temp) * 1e4
 
-        print("距离差: ", delta_dis)
-        print("半径差: ", delta_r)
-        print("涡度差: ", delta_xi)
-        print("eke差: ", delta_eke)
-        print(w1 * (delta_dis / d0) ** 2, w2 * (delta_r / r0) ** 2, w3 * (delta_xi / xi0) ** 2,
-              w4 * (delta_eke / eke0) ** 2)
+        # print("距离差: ", delta_dis)
+        # print("半径差: ", delta_r)
+        # print("涡度差: ", delta_xi)
+        # print("eke差: ", delta_eke)
+        # print(w1 * (delta_dis / d0) ** 2, w2 * (delta_r / r0) ** 2, w3 * (delta_xi / xi0) ** 2,
+        #       w4 * (delta_eke / eke0) ** 2)
 
         curD = sqrt(w1 * (delta_dis / d0) ** 2 + w2 * (delta_r / r0) ** 2 + w3 * (delta_xi / xi0) ** 2 + w4 * (
                 delta_eke / eke0) ** 2)
@@ -175,7 +175,7 @@ def search(day1, day2, index1, indices, level_num, lon_set, lat_set, radius_set,
         lon_set.append(next_lon)
         lat_set.append(next_lat)
         radius_set.append(next_radi)
-        print("-----------------------------------\n")
+        # print("-----------------------------------\n")
         search(day2, day2 + 1, next_index,  indices, level_num, lon_set, lat_set, radius_set)
     else:  # # 如果最小值仍然超过阈值 说明没有合适的候选。没找到，就跳过这一天
         indices.append(-1)
@@ -183,7 +183,7 @@ def search(day1, day2, index1, indices, level_num, lon_set, lat_set, radius_set,
         lon_set.append(-1)
         lat_set.append(-1)
         radius_set.append(-1)
-        print("-----------------------------------\n")
+        # print("-----------------------------------\n")
         search(day1, day2 + 1, index1,  indices, level_num, lon_set, lat_set, radius_set)
 
 
@@ -220,6 +220,8 @@ def write_json(tarDir, obj):
     # 将追加的内容与原有内容写回（覆盖）原文件
     with open(os.path.join(tarDir, 'eddies.json'), 'w', encoding='utf-8') as f2:
         json.dump(item_list, f2, ensure_ascii=False)
+
+        f2.close()
 
 
 # 对于 start_day _ start_index 的涡旋进行追踪，并保存涡旋信息到json
@@ -330,6 +332,9 @@ def track_eddy(start_day, start_index):
 '''
 if __name__ == '__main__':
     start_day = 0
-    start_index = 9
+    tarD = os.path.join('whole_result', str(start_day))
+    num = len(joblib.load(os.path.join(tarD, 'levels.pkl')))
 
-    track_eddy(start_day, start_index)
+    # print(num)
+    for start_index in range(num):
+        track_eddy(start_day, start_index)

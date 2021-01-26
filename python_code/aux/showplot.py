@@ -194,13 +194,13 @@ if __name__ == '__main__':
     k_plot = 0
 
 
-    tarDir = os.path.join("../result2", "small" + str(day))
+    tarDir = os.path.join("../whole_result/" + str(day))
 
     # (f, lon, lat, depth, t) = load_netcdf4('COMBINED_2011013100.nc')
 
-    t = joblib.load(tarDir + '/t.pkl')
-    lon = joblib.load(tarDir + '/lon.pkl')
-    lat = joblib.load(tarDir + '/lat.pkl')
+    # t = joblib.load(tarDir + '/t.pkl')
+    # lon = joblib.load(tarDir + '/lon.pkl')
+    # lat = joblib.load(tarDir + '/lat.pkl')
     uvel = joblib.load(tarDir + '/uvel.pkl')
     vvel = joblib.load(tarDir + '/vvel.pkl')
     vorticity = joblib.load(tarDir + '/vorticity.pkl')
