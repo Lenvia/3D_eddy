@@ -81,6 +81,7 @@ var opa2_ctrl;
 var opa3_ctrl;
 var opa4_ctrl;
 
+var textures_2d = [];
 
 
 
@@ -121,6 +122,8 @@ function init() {
     // 辅助坐标系
     var axesHelper = new THREE.AxesHelper(1500);
     scene.add(axesHelper);
+
+    loadTexture2d();
 
     createSea();
     // createLand();
@@ -167,6 +170,16 @@ function onWindowResize() {
 
 
 
+function loadTexture2d(){
+    for(let i=0; i<5; i++){
+        var texture = THREE.ImageUtils.loadTexture('./images/2d_material/'+String(i)+'.png', {}, function() {
+            render();
+        });
+
+        textures_2d[i] = texture;
+    }
+    console.log(textures_2d);
+}
 
 
 function createHelper(){
@@ -435,7 +448,7 @@ function createChannel(){
 
 // 2D地图形式
 function create2d(){
-    var texture = THREE.ImageUtils.loadTexture('./images/2d_material/4.png', {}, function() {
+    var texture = THREE.ImageUtils.loadTexture('./images/2d_material/0.png', {}, function() {
         render();
     });
 
@@ -746,38 +759,50 @@ function setGUI(){
 
 
     // 切换日期
-    gui.add(default_opt, 'currentMainDay', exDays).onChange(function(){
-        if(lastDay!=-1){  // 清除上次的显示
-            last_site = "day"+String(lastDay);
-            lastLine = scene.getObjectByName(last_site);
-            lastLine.visible = false;
-
-            for(let i=0; i<existedSphere.length; i++){
-                scene.remove(existedSphere[i]);
-            }
-            existedSphere.length = 0;  // 清空数组
-        }
-
+    day_ctrl = gui.add(default_opt, 'currentMainDay', exDays).onChange(function(){
         currentMainDay = default_opt.currentMainDay;
+        currentMainDay = parseInt(currentMainDay);
         console.log("currentMainDay:", currentMainDay);
+        console.log(is3d);
 
-        site = "day"+String(currentMainDay);
-        
-        curLine = scene.getObjectByName(site);
+        if(is3d){ // 3d视图
+            if(lastDay!=-1){  // 清除上次的显示
+                last_site = "day"+String(lastDay);
+                lastLine = scene.getObjectByName(last_site);
+                lastLine.visible = false;
 
-        if(keepValue){  // 更换日期，但属性设置不变
-            keepValue_update(curLine);
+                for(let i=0; i<existedSphere.length; i++){
+                    scene.remove(existedSphere[i]);
+                }
+                existedSphere.length = 0;  // 清空数组
+            }
+            
+
+            site = "day"+String(currentMainDay);
+            
+            curLine = scene.getObjectByName(site);
+
+            if(curLine!=undefined){
+                if(keepValue){  // 更换日期，但属性设置不变
+                    keepValue_update(curLine);
+                }
+                else{
+                    resetCtrl();
+                    resetMaterial(curLine);
+                }
+                console.log(curLine.name);
+                curLine.visible = true;
+            }
+            
+
+            // showCores();  // 显示涡核
+            lastDay = currentMainDay;
         }
-        else{
-            resetCtrl();
-            resetMaterial(curLine);
+        else{  // 2d视图
+            if(curLine!=undefined)  // 去除3d视图显示的流线
+                curLine.visible = false;
+            land_2d.material.map = textures_2d[currentMainDay];
         }
-
-        
-        console.log(curLine.name);
-        curLine.visible = true;
-        // showCores();  // 显示涡核
-        lastDay = currentMainDay;
     });
 
     gui.add(default_opt, 'pitchMode').onChange(function(){
@@ -982,13 +1007,14 @@ function setGUI(){
         };
     };
 
+    funcFolder = gui.addFolder('functions');
+    
     // 播放
-    // gui.add(func_opt, 'play');
-    gui.add(func_opt, 'reset');
+    funcFolder.add(func_opt, 'play');
+    funcFolder.add(func_opt, 'reset');
 
-    // console.log(gui);
 
-    changeView();  // 先使用一遍视图
+    switchView();  // 先使用一遍视图
     
 }
 
@@ -1037,6 +1063,8 @@ function showCores(){
     改变geometry的属性
 */
 function assignColor(curLine, opt_color, num){
+    if(curLine==undefined)
+        return;
     var cColor = [opt_color[0]/255, opt_color[1]/255, opt_color[2]/255];
 
     switch(num){
@@ -1099,6 +1127,8 @@ function assignColor(curLine, opt_color, num){
 }
 
 function assignOpacity(curLine, opt_opacity, num){
+    if(curLine==undefined)
+        return;
     var cOpa = opt_opacity;
 
     switch(num){
@@ -1152,6 +1182,8 @@ function assignOpacity(curLine, opt_opacity, num){
 
 // 用于全局赋值geometry的color，只用一边循环 比5次assignColor快
 function assignAllColor(curLine){
+    if(curLine==undefined)
+        return;
     var cColor0 = [currentColor0[0]/255, currentColor0[1]/255, currentColor0[2]/255];
     var cColor1 = [currentColor1[0]/255, currentColor1[1]/255, currentColor1[2]/255];
     var cColor2 = [currentColor2[0]/255, currentColor2[1]/255, currentColor2[2]/255];
@@ -1188,6 +1220,9 @@ function assignAllColor(curLine){
 }
 
 function assignAllOpacity(curLine){
+    if(curLine==undefined)
+        return;
+
     var cOpa0 = currentOpacity0;
     var cOpa1 = currentOpacity1;
     var cOpa2 = currentOpacity2;
@@ -1217,6 +1252,9 @@ function assignAllOpacity(curLine){
     更新material的属性
 */
 function updateColor(curLine){
+    if(curLine==undefined)
+        return;
+
     for(var i=0; i<curLine.material.length; i++){
         let r = (curLine.geometry.attributes.color.array[6*i] + curLine.geometry.attributes.color.array[6*i+3])/2;
         let g = (curLine.geometry.attributes.color.array[6*i+1] + curLine.geometry.attributes.color.array[6*i+4])/2;
@@ -1227,6 +1265,9 @@ function updateColor(curLine){
 }
 
 function updateOpacity(curLine){
+    if(curLine==undefined)
+        return;
+
     for(var i=0; i<curLine.material.length; i++){
         curLine.material[i].opacity = (curLine.geometry.attributes.opacity.array[2*i] + curLine.geometry.attributes.opacity.array[2*i+1])/2;
     }
@@ -1251,6 +1292,8 @@ function resetCtrl(){
 
 // 把所有线条颜色都变成白色，透明度变为1
 function resetMaterial(curLine){
+    if(curLine==undefined)
+        return;
     for(var i=0; i<curLine.material.length; i++){
         curLine.material[i].color = new THREE.Color(1, 1, 1);
         curLine.material[i].opacity = 1.0;

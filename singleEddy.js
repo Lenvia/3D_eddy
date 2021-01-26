@@ -76,7 +76,7 @@ function init() {
 
 
     // 加载涡旋模型
-    loadAllEddies();
+    // loadAllEddies();
 
 
     //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算

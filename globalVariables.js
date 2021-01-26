@@ -18,11 +18,14 @@ var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
 
 var currentMainDay;  // （主面板）当前日期
+var day_ctrl;
 
 var appearFolder;
 var attrFolder;
 var colorFolder;
 var opaFolder;
+var funcFolder;
+
 
 
 
@@ -34,10 +37,14 @@ var updateSign = false;
 
 var eddyInfo;  // 涡核信息数组
 
+
+
+
 // 加载深度数组
 loadDepth();
 // 加载涡核信息数组
 loadEddyInfo();
+
 
 
 
@@ -107,6 +114,19 @@ function lll2xyz(lon, lat, level){
 
 
 function changeView(){
+    // 这个顺序不能倒
+    switchView(); 
+    flashDay();
+}
+
+function flashDay(){
+    // 直接setValue也会改变currentMainDay的值
+    var temp = currentMainDay;
+    day_ctrl.setValue(-1);
+    day_ctrl.setValue(temp);
+}
+
+function switchView(){
     if(is3d){
         is3d = false;  // 切换成2d
 
@@ -123,6 +143,7 @@ function changeView(){
         colorFolder.domElement.style="display:none;";
         opaFolder.domElement.style="display:none;";
         attrFolder.domElement.style="display:none;";
+        funcFolder.domElement.style="display:none;";
 
     }
     else{
@@ -141,5 +162,6 @@ function changeView(){
         colorFolder.domElement.style="display:";
         opaFolder.domElement.style="display:";
         attrFolder.domElement.style="display:";
+        funcFolder.domElement.style="display:";
     }
 }
