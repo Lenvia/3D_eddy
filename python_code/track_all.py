@@ -3,11 +3,13 @@ import joblib
 import sys
 import numpy as np
 from sympy import *
-from math import radians, cos, sin, asin, sqrt, fabs, ceil
+from math import radians, cos, sin, asin, sqrt, fabs, ceil, pi
 import os
 import json
 
 # 全局常量
+R = 6371 * 1000  # 地球半径
+
 d0 = 100
 r0 = 50
 xi0 = 1e-5
@@ -58,8 +60,8 @@ def load_pkl(tar_dir):
 # 计算两点间距离
 def geodistance(lon1, lat1, lon2, lat2):
     print("(%f, %f) (%f, %f)" % (lon1, lat1, lon2, lat2))
-    # 这里用km
-    R = 6371 * 1000
+    # 这里用m
+
     lon1, lat1, lon2, lat2 = map(radians, [float(lon1), float(lat1), float(lon2), float(lat2)])  # 经纬度转换成弧度
     dlon = lon2 - lon1
     dlat = lat2 - lat1
@@ -67,6 +69,46 @@ def geodistance(lon1, lat1, lon2, lat2):
     distance = 2 * asin(sqrt(a)) * R  # 地球平均半径，6371km
     distance = round(distance, 3)
     return distance / 1000  # 返回km为单位
+
+
+"""计算点经纬度 北dist米的点的经纬度"""
+
+
+def get_nor(lonC, latC, dist):
+    latNorth = 180 * dist / (R * pi) + latC
+    return latNorth
+
+
+"""计算点经纬度 南dist米的点的经纬度"""
+
+
+def get_sou(lonC, latC, dist):
+    latSouth = - 180 * dist / (R * pi) + latC
+    return latSouth
+
+
+"""计算点经纬度 东dist米点的经纬度"""
+
+
+def get_east(lonC, latC, dist):
+    lonEast = 180 * dist / (R * pi * cos(radians(latC))) + lonC
+    return lonEast
+
+
+"""计算点经纬度 西dist米点的经纬度"""
+
+
+def get_west(lonC, latC, dist):
+    lonWest = - 180 * dist / (R * pi * cos(radians(latC))) + lonC
+    return lonWest
+
+
+def normalize_lon(lon):
+    return (lon - 30.2072) / spanLon
+
+
+def normalize_lat(lat):
+    return (lat - 10.0271) / spanLat
 
 
 def get_lon_index(lon_arr, lon1):
@@ -176,7 +218,7 @@ def search(day1, day2, index1, indices, level_num, lon_set, lat_set, radius_set,
         lat_set.append(next_lat)
         radius_set.append(next_radi)
         # print("-----------------------------------\n")
-        search(day2, day2 + 1, next_index,  indices, level_num, lon_set, lat_set, radius_set)
+        search(day2, day2 + 1, next_index, indices, level_num, lon_set, lat_set, radius_set)
     else:  # # 如果最小值仍然超过阈值 说明没有合适的候选。没找到，就跳过这一天
         indices.append(-1)
         level_num.append(-1)
@@ -184,7 +226,7 @@ def search(day1, day2, index1, indices, level_num, lon_set, lat_set, radius_set,
         lat_set.append(-1)
         radius_set.append(-1)
         # print("-----------------------------------\n")
-        search(day1, day2 + 1, index1,  indices, level_num, lon_set, lat_set, radius_set)
+        search(day1, day2 + 1, index1, indices, level_num, lon_set, lat_set, radius_set)
 
 
 def write_json(tarDir, obj):
@@ -221,7 +263,7 @@ def write_json(tarDir, obj):
     with open(os.path.join(tarDir, 'eddies.json'), 'w', encoding='utf-8') as f2:
         json.dump(item_list, f2, ensure_ascii=False)
 
-        f2.close()
+        # f2.close()
 
 
 # 对于 start_day _ start_index 的涡旋进行追踪，并保存涡旋信息到json
@@ -237,6 +279,11 @@ def track_eddy(start_day, start_index):
     z_pos = []  # 在paraview上的z坐标
     seedR = []  # paraview球的半径
     points = []  # 35层大概需要10万  14层4万
+    # 边界
+    xL = []
+    xR = []
+    yL = []
+    yR = []
 
     # 把该日期前的位置补齐，即在此天之前没追踪到
     for i in range(start_day):
@@ -258,12 +305,29 @@ def track_eddy(start_day, start_index):
             z_pos.append(-1)
             seedR.append(-1)
             points.append(-1)
+            xL.append(-1)
+            xR.append(-1)
+            yL.append(-1)
+            yR.append(-1)
+
         else:
             # 原数据经纬度跨度都是20
-            x_pos.append((lon_set[i] - 30.2072) / spanLon)
-            y_pos.append((lat_set[i] - 10.0271) / spanLat)
+            x_pos.append(normalize_lon(lon_set[i]))
+            y_pos.append(normalize_lat(lat_set[i]))
             # 比如有40层，中心位置应该在13层左右， 然后球半径应该是26层
             z_pos.append(2 * level_num[i] / 50 / 3)  # 中心位置设置在2/3高度处（因为靠近底部才是第0层）
+
+            mul = 3  # 半径扩大倍数
+            _xL = max(0, normalize_lon(get_west(lon_set[i], lat_set[i], mul * radius_set[i] * 1e3)))
+            _xR = min(1, normalize_lon(get_east(lon_set[i], lat_set[i], mul * radius_set[i] * 1e3)))
+            _yL = max(0, normalize_lat(get_sou(lon_set[i], lat_set[i], mul * radius_set[i] * 1e3)))
+            _yR = min(1, normalize_lat(get_nor(lon_set[i], lat_set[i], mul * radius_set[i] * 1e3)))
+
+            xL.append(round(_xL * 499))
+            xR.append(round(_xR * 499))
+            yL.append(round(_yL * 499))
+            yR.append(round(_yR * 499))
+
             seedR.append(level_num[i] / 50 / 3)  # 半径设置为1/3深度
 
             temp = ceil(level_num[i] * 2 / 7)
@@ -282,49 +346,57 @@ def track_eddy(start_day, start_index):
     print("x_pos:\n", x_pos)
     print("y_pos:\n", y_pos)
     print("z_pos:\n", z_pos)
-    print("seedR:\n", seedR)
+    # print("seedR:\n", seedR)
+    print("xL, xR, yL, yR:\n")
+    print(xL)
+    print(xR)
+    print(yL)
+    print(yR)
 
     # print(len(days), len(indices), len(level_num), len(points), len(lon_set), len(lat_set), len(x_pos), len(y_pos))
 
     identifier = str(start_day) + '-' + str(start_index)
 
     # ------------------------------------生成paraview所需数据-------------------------------------------
+    # track_dict = {"days": days, "indices": indices, "points": points,
+    #               "x_pos": x_pos, "y_pos": y_pos, "z_pos": z_pos, "seedR": seedR}
     track_dict = {"days": days, "indices": indices, "points": points,
-                  "x_pos": x_pos, "y_pos": y_pos, "z_pos": z_pos, "seedR": seedR}
+                  "x_pos": x_pos, "y_pos": y_pos, "z_pos": z_pos, "xL": xL, "xR": xR, "yL": yL, "yR": yR}
 
     # 写入追踪字典数据，它不生成json数据！
-    tarDir = 'track/'
+    tarDir = 'track/npy'
     if not os.path.exists(tarDir):
         os.makedirs(tarDir)
     file = os.path.join(tarDir, identifier)
     np.save(file, track_dict)
 
     # ------------------------------------生成json格式 主涡旋 追踪数据-------------------------------------------
+    # tarDir = 'track/json'
     # 这个是简单的涡旋追踪，是生成json后在js里加载的
-    site_dict = {"days": days, "indices": indices}
-    # 写入时间和索引json数据
-    site_json = json.dumps(site_dict, sort_keys=False)
-    f = open(os.path.join(tarDir, identifier + '_track.json'), 'w')
-    f.write(site_json)
+    # site_dict = {"days": days, "indices": indices}
+    # # 写入时间和索引json数据
+    # site_json = json.dumps(site_dict, sort_keys=False)
+    # f = open(os.path.join(tarDir, identifier + '_track.json'), 'w')
+    # f.write(site_json)
 
     # ------------------------------------更新json所有涡旋信息-------------------------------------------
     # 如果不存在，先创建个空的
-    if not os.path.exists(os.path.join(tarDir, 'eddies.json')):
-        f = open(os.path.join(tarDir, 'eddies.json'), 'w')
-        f.close()
-
-    for i in range(len(indices)):
-        if indices[i] == -1:
-            continue
-        info_dict = {
-            "name": str(days[i]) + "_" + str(indices[i]),
-            "master": identifier,
-            "lon": lon_set[i],
-            "lat": lat_set[i],
-            "radius": radius_set[i],
-            "level": int(level_num[i]),
-        }
-        write_json(tarDir, info_dict)
+    # if not os.path.exists(os.path.join(tarDir, 'eddies.json')):
+    #     f = open(os.path.join(tarDir, 'eddies.json'), 'w')
+    #     f.close()
+    #
+    # for i in range(len(indices)):
+    #     if indices[i] == -1:
+    #         continue
+    #     info_dict = {
+    #         "name": str(days[i]) + "_" + str(indices[i]),
+    #         "master": identifier,
+    #         "lon": lon_set[i],
+    #         "lat": lat_set[i],
+    #         "radius": radius_set[i],
+    #         "level": int(level_num[i]),
+    #     }
+    #     write_json(tarDir, info_dict)
 
 
 '''
@@ -334,7 +406,10 @@ if __name__ == '__main__':
     start_day = 0
     tarD = os.path.join('whole_result', str(start_day))
     num = len(joblib.load(os.path.join(tarD, 'levels.pkl')))
+    cells = joblib.load(os.path.join(tarD, 'eddie_census.pkl'))[4][:num]
 
+    # print(cells)
     # print(num)
     for start_index in range(num):
-        track_eddy(start_day, start_index)
+        if cells[start_index] > 1e2:
+            track_eddy(start_day, start_index)
