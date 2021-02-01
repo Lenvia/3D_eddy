@@ -26,6 +26,9 @@ var colorFolder;
 var opaFolder;
 var funcFolder;
 
+var whole_models = [];
+var local_models = [];
+
 
 
 
