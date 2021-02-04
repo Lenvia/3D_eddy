@@ -28,7 +28,7 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 		loader.setRequestHeader( scope.requestHeader );
 		loader.setWithCredentials( scope.withCredentials );
 		loader.load( url, function ( text ) {
-			// console.log(url)
+
 			try {
 
 				onLoad( scope.parse( text ) );
@@ -69,12 +69,6 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 			// normal vector, one per vertex
 			var normals = [];
 
-			// ## Custom supplement ##
-			
-			var sectionNums = [];  // 一条长线段的分段数
-			var startNums = [];  // 每一个group起始下标
-			var sFlag = true;  // 仅在这里使用！为true时表示首部
-
 			var result;
 
 			// pattern for detecting the end of a number sequence
@@ -93,10 +87,6 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 			// indicates start of polygon connectivity section
 			var patPOLYGONS = /^POLYGONS /;
 
-			// ## Custom supplement ##
-			// indicates start of line connectivity section
-			var patLINES = /^LINES /;
-
 			// indicates start of triangle strips section
 			var patTRIANGLE_STRIPS = /^TRIANGLE_STRIPS /;
 
@@ -114,7 +104,6 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 			var inPointsSection = false;
 			var inPolygonsSection = false;
-			var inLinesSection = false;
 			var inTriangleStripSection = false;
 			var inPointDataSection = false;
 			var inCellDataSection = false;
@@ -174,34 +163,6 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 					}
 
-				} else if ( inLinesSection ) { //线段类型
-
-					if ( ( result = patConnectivity.exec( line ) ) !== null ) {
-
-						// numVertices i0 i1 i2 ...
-						var numVertices = parseInt( result[ 1 ] );
-						sectionNums.push(numVertices - 1);  // 最小线段数
-
-						if(sFlag){
-							startNums.push(0);
-							sFlag = false;
-						}
-						else
-							startNums.push(startNums[startNums.length-1]+sectionNums[startNums.length-1]);
-
-
-						var inds = result[ 2 ].split( /\s+/ );
-
-						var i1, i2;
-						if(numVertices >=2){
-							for (var j = 0; j<numVertices-1 ; j++){
-								i1 = parseInt( inds[j]);
-								i2 = parseInt( inds[j+1]);
-								indices.push( i1, i2);
-							}
-						}
-					}
-
 				} else if ( inTriangleStripSection ) {
 
 					if ( ( result = patConnectivity.exec( line ) ) !== null ) {
@@ -238,10 +199,9 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 					}
 
-				}
-				 else if ( inPointDataSection || inCellDataSection ) {
+				} else if ( inPointDataSection || inCellDataSection ) {
 
-					if ( inColorSection ) {  //设置了颜色
+					if ( inColorSection ) {
 
 						// Get the colors
 
@@ -275,31 +235,21 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 				}
 
-				if ( patPOLYGONS.exec( line ) !== null ) {  //多边形
+				if ( patPOLYGONS.exec( line ) !== null ) {
 
 					inPolygonsSection = true;
-					inLinesSection = false;
 					inPointsSection = false;
 					inTriangleStripSection = false;
 
-				} else if ( patPOINTS.exec( line ) !== null ) { //点
+				} else if ( patPOINTS.exec( line ) !== null ) {
 
 					inPolygonsSection = false;
-					inLinesSection = false;
 					inPointsSection = true;
 					inTriangleStripSection = false;
 
-				} else if ( patLINES.exec( line ) !== null ) { //线段
+				} else if ( patTRIANGLE_STRIPS.exec( line ) !== null ) {
 
 					inPolygonsSection = false;
-					inLinesSection = true;
-					inPointsSection = false;
-					inTriangleStripSection = false;
-
-				}else if ( patTRIANGLE_STRIPS.exec( line ) !== null ) {
-
-					inPolygonsSection = false;
-					inLinesSection = false;
 					inPointsSection = false;
 					inTriangleStripSection = true;
 
@@ -308,7 +258,6 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 					inPointDataSection = true;
 					inPointsSection = false;
 					inPolygonsSection = false;
-					inLinesSection = false;
 					inTriangleStripSection = false;
 
 				} else if ( patCELL_DATA.exec( line ) !== null ) {
@@ -316,25 +265,22 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 					inCellDataSection = true;
 					inPointsSection = false;
 					inPolygonsSection = false;
-					inLinesSection = false;
 					inTriangleStripSection = false;
 
-				} else if ( patCOLOR_SCALARS.exec( line ) !== null ) {  //颜色
+				} else if ( patCOLOR_SCALARS.exec( line ) !== null ) {
 
 					inColorSection = true;
 					inNormalsSection = false;
 					inPointsSection = false;
 					inPolygonsSection = false;
-					inLinesSection = false;
 					inTriangleStripSection = false;
 
-				} else if ( patNORMALS.exec( line ) !== null) {  //法线
+				} else if ( patNORMALS.exec( line ) !== null ) {
 
 					inNormalsSection = true;
 					inColorSection = false;
 					inPointsSection = false;
 					inPolygonsSection = false;
-					inLinesSection = false;
 					inTriangleStripSection = false;
 
 				}
@@ -343,52 +289,54 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 			var geometry = new BufferGeometry();
 			geometry.setIndex( indices );
-			geometry.setAttribute( 'position', new Float32BufferAttribute( positions, 3 ) );  //每一个position元素都是xyz三元组
+			geometry.setAttribute( 'position', new Float32BufferAttribute( positions, 3 ) );
 
-			// console.log(indices);
-			// console.log("indices.length: ", indices.length);
-			// console.log("positions.length: ", positions.length);
-			// console.log("normals.length: ", normals.length);
-			// console.log("colors.length: ", colors.length);
 
-			if(colors.length==0){
-				// 如果未设置颜色，则将所有顶点都默认为白色
-				for (let i =0; i<positions.length; i++)
-					colors.push(1); 
-					// 换成Math.random()就是五颜六色的涡旋
-					// colors.push(Math.random());
-			}
-			// 此时colors和positions都是每三位表示1个点。点的个数就是不重复的点的个数。
-			
+			console.log("indices.length: ", indices.length);  // 7032
+			console.log("positions.length: ", positions.length);  // 3600
+			console.log("positions.count: ", geometry.attributes.position.count)  // 1200
 
-			if (sectionNums.length != 0){
-				geometry.setAttribute( 'sectionNum', new Float32BufferAttribute( sectionNums, 1 ) );
-				geometry.setAttribute( 'startNum', new Float32BufferAttribute( startNums, 1 ) );
+			for(let i=0; i<positions.length; i++){
+				colors.push(Math.random());
 			}
 
+			if ( normals.length === positions.length ) {
 
-			if ( normals.length === positions.length ) {  //设置每一个点的法线
 				geometry.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
+
 			}
 
-			if ( colors.length !== indices.length ) {  //如果颜色个数和 形状个数 不相同
+			if ( colors.length !== indices.length ) {  // 7032
 
 				// stagger
 
-				if ( colors.length === positions.length ) {  // 顶点基础上的染色
+				if ( colors.length === positions.length ) {  // 3600
 
 					geometry.setAttribute( 'color', new Float32BufferAttribute( colors, 3 ) );
 
 				}
 
-			} else {  // 图形上的染色
+			} else {  // 几何体级别的赋值  colors.length == indices.length
 
 				// cell
+
 				geometry = geometry.toNonIndexed();
+
+			
 				var numTriangles = geometry.attributes.position.count / 3;
 
-				if ( colors.length === ( numTriangles * 3 ) ) {
+				// for(let i=0; i<numTriangles*3; i++){
+				// 	colors.push(Math.random());
+				// }
 
+				// 此时说明 colors的每3位，分别表示一个三角形整体的r,g,b
+				// 这时候要把它转换成每个顶点，相当于额外拷贝2份（一共三份）
+
+				console.log("---------");
+				console.log(numTriangles);
+
+				if ( colors.length === ( numTriangles * 3 ) ) {
+					
 					var newColors = [];
 
 					for ( var i = 0; i < numTriangles; i ++ ) {
@@ -409,17 +357,15 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 			}
 
-
 			return geometry;
 
 		}
 
-
 		// get the 5 first lines of the files to check if there is the key word binary
 		var meta = LoaderUtils.decodeText( new Uint8Array( data, 0, 250 ) ).split( '\n' );
-		if ( meta[ 2 ].includes( 'ASCII' ) ) {
-			return parseASCII( LoaderUtils.decodeText( data ) );
-		}
+
+		return parseASCII( LoaderUtils.decodeText( data ) );
+
 
 	}
 
