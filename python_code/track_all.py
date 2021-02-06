@@ -330,11 +330,11 @@ def track_eddy(start_day, start_index):
 
             seedR.append(level_num[i] / 50 / 3)  # 半径设置为1/3深度
 
-            temp = ceil(level_num[i] * 2 / 7)
-            if temp < 3:
-                temp = 3
+            temp = ceil(level_num[i])
+            if temp < 5:
+                temp = 5
 
-            points.append(temp * 10000)
+            points.append(temp * 1000)
 
     print("days:\n", days)  # 天数
     print("indices:\n", indices)  # 图上的第几个涡旋

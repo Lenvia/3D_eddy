@@ -57,7 +57,8 @@ if __name__ == '__main__':
     projDir = os.getcwd()
     subRoot = str(start_day) + '-' + str(start_index)
 
-    npz_path = os.path.join(projDir, 'npy_file', subRoot)
+    # npz_path = os.path.join(projDir, 'npy_file', subRoot)
+    npz_path = os.path.join(projDir, 'npy_file')
 
     files = os.listdir(npz_path)
     for file in files:
@@ -66,7 +67,9 @@ if __name__ == '__main__':
 
         liquid_array = np.array(npz_file['x'])
 
-        tarDir = os.path.join('vtk_file', subRoot)
+        # tarDir = os.path.join('vtk_file', subRoot)
+        tarDir = os.path.join('vtk_file')
+
         if not os.path.exists(tarDir):
             os.makedirs(tarDir)
 

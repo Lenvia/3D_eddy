@@ -140,7 +140,7 @@ for file in files:
 
         # Properties modified on streamTracer1.SeedType
         streamTracer1.SeedType.Center = [x_pos[i], y_pos[i], 0.5]
-        streamTracer1.SeedType.NumberOfPoints = points[i]
+        streamTracer1.SeedType.NumberOfPoints = int(points[i]*0.8)
         streamTracer1.SeedType.Radius = 0.5
 
         # Properties modified on streamTracer1
@@ -217,7 +217,7 @@ for file in files:
         Delete(extractSubset1)
         del extractSubset1
 
-        print(name, " finished!\n")
+        print(name+" finished!\n")
 
 
 
