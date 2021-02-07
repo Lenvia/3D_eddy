@@ -14,8 +14,8 @@ var maxH;  // 产生的山脉最大高度
 
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 
-const renderWidth = 0.6*window.innerWidth, renderHeight = window.innerHeight;
-
+var renderWidth, renderHeight;
+setRenderSize();
 
 let helper;  // 鼠标helper
 
@@ -163,6 +163,7 @@ function init() {
 }
 
 function onWindowResize() {
+    setRenderSize();
     camera.aspect = renderWidth / renderHeight;
     camera.updateProjectionMatrix();
     renderer.setSize( renderWidth, renderHeight );
@@ -557,7 +558,7 @@ function loadEddiesForDays(){
                 
                 var opa = []; // 顶点透明度，用来改变线条透明度
                 for (var i = 0; i<vertexNum; i++){
-                    opa.push(1);  // 默认都是1
+                    opa.push(1);  // 默认1；但是初始是以下面的material为准
                 }
                 geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
 
@@ -573,7 +574,7 @@ function loadEddiesForDays(){
                     let material = new THREE.LineBasicMaterial({
                         // vertexColors: false,  // 千万不能设置为true！！！！血的教训
                         transparent: true, // 可定义透明度
-                        opacity: 1,
+                        opacity: 0.8,
                         depthWrite: false, 
                     });
                     mats.push(material);
@@ -1467,4 +1468,8 @@ function onMouseClick(event){
 function getMouseXY(event){
     mouse.x = ( (event.clientX) / renderer.domElement.clientWidth ) * 2 - 1;
     mouse.y = - ( (event.clientY ) / renderer.domElement.clientHeight ) * 2 + 1;
+}
+
+function setRenderSize() {
+    renderWidth = 0.5*window.innerWidth, renderHeight = window.innerHeight;
 }

@@ -14,7 +14,8 @@ var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 
-const renderWidth = 0.4*window.innerWidth, renderHeight = 0.5*window.innerHeight;
+var renderWidth , renderHeight;
+setRenderSize();
 
 
 let helper;  // 鼠标helper
@@ -93,6 +94,7 @@ function init() {
 }
 
 function onWindowResize() {
+    setRenderSize();
     camera.aspect = renderWidth / renderHeight;
     camera.updateProjectionMatrix();
     renderer.setSize( renderWidth, renderHeight );
@@ -338,4 +340,8 @@ function animate() {
 
 function render() {
     renderer.render( scene, camera );
+}
+
+function setRenderSize() {
+    renderWidth = 0.5*window.innerWidth, renderHeight = 0.6*window.innerHeight;
 }
