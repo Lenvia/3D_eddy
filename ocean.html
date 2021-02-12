@@ -3,13 +3,16 @@
 	<head>
 		<title>3D_eddy</title>
 		<link rel="stylesheet" type="text/css" href="./main.css">
+		<link rel="stylesheet" type="text/css" href="./node_modules/jquery-ui-dist/jquery-ui.min.css"/>
+
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 
 		
 		<!-- 共享文件 -->
 		<script type="text/javascript" src="./node_modules/jquery/dist/jquery.min.js"></script>
-		<script type="text/javascript" src="./node_modules/jquery-ui-dist/jquery-ui.js"></script>
+		<script type="text/javascript" src="./node_modules/jquery-ui-dist/jquery-ui.min.js"></script>
+		
 		<script type="text/javascript" src="./node_modules/three/examples/js/libs/dat.gui.min.js"></script>
 
 		<!-- 全局变量 -->
@@ -34,7 +37,17 @@
 		<!-- 切换视图按钮 -->
 		<a href="javascript:void(0);" class="btn btn-sm btn-primary" id="ex23d"  onclick="changeView()">切换2D/3D视图</a>
 
-				  
+		<!-- 进度条 -->
+		<div id="audio-player-container">
+			<div class="audio-progress" id="audio-progress">
+				<div id="draggable-point" style="left:75%;position:absolute;" class="draggable ui-widget-content">
+				<div id="audio-progress-handle"></div>
+				</div>
+				<div id="audio-progress-bar" class="bar" style="width:75%">
+				</div>
+			</div>
+		</div>
+
 		<div id="posX"></div>
 
 		

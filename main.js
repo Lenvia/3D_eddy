@@ -28,6 +28,7 @@ for (var i =0; i<=59; i++){
     days.push(i);
     exDays.push(i);
 }
+var loadDayNum = 2;  // 加载多少天
 
 var existedSphere = [];  // 场上存在的标记
 
@@ -96,6 +97,8 @@ function init() {
     renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
     renderer.setSize( renderWidth, renderHeight );  // 尺寸
 
+    var audio_player = document.getElementById('audio-player-container');
+    container.appendChild(audio_player);
 
     container.appendChild( renderer.domElement );
 
@@ -516,7 +519,7 @@ function hideProgressModal(){
 */
 function loadEddiesForDays(){
     let arr = []; //promise返回值的数组
-    for (let i = 0; i<5; i++){
+    for (let i = 0; i<loadDayNum; i++){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
@@ -698,7 +701,7 @@ function loadOneOWArray(path, d){
 
 function loadOWArray(){
     let flag0 = []; //promise数组
-    for(var i =0; i<5; i++){
+    for(var i =0; i<loadDayNum; i++){
         flag0[i] = new Promise((resolve, reject)=>{
             var d = i;
             var path = ("./whole_attributes_txt_file/OW/".concat("OW_", String(d), ".txt"));
@@ -1473,3 +1476,21 @@ function getMouseXY(event){
 function setRenderSize() {
     renderWidth = 0.5*window.innerWidth, renderHeight = window.innerHeight;
 }
+
+
+// 进度条
+$('#draggable-point').draggable({
+    axis: 'x',
+    containment: "#audio-progress"
+});
+
+$('#draggable-point').draggable({
+    drag: function() {
+        var offset = $(this).offset();
+        var xPos = (100 * parseFloat($(this).css("left"))) / (parseFloat($(this).parent().css("width"))) + "%";
+
+        $('#audio-progress-bar').css({
+        'width': xPos
+        });
+    }
+});
