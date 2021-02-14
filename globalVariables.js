@@ -19,6 +19,12 @@ var re_depth = new Map();  // 反向映射，通过高度映射第几层
 
 var currentMainDay;  // （主面板）当前日期
 var day_ctrl;
+var dynamic = false;  // 默认不准动
+var progress_bar;
+var draggable_point;
+
+var play_start_day = 0;  // 播放器起点（默认为0）
+var loadDayNum = 5;  // 加载多少天
 
 var appearFolder;
 var attrFolder;
@@ -28,6 +34,8 @@ var funcFolder;
 
 var whole_models = [];
 var local_models = [];
+
+
 
 
 
@@ -166,5 +174,44 @@ function switchView(){
         opaFolder.domElement.style="display:";
         attrFolder.domElement.style="display:";
         funcFolder.domElement.style="display:";
+    }
+}
+
+
+
+function sleep(numberMillis) {
+    var now = new Date();
+    var exitTime = now.getTime() + numberMillis;
+    while (true) {
+        now = new Date();
+        if (now.getTime() > exitTime)
+            return;
+    }
+}
+
+function playAction() {
+    var startDay = play_start_day;
+    if(is3d){
+        var oriDy = dynamic;  // 原始dynamic
+        dynamic = true;  // 不管是不是dy，先设置成动态
+
+        let i=startDay;
+        day_ctrl.setValue(i);  // 先执行一次
+
+        var Timer = setInterval(function(){
+            console.log(i+1);
+            if(i+1<loadDayNum){
+                i++;
+                progress_bar.style.width = i/loadDayNum*100 + "%";
+                // draggable_point.style.width = i/loadDayNum*100 + "%";
+
+
+                day_ctrl.setValue(i);
+            }
+            else{
+                dynamic = oriDy;
+                clearInterval(Timer);
+            }
+        },5000);
     }
 }

@@ -1,7 +1,6 @@
 import * as THREE from './node_modules/three/build/three.module.js';
 import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
-import { ImprovedNoise } from './node_modules/three/examples/jsm/math/ImprovedNoise.js';
 import { VTKLoader } from './VTKLoader4.js';
 
 
@@ -9,6 +8,9 @@ THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 
 var container, stats;  // 容器，状态监控器
 var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
+var audio_player;
+var div_start_time;
+
 
 var maxH;  // 产生的山脉最大高度
 
@@ -28,7 +30,7 @@ for (var i =0; i<=59; i++){
     days.push(i);
     exDays.push(i);
 }
-var loadDayNum = 2;  // 加载多少天
+
 
 var existedSphere = [];  // 场上存在的标记
 
@@ -54,7 +56,7 @@ var keepValue = true;  // 保持设置
 var hideChannel = false; // 隐藏海峡
 var hideSurface = false;  // 隐藏陆地
 var pitchMode = false;  // 选中模式（选择涡旋）
-var dynamic = false;  // 默认不准动
+
 
 // 当前gui颜色面板值
 var currentColor0 = [];
@@ -97,8 +99,12 @@ function init() {
     renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
     renderer.setSize( renderWidth, renderHeight );  // 尺寸
 
-    var audio_player = document.getElementById('audio-player-container');
-    var div_start_time = document.getElementById('start-time');
+    audio_player = document.getElementById('audio-player-container');
+    progress_bar = document.getElementById("audio-progress-bar");
+    draggable_point = document.getElementById("draggable-point");
+    // console.log(progress_bar);
+
+    div_start_time = document.getElementById('start-time');
     div_start_time.innerHTML = "000000";
     container.appendChild(audio_player);
 
@@ -1489,10 +1495,20 @@ $('#draggable-point').draggable({
 $('#draggable-point').draggable({
     drag: function() {
         var offset = $(this).offset();
-        var xPos = (100 * parseFloat($(this).css("left"))) / (parseFloat($(this).parent().css("width"))) + "%";
+        var percent = (100 * parseFloat($(this).css("left"))) / (parseFloat($(this).parent().css("width")));
+        var xPos = percent + "%";
+        play_start_day = Math.round(percent/100*loadDayNum+1);  // 实际上拉不到头，所以多加个1
 
+        // 更新文字和进度条
+        div_start_time.innerHTML = play_start_day;  
         $('#audio-progress-bar').css({
         'width': xPos
         });
     }
 });
+
+//numberMillis 毫秒
+
+
+
+
