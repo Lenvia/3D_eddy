@@ -39,13 +39,17 @@
 
 		<!-- 进度条 -->
 		<div id="audio-player-container">
+			<div id="start-time"></div>
 			<div class="audio-progress" id="audio-progress">
-				<div id="draggable-point" style="left:75%;position:absolute;" class="draggable ui-widget-content">
+				<div id="draggable-point" style="left:0%;position:absolute;" class="draggable ui-widget-content">
 				<div id="audio-progress-handle"></div>
 				</div>
-				<div id="audio-progress-bar" class="bar" style="width:75%">
+				<div id="audio-progress-bar" class="bar" style="width:0%">
 				</div>
 			</div>
+
+			<button type="button" class="audio-button" id="confirm">开始播放</button>
+			<button type="button" class="audio-button" id="pause">暂停</button>
 		</div>
 
 		<div id="posX"></div>

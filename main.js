@@ -98,6 +98,8 @@ function init() {
     renderer.setSize( renderWidth, renderHeight );  // 尺寸
 
     var audio_player = document.getElementById('audio-player-container');
+    var div_start_time = document.getElementById('start-time');
+    div_start_time.innerHTML = "000000";
     container.appendChild(audio_player);
 
     container.appendChild( renderer.domElement );

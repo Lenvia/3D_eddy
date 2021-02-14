@@ -124,17 +124,54 @@
 
 
 /* 进度条 */
+
+#audio-player-container{
+	height: 4rem;
+	width: 100%;
+	position: absolute;
+	bottom: 50px;
+	left: 50%;
+	/* 向左移动自身长度的50% */
+	transform: translate(-50%, 0%);
+}
+
+#start-time{
+	height: 1rem;
+	width: 60%;
+	position: absolute;
+	left: 50%;
+	transform: translate(-50%, 0%);
+	background-color: #10C0C0;
+}
+
+.audio-button{
+	position: absolute;
+	margin-top: 2.5rem;
+	width: 10%;
+	height: 25px;
+	transform: translate(-50%, 0%);
+}
+
+#confirm{
+	left: 40%;
+}
+
+
+#pause{
+	left: 60%;
+}
+
+
 .audio-progress {
 	/* 进度条高度 */
 	height: 1rem;
 	width: 60%;
 	
 	position: absolute;
-	bottom: 50px;
+	margin-top: 1rem;
 	left: 50%;
 	/* 向左移动自身长度的50% */
 	transform: translate(-50%, 0%);
-	
 	background-color: #C0C0C0;
 }
 
