@@ -1,6 +1,6 @@
 import * as THREE from './node_modules/three/build/three.module.js';
 import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
-import { VTKLoader } from './VTKLoader3.js';
+import { VTKLoader } from './VTKLoader4.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 import { Line2 } from './node_modules/three/examples/jsm/lines/Line2.js';
 import { LineMaterial } from './node_modules/three/examples/jsm/lines/LineMaterial.js';
@@ -127,14 +127,63 @@ function demo2(){
 
 }
 
+function demo3() {
+    var promise1 = new Promise((resolve, reject)=>{
+        // 加载一天的形状
+        var vtk_path = ("./temo.vtk");
+        var loader = new VTKLoader();
+        console.log("loading", vtk_path);
+        loader.load( vtk_path, function ( temp_geometry ) {  // 异步加载
+            
+            temp_geometry.translate(-0.5, -0.5, 0);
+
+            var positions = temp_geometry.attributes.position.array;
+                // 改变顶点高度值
+                
+                for ( let j = 0;  j < positions.length; j += 3 ) {
+                    positions[j+2] = -positions[j+2];
+                }
+
+
+            // 改变顶点高度值
+            temp_geometry.scale(100, 100, 100);
+
+            temp_geometry.computeVertexNormals();
+            temp_geometry.normalizeNormals();
+
+
+            let material = new THREE.LineBasicMaterial({
+                // vertexColors: false,  // 千万不能设置为true！！！！血的教训
+                transparent: true, // 可定义透明度
+                opacity: 1,
+                depthWrite: false, 
+            });
+
+            // 不用加这一句
+            // temp_geometry = BufferGeometryUtils.toTrianglesDrawMode(temp_geometry, THREE.TriangleStripDrawMode);
+
+            var linesG = new THREE.LineSegments(temp_geometry, material);
+
+            scene.add(linesG);
+            curLine = linesG;
+
+            console.log(curLine);
+
+            resolve();
+        });
+        
+    })
+    
+}
 
 function init(){
     container = document.getElementById( 'container' );
     container.innerHTML = "";
 
 
-    demo2();
+    // demo2();
     // demo();
+    // demo3();
 
     /**
      * 相机设置
@@ -160,6 +209,12 @@ function init(){
     controls = new OrbitControls( camera, renderer.domElement );
     controls.addEventListener('change', render);//监听鼠标、键盘事件
 
+
+    // console.log(container);
+    var pro = document.getElementById('audio-player-container');
+    container.appendChild(pro);
+
+
     container.appendChild( renderer.domElement );
     stats = new Stats();
     container.appendChild( stats.dom );
@@ -177,3 +232,20 @@ function render() {
     renderer.render( scene, camera );
 }
 
+
+// 进度条
+// $('#draggable-point').draggable({
+//     axis: 'x',
+//     containment: "#audio-progress"
+// });
+
+// $('#draggable-point').draggable({
+//     drag: function() {
+//         var offset = $(this).offset();
+//         var xPos = (100 * parseFloat($(this).css("left"))) / (parseFloat($(this).parent().css("width"))) + "%";
+
+//         $('#audio-progress-bar').css({
+//         'width': xPos
+//         });
+//     }
+// });

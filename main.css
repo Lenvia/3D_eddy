@@ -19,6 +19,15 @@
 	background-color: #1b76dd;
 }
 
+#container3{
+	position: absolute;
+	right: 0px;
+	bottom: 0px;
+	width: 50%;
+	height: 40%;
+	background-color: #ffffff;
+}
+
 #progressModal {
 	width: 50%;
 	min-height: 45px;

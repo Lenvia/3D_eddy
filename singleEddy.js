@@ -18,8 +18,6 @@ var renderWidth , renderHeight;
 setRenderSize();
 
 
-let helper;  // 鼠标helper
-
 const raycaster = new THREE.Raycaster();  // 射线
 const mouse = new THREE.Vector2();  // 鼠标二维坐标
 

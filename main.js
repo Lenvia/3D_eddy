@@ -1497,7 +1497,7 @@ $('#draggable-point').draggable({
         var offset = $(this).offset();
         var percent = (100 * parseFloat($(this).css("left"))) / (parseFloat($(this).parent().css("width")));
         var xPos = percent + "%";
-        play_start_day = Math.round(percent/100*loadDayNum+1);  // 实际上拉不到头，所以多加个1
+        play_start_day = Math.round(percent/100*(loadDayNum+1));  // 实际上拉不到头，所以多加个1
 
         // 更新文字和进度条
         div_start_time.innerHTML = play_start_day;  

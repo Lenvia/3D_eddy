@@ -22,6 +22,7 @@ var day_ctrl;
 var dynamic = false;  // 默认不准动
 var progress_bar;
 var draggable_point;
+var Timer;
 
 var play_start_day = 0;  // 播放器起点（默认为0）
 var loadDayNum = 5;  // 加载多少天
@@ -190,7 +191,10 @@ function sleep(numberMillis) {
 }
 
 function playAction() {
+    console.log(Timer);
+    
     var startDay = play_start_day;
+    console.log(play_start_day);
     if(is3d){
         var oriDy = dynamic;  // 原始dynamic
         dynamic = true;  // 不管是不是dy，先设置成动态
@@ -198,12 +202,12 @@ function playAction() {
         let i=startDay;
         day_ctrl.setValue(i);  // 先执行一次
 
-        var Timer = setInterval(function(){
+        Timer = setInterval(function(){
             console.log(i+1);
             if(i+1<loadDayNum){
                 i++;
                 progress_bar.style.width = i/loadDayNum*100 + "%";
-                // draggable_point.style.width = i/loadDayNum*100 + "%";
+                draggable_point.style.left = i/loadDayNum*100 + "%";
 
 
                 day_ctrl.setValue(i);
@@ -214,4 +218,8 @@ function playAction() {
             }
         },5000);
     }
+}
+
+function pauseAction(){
+    clearInterval(Timer);
 }
