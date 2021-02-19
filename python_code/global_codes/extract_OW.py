@@ -44,12 +44,9 @@ import sys
 from sympy import *
 from math import radians, cos, sin, asin, sqrt
 
-day = sys.argv[1]
-day = int(day)
-
 
 # Load netCDF4 data
-def load_netcdf4(filename):  # name of the netCDF data file
+def load_netcdf4(filename, day):  # name of the netCDF data file
     f = nc4.Dataset(filename,'r', format='NETCDF4')  # 'r' stands for read
     # lon = f.variables['longitude'][:]
     # lat = f.variables['latitude'][:]
@@ -65,11 +62,11 @@ def load_netcdf4(filename):  # name of the netCDF data file
     lat = f.variables['YC']  # 纬度
     depth = f.variables['Z_MIT40'][:]  # 层数
     # Load zonal and meridional veslocity, in m/s
-    uvel = f.variables['U']  # 纬向速度
-    vvel = f.variables['V']  # 经线速度
+    uvel = f.variables['U'][day]  # 纬向速度
+    vvel = f.variables['V'][day]  # 经线速度
 
-    print(uvel.shape)
-    print(vvel.shape)
+    # print(uvel.shape)
+    # print(vvel.shape)
 
     # Load time in hours from 1950-01-01
     t = f.variables['T_AX'][:]  # 时间数组
@@ -88,8 +85,8 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,OW_start):
 
     # We transpose the data to fit with the algorithm provided, the correct order is uvel(lon,lat,depth) while the original from the netCDF is uvel(time,lat,lon,depth)
     # (50, 500, 500)->(500, 500, 50) 即 (depth, lat, lon) -> (lon, lat, depth)
-    uvel = uvel[day,:,:,:].transpose(2, 1, 0)
-    vvel = vvel[day,:,:,:].transpose(2, 1, 0)
+    uvel = uvel[:,:,:].transpose(2, 1, 0)
+    vvel = vvel[:,:,:].transpose(2, 1, 0)
 
     # Since they are masked arrays (in the mask, True = NaN value), we can fill the masked values with 0.0 to describe land
     uvel.set_fill_value(0.0)
@@ -159,7 +156,7 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,OW_start):
     '''
     执行到这里直接return，下面的R2算法暂时不运行
     '''
-    return OW
+    return OW, vorticity
 
 
 ## Creates grid #####################################################
@@ -212,18 +209,39 @@ def deriv1_central_diff_3D(a,x,y):
 
 
 if __name__ == '__main__':
-    (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('../COMBINED_2011013100.nc')
-    # capture
-    OW_start = -0.2
+    for day in range(0, 10):
+        (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('../COMBINED_2011013100.nc', day)
+        # capture
+        OW_start = -0.2
 
-    OW = eddy_detection(lon, lat, depth, uvel, vvel, day, OW_start)
+        OW, vorticity = eddy_detection(lon, lat, depth, uvel, vvel, day, OW_start)
 
-    print("successfully detected!")
+        # print("successfully detected!")
 
-    tarDir = os.path.join("../whole_attributes_pkl_file", 'whole_attributes_txt_file/OW')
+        tarDir_OW = os.path.join("../whole_attributes_pkl_file", 'OW')
+        tarDir_vorticity = os.path.join("../whole_attributes_pkl_file", 'VORTICITY')
 
-    if not os.path.exists(tarDir):
-        os.makedirs(tarDir)
+        if not os.path.exists(tarDir_OW):
+            os.makedirs(tarDir_OW)
+        if not os.path.exists(tarDir_vorticity):
+            os.makedirs(tarDir_vorticity)
 
-    joblib.dump(OW, os.path.join(tarDir, 'OW_'+str(day)+'.pkl'))
+        joblib.dump(OW, os.path.join(tarDir_OW, 'OW_'+str(day)+'.pkl'))
+        joblib.dump(vorticity, os.path.join(tarDir_vorticity, 'VORTICITY_' + str(day) + '.pkl'))
+
+        OW_arr_reshaped = OW.reshape(OW.shape[0], -1)
+        vorticity_arr_reshaped = vorticity.reshape(vorticity.shape[0], -1)
+
+        tarDir1 = os.path.join("../whole_attributes_txt_file", 'OW')
+        tarDir2 = os.path.join("../whole_attributes_txt_file", 'VORTICITY')
+
+        if not os.path.exists(tarDir1):
+            os.makedirs(tarDir1)
+        if not os.path.exists(tarDir2):
+            os.makedirs(tarDir2)
+
+        np.savetxt(os.path.join(tarDir1, "OW_" + str(day) + ".txt"), OW_arr_reshaped)
+        np.savetxt(os.path.join(tarDir2, "VORTICITY_" + str(day) + ".txt"), vorticity_arr_reshaped)
+
+        print(day, " finished.")
 
