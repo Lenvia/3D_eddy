@@ -2,6 +2,7 @@
   "requires": true,
   "lockfileVersion": 1,
   "dependencies": {
+    "echarts": "^5.0.2",
     "jquery": "^3.5.1",
     "jquery-ui-dist": "^1.12.1",
     "three": "^0.123.0"

@@ -165,7 +165,7 @@ function onWindowResize() {
 }
 
 function loadDepth(){
-    var depth_path = ("./depth.json");
+    var depth_path = ("./resources/depth.json");
     var json_data;
     $.ajax({
         url: depth_path,//json文件位置
@@ -360,7 +360,7 @@ function createSea(){
 
 function createLand(){
     // 生成第0层平面
-    var path = ("./whole_attributes_txt_file/".concat("surface.txt"));  // 默认盐都为0的地方都是陆地
+    var path = ("./resources/whole_attributes_txt_file/".concat("surface.txt"));  // 默认盐都为0的地方都是陆地
     var arr = [];
     var promise1 = new Promise(function(resolve, reject) {
         $.get(path, function(data) {
@@ -433,7 +433,7 @@ function createLand(){
 
 // 根据盐度数据建立峡谷
 function createChannel(){
-    var path = ("./whole_attributes_txt_file/SALT/".concat("SALT_0.txt"));  // 默认盐都为0的地方都是陆地
+    var path = ("./resources/whole_attributes_txt_file/SALT/".concat("SALT_0.txt"));  // 默认盐都为0的地方都是陆地
     var arr;
     var promise1 = new Promise(function(resolve, reject) {
         $.get(path, function(data) {
@@ -625,7 +625,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./whole_vtk_folder".concat("/vtk", d, "_5000.vtk"));
+            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_5000.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( temp_geometry ) {  // 异步加载
@@ -863,7 +863,7 @@ function loadOWArray(){
     for(var i =0; i<2; i++){
         flag0[i] = new Promise((resolve, reject)=>{
             var d = i;
-            var path = ("./whole_attributes_txt_file/OW/".concat("OW_", String(d), ".txt"));
+            var path = ("./resources/whole_attributes_txt_file/OW/".concat("OW_", String(d), ".txt"));
             loadOneOWArray(path,d);
             resolve(i);
         });

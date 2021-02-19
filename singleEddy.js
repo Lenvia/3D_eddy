@@ -131,7 +131,7 @@ function loadAllEddies(){
         arr[i] = new Promise((resolve, reject)=>{
             var master = eddyInfo[i]['master'];  // 所属涡旋
             var name = eddyInfo[i]['name'];  // 涡旋识别编号
-            var vtk_path = ("./vtk_folder/".concat(master, '/vtk', name, '.vtk'))
+            var vtk_path = ("./resources/vtk_folder/".concat(master, '/vtk', name, '.vtk'))
 
             var loader = new VTKLoader();
 
@@ -241,7 +241,7 @@ function loadSigleEddy(name){
     for(let i=0; i<eddyInfo.length; i++){
         if(eddyInfo[i]['name']==name){
             var promise = new Promise(function(resolve, reject) {
-                var vtk_path = ("./vtk_folder/".concat(eddyInfo[i]['master'], '/vtk', name, '.vtk'))
+                var vtk_path = ("./resources/vtk_folder/".concat(eddyInfo[i]['master'], '/vtk', name, '.vtk'))
                 var loader = new VTKLoader();
 
                 loader.load( vtk_path, function ( geometry ) {  // 异步加载

@@ -61,7 +61,7 @@ loadEddyInfo();
 
 
 function loadDepth(){
-    var depth_path = ("./depth.json");
+    var depth_path = ("./resources/depth.json");
     var json_data;
     $.ajax({
         url: depth_path,//json文件位置
@@ -83,7 +83,7 @@ function loadDepth(){
 
 
 function loadEddyInfo(){
-    var eddis_info_path = ("./track/eddies.json");
+    var eddis_info_path = ("./resources/track/eddies.json");
     
     $.ajax({
         url: eddis_info_path,//json文件位置
