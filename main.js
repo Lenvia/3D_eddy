@@ -84,6 +84,9 @@ var opa2_ctrl;
 var opa3_ctrl;
 var opa4_ctrl;
 
+var upValue_ctrl;
+var downValue_ctrl;
+
 var textures_2d = [];
 
 
@@ -531,7 +534,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_1000_0_8.vtk"));
+            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_3000_0_8.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -837,6 +840,23 @@ function setGUI(){
         currentAttr = default_opt.currentAttr;
         console.log("currentAttr:", currentAttr);
 
+        // 使用不同的初始上下界
+        switch(currentAttr){
+            case "OW":
+                presupposeUD(-1, 1);
+                break;
+            case "VORTICITY":
+                presupposeUD(0, 0);
+                break;
+            case "SALT":
+                presupposeUD(34, 42);
+                break;
+            case "TEMP":
+                presupposeUD(0, 32);
+                break;
+        }
+        
+
         // 切换属性的话，一定要重新设置
         resetCtrl();
         resetMaterial(curLine);
@@ -845,8 +865,20 @@ function setGUI(){
         updateEcharts(currentAttr, currentMainDay);
     });
 
+    // 设置下界
+    downValue_ctrl = attrFolder.add(default_opt, 'downValue').onChange(function(){
+        downValue = default_opt.downValue;
+        console.log("downValue:", downValue);
+
+        // 更新中间点
+        updateMid();
+
+        resetCtrl();
+        resetMaterial(curLine);
+    });
+
     // 设置上界
-    attrFolder.add(default_opt, 'upValue').onChange(function(){
+    upValue_ctrl = attrFolder.add(default_opt, 'upValue').onChange(function(){
         upValue = default_opt.upValue;
         console.log("upValue:", upValue);
 
@@ -857,17 +889,7 @@ function setGUI(){
         resetMaterial(curLine);
     });
 
-    // 设置下界
-    attrFolder.add(default_opt, 'downValue').onChange(function(){
-        downValue = default_opt.downValue;
-        console.log("downValue:", downValue);
 
-        // 更新中间点
-        updateMid();
-
-        resetCtrl();
-        resetMaterial(curLine);
-    });
 
     /*
         控制
@@ -914,7 +936,7 @@ function setGUI(){
         dynamic = default_opt.dynamic;
 
         if(dynamic==true){
-            initLineOpacity(curLine, 0.5);  // 初始化透明度
+            initLineOpacity(curLine, 1);  // 初始化透明度
         }
         else{  // 将所有透明度设置为1
             opa0_ctrl.setValue(1.0);
@@ -1033,6 +1055,15 @@ function setGUI(){
 
     switchView();  // 先使用一遍视图
     
+}
+
+function presupposeUD(down, up) {
+    downValue = down;
+    upValue = up;
+    
+    downValue_ctrl.setValue(downValue);
+    upValue_ctrl.setValue(upValue);
+    updateMid();
 }
 
 
@@ -1315,7 +1346,7 @@ function assignAllOpacity(curLine){
             currentAttrArray = curLine.geometry.attributes.TEMP.array;
             break;
     }
-    
+
     for(var i = 0; i<currentAttrArray.length; i++){
         if(currentAttrArray[i]<= mid1){
             curLine.geometry.attributes.opacity.array[i] = cOpa0;
