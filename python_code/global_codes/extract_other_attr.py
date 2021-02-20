@@ -11,6 +11,8 @@ import os
 import sys
 from sympy import *
 from math import radians, cos, sin, asin, sqrt
+from global_codes import create_dataJson as cdj
+
 
 filename = '../COMBINED_2011013100.nc'  # .nc文件名
 f = nc4.Dataset(filename)  # 读取.nc文件，传入f中。此时f包含了该.nc文件的全部信息
@@ -68,3 +70,7 @@ for day in range(2, 10):
 
     np.savetxt(os.path.join(tarDir1, "TEMP_" + str(day) + ".txt"), temp_arr_reshaped)
     np.savetxt(os.path.join(tarDir2, "SALT_" + str(day) + ".txt"), salt_arr_reshaped)
+
+    cdj.create("../whole_attributes_txt_file", day, "TEMP")
+    cdj.create("../whole_attributes_txt_file", day, "SALT")
+
