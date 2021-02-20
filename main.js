@@ -1091,12 +1091,28 @@ function assignColor(curLine, opt_color, num){
         return;
     var cColor = [opt_color[0]/255, opt_color[1]/255, opt_color[2]/255];
 
+    var currentAttrArray = [];
+    switch(currentAttr){
+        case "OW":
+            currentAttrArray = curLine.geometry.attributes.OW.array;
+            break;
+        case "VORTICITY":
+            currentAttrArray = curLine.geometry.attributes.VORTICITY.array;
+            break;
+        case "SALT":
+            currentAttrArray = curLine.geometry.attributes.SALT.array;
+            break;
+        case "TEMP":
+            currentAttrArray = curLine.geometry.attributes.TEMP.array;
+            break;
+    }
+
     switch(num){
         case 0:
             console.log("color0:", opt_color);
             // 修改该范围内的点的颜色
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]<= mid1){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]<= mid1){
                     curLine.geometry.attributes.color.array[3*i] = cColor[0];
                     curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
                     curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
@@ -1106,8 +1122,8 @@ function assignColor(curLine, opt_color, num){
         case 1:
             console.log("color1:", opt_color);
             // 修改该范围内的点的颜色
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]> mid1 && currentAttrArray[i]<= mid2){
                     curLine.geometry.attributes.color.array[3*i] = cColor[0];
                     curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
                     curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
@@ -1117,8 +1133,8 @@ function assignColor(curLine, opt_color, num){
         case 2:
             console.log("color2:", opt_color);
             // 修改该范围内的点的颜色
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]> mid2 && currentAttrArray[i]<= mid3){
                     curLine.geometry.attributes.color.array[3*i] = cColor[0];
                     curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
                     curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
@@ -1128,8 +1144,8 @@ function assignColor(curLine, opt_color, num){
         case 3:
             console.log("color3:", opt_color);
             // 修改该范围内的点的颜色
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]> mid3 && currentAttrArray[i]<= mid4){
                     curLine.geometry.attributes.color.array[3*i] = cColor[0];
                     curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
                     curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
@@ -1139,8 +1155,8 @@ function assignColor(curLine, opt_color, num){
         case 4:
             console.log("color4:", opt_color);
             // 修改该范围内的点的颜色
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]> mid4){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]> mid4){
                     curLine.geometry.attributes.color.array[3*i] = cColor[0];
                     curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
                     curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
@@ -1155,12 +1171,28 @@ function assignOpacity(curLine, opt_opacity, num){
         return;
     var cOpa = opt_opacity;
 
+    var currentAttrArray = [];
+    switch(currentAttr){
+        case "OW":
+            currentAttrArray = curLine.geometry.attributes.OW.array;
+            break;
+        case "VORTICITY":
+            currentAttrArray = curLine.geometry.attributes.VORTICITY.array;
+            break;
+        case "SALT":
+            currentAttrArray = curLine.geometry.attributes.SALT.array;
+            break;
+        case "TEMP":
+            currentAttrArray = curLine.geometry.attributes.TEMP.array;
+            break;
+    }
+
     switch(num){
         case 0:
             console.log("opacity0:", opt_opacity);
             // 修改该范围内的点的透明度
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]<= mid1){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]<= mid1){
                     curLine.geometry.attributes.opacity.array[i] = cOpa;
                 }
             }
@@ -1168,8 +1200,8 @@ function assignOpacity(curLine, opt_opacity, num){
         case 1:
             console.log("opacity1:", opt_opacity);
             // 修改该范围内的点的透明度
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]> mid1 && currentAttrArray[i]<= mid2){
                     curLine.geometry.attributes.opacity.array[i] = cOpa;
                 }
             }
@@ -1177,8 +1209,8 @@ function assignOpacity(curLine, opt_opacity, num){
         case 2:
             console.log("opacity2:", opt_opacity);
             // 修改该范围内的点的透明度
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]> mid2 && currentAttrArray[i]<= mid3){
                     curLine.geometry.attributes.opacity.array[i] = cOpa;
                 }
             }
@@ -1186,8 +1218,8 @@ function assignOpacity(curLine, opt_opacity, num){
         case 3:
             console.log("opacity3:", opt_opacity);
             // 修改该范围内的点的透明度
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]> mid3 && currentAttrArray[i]<= mid4){
                     curLine.geometry.attributes.opacity.array[i] = cOpa;
                 }
             }
@@ -1195,8 +1227,8 @@ function assignOpacity(curLine, opt_opacity, num){
         case 4:
             console.log("opacity4:", opt_opacity);
             // 修改该范围内的点的透明度
-            for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-                if(curLine.geometry.attributes.OW.array[i]> mid4){
+            for(var i = 0; i<currentAttrArray.length; i++){
+                if(currentAttrArray[i]> mid4){
                     curLine.geometry.attributes.opacity.array[i] = cOpa;
                 }
             }
@@ -1214,23 +1246,38 @@ function assignAllColor(curLine){
     var cColor3 = [currentColor3[0]/255, currentColor3[1]/255, currentColor3[2]/255];
     var cColor4 = [currentColor4[0]/255, currentColor4[1]/255, currentColor4[2]/255];
 
-    for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-        if(curLine.geometry.attributes.OW.array[i]<= mid1){
+    var currentAttrArray = [];
+    switch(currentAttr){
+        case "OW":
+            currentAttrArray = curLine.geometry.attributes.OW.array;
+            break;
+        case "VORTICITY":
+            currentAttrArray = curLine.geometry.attributes.VORTICITY.array;
+            break;
+        case "SALT":
+            currentAttrArray = curLine.geometry.attributes.SALT.array;
+            break;
+        case "TEMP":
+            currentAttrArray = curLine.geometry.attributes.TEMP.array;
+            break;
+    }
+    for(var i = 0; i<currentAttrArray.length; i++){
+        if(currentAttrArray[i]<= mid1){
             curLine.geometry.attributes.color.array[3*i] = cColor0[0];
             curLine.geometry.attributes.color.array[3*i+1] = cColor0[1];
             curLine.geometry.attributes.color.array[3*i+2] = cColor0[2];
         }
-        else if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+        else if(currentAttrArray[i]> mid1 && currentAttrArray[i]<= mid2){
             curLine.geometry.attributes.color.array[3*i] = cColor1[0];
             curLine.geometry.attributes.color.array[3*i+1] = cColor1[1];
             curLine.geometry.attributes.color.array[3*i+2] = cColor1[2];
         }
-        else if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+        else if(currentAttrArray[i]> mid2 && currentAttrArray[i]<= mid3){
             curLine.geometry.attributes.color.array[3*i] = cColor2[0];
             curLine.geometry.attributes.color.array[3*i+1] = cColor2[1];
             curLine.geometry.attributes.color.array[3*i+2] = cColor2[2];
         }
-        else if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+        else if(currentAttrArray[i]> mid3 && currentAttrArray[i]<= mid4){
             curLine.geometry.attributes.color.array[3*i] = cColor3[0];
             curLine.geometry.attributes.color.array[3*i+1] = cColor3[1];
             curLine.geometry.attributes.color.array[3*i+2] = cColor3[2];
@@ -1253,17 +1300,33 @@ function assignAllOpacity(curLine){
     var cOpa3 = currentOpacity3;
     var cOpa4 = currentOpacity4;
 
-    for(var i = 0; i<curLine.geometry.attributes.OW.array.length; i++){
-        if(curLine.geometry.attributes.OW.array[i]<= mid1){
+    var currentAttrArray = [];
+    switch(currentAttr){
+        case "OW":
+            currentAttrArray = curLine.geometry.attributes.OW.array;
+            break;
+        case "VORTICITY":
+            currentAttrArray = curLine.geometry.attributes.VORTICITY.array;
+            break;
+        case "SALT":
+            currentAttrArray = curLine.geometry.attributes.SALT.array;
+            break;
+        case "TEMP":
+            currentAttrArray = curLine.geometry.attributes.TEMP.array;
+            break;
+    }
+    
+    for(var i = 0; i<currentAttrArray.length; i++){
+        if(currentAttrArray[i]<= mid1){
             curLine.geometry.attributes.opacity.array[i] = cOpa0;
         }
-        else if(curLine.geometry.attributes.OW.array[i]> mid1 && curLine.geometry.attributes.OW.array[i]<= mid2){
+        else if(currentAttrArray[i]> mid1 && currentAttrArray[i]<= mid2){
             curLine.geometry.attributes.opacity.array[i] = cOpa1;
         }
-        else if(curLine.geometry.attributes.OW.array[i]> mid2 && curLine.geometry.attributes.OW.array[i]<= mid3){
+        else if(currentAttrArray[i]> mid2 && currentAttrArray[i]<= mid3){
             curLine.geometry.attributes.opacity.array[i] = cOpa2;
         }
-        else if(curLine.geometry.attributes.OW.array[i]> mid3 && curLine.geometry.attributes.OW.array[i]<= mid4){
+        else if(currentAttrArray[i]> mid3 && currentAttrArray[i]<= mid4){
             curLine.geometry.attributes.opacity.array[i] = cOpa3;
         }
         else{
