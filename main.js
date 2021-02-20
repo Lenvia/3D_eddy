@@ -531,7 +531,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, ".vtk"));
+            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_1000_0_8.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -607,8 +607,9 @@ function loadEddiesForDays(){
     // 当所有加载都完成之后，再隐藏“等待进度条”
     Promise.all(arr).then((res)=>{
         console.log("模型加载完毕");
-        // 设置OW属性
-        loadOWArray();
+        // 设置属性
+        loadAttrArray("OW");
+        loadAttrArray("VORTICITY")
     })
 }
 
@@ -636,15 +637,15 @@ function initLineOpacity(curLine, k){
 }
 
 /*
-    加载OW数组
+    加载attr数组
 */
 //  单个加载函数
-function loadOneOWArray(path, d){
+function loadOneAttrArray(attr, path, d){
     var site, linesG;
     var arr;
     var promise1 = new Promise(function(resolve, reject) {
         $.get(path, function(data) {
-            // 加载OW数组
+            // 加载Attr数组
             var items = data.split(/\r?\n/).map( pair => pair.split(/\s+/).map(Number) );
             // console.log(items);
         
@@ -658,19 +659,17 @@ function loadOneOWArray(path, d){
                     }
                 }
             }
-            // console.log(d, "OW数组提取完毕");
-            // console.log(arr);
             resolve(1);
         });
     });
 
     promise1.then(()=>{
-        // 将OW值放到geometry中
+        // 将Attr值放到geometry中
         site = "day"+String(d)
         linesG = findModel(site);
-        var OW = [];
+        var attrArray = [];
         var x,y,z;  // 点的当前坐标（缩放后）
-        var i,j,k;  // 点对应的OW数组中的下标
+        var i,j,k;  // 点对应的attr数组中的下标
         var position = linesG.geometry.attributes.position.array;  // 看清属性
         // console.log("postion数组读取完毕");
 
@@ -690,35 +689,37 @@ function loadOneOWArray(path, d){
                 // console.log(x,y,z, "-->", i, j, k);
                 // console.log(arr[i][j][k]);
 
-                OW[q/3] = arr[i][j][k];
+                attrArray[q/3] = arr[i][j][k];
                 resolve(q);
             })
         }
         
         Promise.all(flag1).then((res)=>{
-            linesG.geometry.setAttribute( 'OW', new THREE.Float32BufferAttribute( OW, 1 ));
-            // console.log(OW);
-            if(d==1){
-                hideProgressModal();
-                console.log("OW值设置完毕");
+            linesG.geometry.setAttribute( attr, new THREE.Float32BufferAttribute( attrArray, 1 ));
+            // console.log(attrArray);
+            if(d==loadDayNum-1){
+                console.log(attr+"值设置完毕");
                 animate();
+
+                if(attr=="VORTICITY")
+                    hideProgressModal();
             }
         })
     });
 }
 
-function loadOWArray(){
+function loadAttrArray(attr){
     let flag0 = []; //promise数组
     for(var i =0; i<loadDayNum; i++){
         flag0[i] = new Promise((resolve, reject)=>{
             var d = i;
-            var path = ("./resources/whole_attributes_txt_file/OW/".concat("OW_", String(d), ".txt"));
-            loadOneOWArray(path,d);
+            var path = ("./resources/whole_attributes_txt_file/".concat(attr,"/",attr,"_", String(d), ".txt"));
+            loadOneAttrArray(attr, path,d);
             resolve(i);
         });
     }
     Promise.all(flag0).then((res)=>{
-       
+        
     })
     
 }
@@ -788,6 +789,9 @@ function setGUI(){
             curLine = findModel(site);
             scene.add(curLine);
 
+            // 更新当天当前属性的echarts
+            updateEcharts(currentAttr, currentMainDay);
+
             if(curLine!=undefined){
                 if(keepValue){  // 更换日期，但属性设置不变
                     keepValue_update(curLine);
@@ -829,13 +833,16 @@ function setGUI(){
 
     attrFolder = gui.addFolder('attribute');
     // 切换属性
-    attrFolder.add(default_opt, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
+    attrFolder.add(default_opt, 'currentAttr', ['OW', 'VORTICITY']).onChange(function(){
         currentAttr = default_opt.currentAttr;
         console.log("currentAttr:", currentAttr);
 
         // 切换属性的话，一定要重新设置
         resetCtrl();
         resetMaterial(curLine);
+
+        // 更新当天当前属性的echarts
+        updateEcharts(currentAttr, currentMainDay);
     });
 
     // 设置上界
