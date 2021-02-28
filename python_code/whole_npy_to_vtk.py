@@ -54,6 +54,8 @@ if __name__ == '__main__':
 
     files = os.listdir(npz_path)
     for file in files:
+        if file == ".DS_Store":
+            continue
         npz_file = np.load(npz_path + '/' + file, allow_pickle=True)
         npz_file = npz_file.item()
 
