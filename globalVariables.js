@@ -49,7 +49,7 @@ var selected_pos = undefined;  // 被选中的pos，在singleEddy中查询是否
 // 当主窗口再次有效点击后才能把updateSign设置为true
 var updateSign = false;
 
-var eddyInfo;  // 涡核信息数组
+var eddyFeature;  // 涡核信息数组
 
 
 
@@ -57,7 +57,7 @@ var eddyInfo;  // 涡核信息数组
 // 加载深度数组
 loadDepth();
 // 加载涡核信息数组
-loadEddyInfo();
+loadEddyFeatures();
 
 
 
@@ -85,16 +85,17 @@ function loadDepth(){
 }
 
 
-function loadEddyInfo(){
-    var eddis_info_path = ("./resources/track/eddies.json");
+function loadEddyFeatures(){
+    var eddis_feature_path = ("./resources/features/features.json");
     
     $.ajax({
-        url: eddis_info_path,//json文件位置
+        url: eddis_feature_path,//json文件位置
         type: "GET",//请求方式为get
         dataType: "json", //返回数据格式为json
         async: false,  // 异步设置为否
         success: function(res) { //请求成功完成后要执行的方法 
-            eddyInfo = res;
+            eddyFeature = res;  // 包含三个字段：info, forward, backward。其中info[天数][下标] = [cx, cy, area, bx, by, br]
+            console.log(eddyFeature);
         }
     })
 }
@@ -194,7 +195,7 @@ function sleep(numberMillis) {
 }
 
 function playAction() {
-    console.log(Timer);
+    // console.log(Timer);
     
     var startDay = play_start_day;
     console.log(play_start_day);
@@ -206,20 +207,20 @@ function playAction() {
         day_ctrl.setValue(i);  // 先执行一次
 
         Timer = setInterval(function(){
-            console.log(i+1);
-            if(i+1<loadDayNum){
-                i++;
-                progress_bar.style.width = i/loadDayNum*100 + "%";
-                draggable_point.style.left = i/loadDayNum*100 + "%";
-
-
+            // console.log(i+1);
+            i++;
+            if(i<loadDayNum){
+                // 进度条
+                progress_bar.style.width = i/(loadDayNum-1)*100 + "%";
+                // 原点
+                draggable_point.style.left = i/(loadDayNum-1)*100 + "%";
                 day_ctrl.setValue(i);
             }
             else{
                 dynamic = oriDy;
                 clearInterval(Timer);
             }
-        },5000);
+        },3000);
     }
 }
 

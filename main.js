@@ -186,8 +186,14 @@ function onWindowResize() {
 
 
 function loadTexture2d(){
-    for(let i=0; i<5; i++){
-        var texture = THREE.ImageUtils.loadTexture('./images/2d_material/'+String(i)+'.png', {}, function() {
+    for(let i=0; i<loadDayNum; i++){
+        var str;
+        if(i<10)
+            str = '0'+String(i+1);  // 图片下标是从1开始的
+        else
+            str = String(i+1);
+        
+        var texture = THREE.ImageUtils.loadTexture('./resources/Ensemble1/Ensemble1TimeStep'+str+'.png', {}, function() {
             render();
         });
 
@@ -463,7 +469,7 @@ function createChannel(){
 
 // 2D地图形式
 function create2d(){
-    var texture = THREE.ImageUtils.loadTexture('./images/2d_material/0.png', {}, function() {
+    var texture = THREE.ImageUtils.loadTexture('./resources/Ensemble1/Ensemble1TimeStep01.png', {}, function() {
         render();
     });
 
@@ -816,7 +822,7 @@ function setGUI(){
 
         // removeCores();
         if(currentMainDay!=-1){
-            // showCores();  // 显示当日涡核
+            showCores();  // 显示当日涡核
         }
         
         
@@ -1078,29 +1084,28 @@ function updateMid(){
 
 // 在图中显示涡核
 function showCores(){
-    for(let i=0; i<eddyInfo.length; i++){
-        if(eddyInfo[i]['name'].split('_')[0] != String(currentMainDay))
-            continue;
-        var lon = eddyInfo[i]['lon'];
-        var lat = eddyInfo[i]['lat'];
-        var level = eddyInfo[i]['level'];
-
-        var pos = lll2xyz(lon, lat, level);
+    if(currentMainDay<0)
+        return;
+    var info = eddyFeature['info'][currentMainDay];
+    for(let i=0; i<info.length; i++){  // currentMainDay当天
+        var cx = info[i][0];
+        var cy = info[i][1];
+        // console.log(cx, cy);
+        cx = (cx/500 - 0.5)*edgeLen;
+        cy = (cy/500 - 0.5)*edgeWid;
 
         // 在涡核处显示标记
-        const geometrySphere = new THREE.SphereGeometry(10, 32, 32);
-        var sphere = new THREE.Mesh( geometrySphere, new THREE.MeshBasicMaterial({
-            color: 0x0000ff,
-            transparent: true,
-            opacity: 0.5,
-        }));
-
+        var geometryTri = new THREE.ConeGeometry( 20, 100, 3 );
+        geometryTri.rotateX( -Math.PI / 2 );
         // 直接setPosition好像不行，还是平移吧
-        geometrySphere.translate(pos[0], pos[1], pos[2]);
-
-        scene.add( sphere );
+        geometryTri.translate(cx, cy, 50);
         
-        existedSphere.push(sphere);
+        var cone = new THREE.Mesh( geometryTri, new THREE.MeshNormalMaterial(
+
+        ) );
+        scene.add( cone );
+        
+        existedSphere.push(cone);
 
         // console.log(sphere);
     }
