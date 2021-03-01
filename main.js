@@ -147,7 +147,7 @@ function init() {
     createHelper();
 
     // 显示等待条
-    showProgressModal("loadingFrames");
+    // showProgressModal("loadingFrames");
     // 加载涡旋模型
     loadEddiesForDays();
     
@@ -174,6 +174,7 @@ function init() {
     // 窗口缩放时触发
     window.addEventListener( 'resize', onWindowResize, false );
 
+    animate();
 }
 
 function onWindowResize() {
@@ -186,9 +187,9 @@ function onWindowResize() {
 
 
 function loadTexture2d(){
-    for(let i=0; i<loadDayNum; i++){
+    for(let i=0; i<30; i++){
         var str;
-        if(i<10)
+        if(i<9)
             str = '0'+String(i+1);  // 图片下标是从1开始的
         else
             str = String(i+1);
@@ -540,7 +541,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_3000_0_8.vtk"));
+            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_1000_0_8.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -708,10 +709,10 @@ function loadOneAttrArray(attr, path, d){
             // console.log(attrArray);
             if(d==loadDayNum-1){
                 console.log(attr+"值设置完毕");
-                animate();
+                // animate();
 
-                if(attr=="VORTICITY")
-                    hideProgressModal();
+                // if(attr=="VORTICITY")
+                    // hideProgressModal();
             }
         })
     });
@@ -820,7 +821,7 @@ function setGUI(){
             land_2d.material.map = textures_2d[currentMainDay];
         }
 
-        // removeCores();
+        removeCores();
         if(currentMainDay!=-1){
             showCores();  // 显示当日涡核
         }

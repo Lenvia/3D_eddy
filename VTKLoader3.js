@@ -89,6 +89,7 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 			// indicates start of triangle strips section
 			var patTRIANGLE_STRIPS = /^TRIANGLE_STRIPS /;
+			var patCELLS = /^CELLS /;
 
 			// POINT_DATA number_of_values
 			var patPOINT_DATA = /^POINT_DATA[ ]+(\d+)/;
@@ -120,7 +121,7 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 					var dataset = line.split( ' ' )[ 1 ];
 
-					if ( dataset !== 'POLYDATA' ) throw new Error( 'Unsupported DATASET type: ' + dataset );
+					if ( dataset !== 'POLYDATA' &&  dataset !== 'UNSTRUCTURED_GRID') throw new Error( 'Unsupported DATASET type: ' + dataset );
 
 				} else if ( inPointsSection ) {
 
@@ -247,7 +248,7 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 					inPointsSection = true;
 					inTriangleStripSection = false;
 
-				} else if ( patTRIANGLE_STRIPS.exec( line ) !== null ) {
+				} else if ( patTRIANGLE_STRIPS.exec( line ) !== null || patCELLS.exec( line ) !== null ) {
 
 					inPolygonsSection = false;
 					inPointsSection = false;

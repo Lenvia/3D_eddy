@@ -1,6 +1,6 @@
 import * as THREE from './node_modules/three/build/three.module.js';
 import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
-import { VTKLoader } from './VTKLoader4.js';
+import { VTKLoader } from './VTKLoader3.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 import { Line2 } from './node_modules/three/examples/jsm/lines/Line2.js';
 import { LineMaterial } from './node_modules/three/examples/jsm/lines/LineMaterial.js';
@@ -72,10 +72,11 @@ function demo() {
     
 }
 
+// 加载vtk流管（含有threhold）
 function demo2(){
     var promise1 = new Promise((resolve, reject)=>{
         // 加载一天的形状
-        var vtk_path = ("./112233.vtk");
+        var vtk_path = ("./resources/local_vtk_folder/0_1.vtk");
         var loader = new VTKLoader();
         console.log("loading", vtk_path);
         loader.load( vtk_path, function ( temp_geometry ) {  // 异步加载
@@ -181,7 +182,7 @@ function init(){
     container.innerHTML = "";
 
 
-    // demo2();
+    demo2();
     // demo();
     // demo3();
 
@@ -211,8 +212,8 @@ function init(){
 
 
     // console.log(container);
-    var pro = document.getElementById('audio-player-container');
-    container.appendChild(pro);
+    // var pro = document.getElementById('audio-player-container');
+    // container.appendChild(pro);
 
 
     container.appendChild( renderer.domElement );
