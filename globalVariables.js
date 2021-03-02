@@ -20,6 +20,7 @@ var re_depth = new Map();  // 反向映射，通过高度映射第几层
 var currentMainDay;  // （主面板）当前日期
 var day_ctrl;
 var dynamic = false;  // 默认不准动
+
 var progress_bar;
 var draggable_point;
 var Timer;
@@ -39,7 +40,7 @@ var local_models = [];
 var myChart = echarts.init(document.getElementById('echarts-container'));
 
 
-
+var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标
 
 
 
@@ -62,7 +63,9 @@ loadEddyFeatures();
 
 
 
-
+/*
+    预加载
+*/
 function loadDepth(){
     var depth_path = ("./resources/depth.json");
     var json_data;
@@ -84,7 +87,6 @@ function loadDepth(){
     })
 }
 
-
 function loadEddyFeatures(){
     var eddis_feature_path = ("./resources/features/features.json");
     
@@ -100,9 +102,9 @@ function loadEddyFeatures(){
     })
 }
 
-
-
-
+/*
+    触发函数
+*/
 
 function changeView(){
     // 这个顺序不能倒
@@ -243,6 +245,45 @@ function updateEcharts(attr, d){
         }
     })
 }
+
+function deleteModel(mod){
+    if(mod==undefined)
+        return ;
+    mod.geometry.dispose(); //删除几何体
+    mod.material.dispose(); //删除材质
+}
+
+// 暂时先用最简单的点距
+function getDisdance(px1, py1, px2, py2){
+    return Math.pow((px1-px2), 2) + Math.pow((py1-py2), 2);
+}
+
+// 找出当前位置最近的涡旋
+function getNearestEddy(px, py){
+    var minDis = 250000; // 最大不会超过250000的
+    var minIndex = undefined;
+    var tarCpx, tarCpy;
+
+    if(currentMainDay<0)
+        return;
+    var info = eddyFeature['info'][currentMainDay];
+    for(let i=0; i<info.length; i++){
+
+        var px2 = info[i][0];
+        var py2 = info[i][1];
+        var currentDis = getDisdance(px, py, px2, py2);
+        console.log(i, currentDis);
+
+        if(minDis>currentDis){
+            minDis = currentDis;
+            minIndex = i;
+            tarCpx = px2;
+            tarCpy = py2;
+        }
+    }
+    return new Array(minIndex, tarCpx, tarCpy);
+}
+
 
 /**
  * 坐标转换函数集合！

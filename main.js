@@ -32,7 +32,7 @@ for (var i =0; i<=59; i++){
 }
 
 
-var existedSphere = [];  // 场上存在的标记
+var existedCones = [];  // 场上存在的标记
 
 // 进度条模块
 var progressModal, progressBar, progressLabel, progressBackground;
@@ -1105,17 +1105,19 @@ function showCores(){
         ) );
         scene.add( cone );
         
-        existedSphere.push(cone);
+        existedCones.push(cone);
 
         // console.log(sphere);
     }
 }
 
 function removeCores(){
-    for(let i=0; i<existedSphere.length; i++){
-        scene.remove(existedSphere[i]);
+    for(let i=0; i<existedCones.length; i++){
+        var item = existedCones[i];
+        deleteModel(item);
+        scene.remove(item);
     }
-    existedSphere.length = 0;  // 清空数组
+    existedCones.length = 0;  // 清空数组
 }
 
 
@@ -1576,7 +1578,24 @@ function onMouseClick(event){
         var curObj = intersects[0];
         if(pitchMode == true){
             selected_pos = curObj.point;
-            updateSign = true;
+
+            // 恢复一下被更改的指示器material
+            if(tarArr[0]!=undefined){
+                recoverPointer(tarArr[0]);
+            }
+
+            // 鼠标mx my转换为panel的px py，再从json中找最近的涡旋
+            var pxy = mxy2pxy(selected_pos.x, selected_pos.y);
+            tarArr = getNearestEddy(pxy[0], pxy[1]);  // 得到最近的涡旋的下标、中心坐标
+
+            if(tarArr[0]!=undefined){
+                // 因为原来的材质是MeshNormalMaterial，是不能改变颜色的
+                // 这里换成普通的MeshLambertMaterial
+                var hex = 0xff0000;
+                changePointer(tarArr[0], hex)
+                updateSign = true;  // 向局部板块释放涡旋更新信号
+            }
+            
         }
     }
     
@@ -1585,6 +1604,15 @@ function onMouseClick(event){
 function getMouseXY(event){
     mouse.x = ( (event.clientX) / renderer.domElement.clientWidth ) * 2 - 1;
     mouse.y = - ( (event.clientY ) / renderer.domElement.clientHeight ) * 2 + 1;
+}
+
+function recoverPointer(index){
+    existedCones[index].material = new THREE.MeshNormalMaterial();
+}
+function changePointer(index, hex){
+    existedCones[index].material = new THREE.MeshLambertMaterial({
+        color: hex,
+    });
 }
 
 function setRenderSize() {
