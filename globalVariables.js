@@ -101,32 +101,7 @@ function loadEddyFeatures(){
 }
 
 
-/*
-    转换后的xyz到数组i,j,k的映射
-*/
-function xyz2ijk(x, y, z){
-    var orix = x/edgeLen + 0.5;
-    var oriy = y/edgeWid + 0.5;
-    var oriz = -z/scaleHeight;
 
-
-    var i = Math.floor(orix/0.002);
-    var j = Math.floor(oriy/0.002);
-    var k = re_depth.get(oriz);
-    // console.log(oriz);
-
-    return new Array(i, j, k);
-}
-
-// 经度、纬度、深度转xyz
-function lll2xyz(lon, lat, level){
-    var x = ((lon - 30.2072)/20 -0.5)*edgeLen;  // 20是经度跨度（下面纬度跨度 数据中也是20）
-    var y = ((lat - 10.0271)/20 -0.5)*edgeWid;
-    // var z = -depth_array[level];
-    var z = 0;  // 还是用0吧
-
-    return new Array(x, y, z);
-}
 
 
 function changeView(){
@@ -269,3 +244,50 @@ function updateEcharts(attr, d){
     })
 }
 
+/**
+ * 坐标转换函数集合！
+ */
+
+//转换后的xyz到数组i,j,k的映射
+function xyz2ijk(x, y, z){
+    var orix = x/edgeLen + 0.5;
+    var oriy = y/edgeWid + 0.5;
+    var oriz = -z/scaleHeight;
+
+
+    var i = Math.floor(orix/0.002);
+    var j = Math.floor(oriy/0.002);
+    var k = re_depth.get(oriz);
+    // console.log(oriz);
+
+    return new Array(i, j, k);
+}
+
+// 经度、纬度、深度转xyz
+// 这里的坐标就代表三维坐标轴里的
+function lll2xyz(lon, lat, level){
+    var x = ((lon - 30.2072)/20 -0.5)*edgeLen;  // 20是经度跨度（下面纬度跨度 数据中也是20）
+    var y = ((lat - 10.0271)/20 -0.5)*edgeWid;
+    // var z = -depth_array[level];
+    var z = 0;  // 还是用0吧
+
+    return new Array(x, y, z);
+}
+
+// 传递过来的鼠标坐标mx,my 到panel中的px,py（panel大小为500*500）
+// 这里mx my和在三维坐标轴里的x y含义一样
+function mxy2pxy(mx, my){
+    var px = (mx/edgeLen+0.5)*500;
+    var py = (my/edgeWid+0.5)*500;
+
+    // console.log("mx, my:",mx, my)
+    // console.log("px, py:",px, py)
+    return new Array(px, py);
+}
+
+// panel中的px py到坐标轴的x y
+function pxy2xy(px, py){
+    var x = (px/500 - 0.5)*edgeLen;
+    var y = (py/500 - 0.5)*edgeWid;
+    return new Array(x,y);
+}

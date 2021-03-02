@@ -1089,17 +1089,16 @@ function showCores(){
         return;
     var info = eddyFeature['info'][currentMainDay];
     for(let i=0; i<info.length; i++){  // currentMainDay当天
-        var cx = info[i][0];
-        var cy = info[i][1];
-        // console.log(cx, cy);
-        cx = (cx/500 - 0.5)*edgeLen;
-        cy = (cy/500 - 0.5)*edgeWid;
+        var cpx = info[i][0];  // cpx指的是在panel上的cx
+        var cpy = info[i][1];
+
+        var cxy = pxy2xy(cpx, cpy);
 
         // 在涡核处显示标记
         var geometryTri = new THREE.ConeGeometry( 20, 100, 3 );
         geometryTri.rotateX( -Math.PI / 2 );
         // 直接setPosition好像不行，还是平移吧
-        geometryTri.translate(cx, cy, 50);
+        geometryTri.translate(cxy[0], cxy[1], 50);
         
         var cone = new THREE.Mesh( geometryTri, new THREE.MeshNormalMaterial(
 

@@ -2,7 +2,7 @@ import * as THREE from './node_modules/three/build/three.module.js';
 import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 import { ImprovedNoise } from './node_modules/three/examples/jsm/math/ImprovedNoise.js';
-import { VTKLoader } from './VTKLoader2.js';
+import { VTKLoader } from './VTKLoader3.js';
 
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
@@ -29,7 +29,8 @@ for (var i =0; i<=59; i++){
 }
 
 
-var curLocalLine;
+var curPart;
+var curPartName;
 
 
 init();
@@ -201,114 +202,141 @@ function loadAllEddies(){
 
 
 
-// 传递过来的坐标到经纬度的映射，用来判断距离
-function xy2lonlat(x, y){
-    var lon = (x/edgeLen+0.5)*20+30.2072;
-    var lat = (y/edgeWid+0.5)*20+10.0271;
+// 找出当前位置最近的涡旋
+function getNearestEddy(px, py){
 
-    console.log(lon, lat);
+    var minDis = 250000; // 最大不会超过250000的
+    var minIndex = undefined;
+    var tarCpx, tarCpy;
 
+    if(currentMainDay<0)
+        return;
+    var info = eddyFeature['info'][currentMainDay];
+    for(let i=0; i<info.length; i++){
 
-    var minDis = 1000; // 最大不会超过800的
-    var minName = undefined;
-
-    for(let i=0; i<eddyInfo.length; i++){
-        if(eddyInfo[i]['name'].split('_')[0] != String(currentMainDay))
-            continue;
-        
-        var currentDis = getDisdance(lon, lat, eddyInfo[i]['lon'], eddyInfo[i]['lat']);
-        console.log(eddyInfo[i]['name'], currentDis);
+        var px2 = info[i][0];
+        var py2 = info[i][1];
+        var currentDis = getDisdance(px, py, px2, py2);
+        console.log(i, currentDis);
 
         if(minDis>currentDis){
             minDis = currentDis;
-            minName = eddyInfo[i]['name'];
+            minIndex = i;
+            tarCpx = px2;
+            tarCpy = py2;
         }
     }
 
-    if(minName!=undefined){
-        curLocalLine = findModel2(minName);
+    if(minIndex!=undefined){
+        // curPart = findModel2(minIndex);
+        curPart = undefined;
 
-        if(curLocalLine == undefined){  // 在已有数组中并没有找到，就从vtk中加载
-            loadSigleEddy(minName);
+        // console.log("pxy: ", px, py);
+        // console.log("tarCpxy:", tarCpx, tarCpy);
+
+        if(curPart == undefined){  // 在已有数组中并没有找到，就从vtk中加载
+            // 计算该涡旋属于哪一个part
+            var partIndex = choosePart(tarCpx, tarCpy);
+            // console.log(partIndex);
+            var partName = String(currentMainDay)+"_"+String(partIndex);
+
+            if(partName == curPartName)  //  不需要加载
+                return ;
+            
+            // 否则重新加载，并且更新curPartName
+            loadLocalEddy(partName);
+            curPartName = partName;
         }
         else{  // 已有缓存，直接加载
-            scene.add(curLocalLine);
+            // scene.add(curPart);
         }
     }
 }
 
-function loadSigleEddy(name){
-    for(let i=0; i<eddyInfo.length; i++){
-        if(eddyInfo[i]['name']==name){
-            var promise = new Promise(function(resolve, reject) {
-                var vtk_path = ("./resources/vtk_folder/".concat(eddyInfo[i]['master'], '/vtk', name, '.vtk'))
-                var loader = new VTKLoader();
+function loadLocalEddy(partName){
+    var promise = new Promise(function(resolve, reject) {
+        var vtk_path = ("./resources/local_vtk_folder/".concat(partName,'.vtk'))
+        var loader = new VTKLoader();
 
-                loader.load( vtk_path, function ( geometry ) {  // 异步加载
-                    geometry.translate(-0.5, -0.5, 0);
-                    
-                    var positions = geometry.attributes.position.array;
-                    for ( let j = 0;  j < positions.length; j += 3 ) {
-                        // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
-                        positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
-                    }
+        loader.load( vtk_path, function ( geometry ) {  // 异步加载
+            geometry.translate(-0.5, -0.5, 0);
+            
+            var positions = geometry.attributes.position.array;
+            for ( let j = 0;  j < positions.length; j += 3 ) {
+                // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
+                positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
+            }
 
-                    geometry.scale(edgeLen, edgeWid, scaleHeight);
-                    // 转化为无索引格式，用来分组
-                    geometry = geometry.toNonIndexed();
+            geometry.scale(edgeLen, edgeWid, scaleHeight);
+            // 转化为无索引格式，用来分组
+            // geometry = geometry.toNonIndexed();
 
-                    var vertexNum = geometry.attributes.position.count;
-                    
-                    var opa = []; // 顶点透明度，用来改变线条透明度
-                    for (var i = 0; i<vertexNum; i++){
-                        opa.push(1);  // 默认都是1
-                    }
-                    geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
-                    
-                    var groupId;  // 组号
+            // var vertexNum = geometry.attributes.position.count;
 
-                    var mats = [];
+            
+            // var groupId;  // 组号
 
-                    for (var i =0; i<vertexNum; i+=2){
-                        groupId = i/2;
-                        geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
+            // var mats = [];
 
-                        let material = new THREE.LineBasicMaterial({
-                            // vertexColors: false,  // 千万不能设置为true！！！！血的教训
-                            transparent: true, // 可定义透明度
-                            opacity: 1,
-                            depthWrite: false, 
-                        });
-                        mats.push(material);
-                    }
-                    var linesG = new THREE.LineSegments(geometry, mats);
+            // for (var i =0; i<vertexNum; i+=2){
+            //     groupId = i/2;
+            //     geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
 
-                    //need update 我不知道有没有用，感觉没用
-                    linesG.geometry.colorsNeedUpdate = true;
-                    linesG.geometry.groupsNeedUpdate = true;
-                    linesG.material.needsUpdate = true;
-                    
-                    // initLineOpacity(linesG, 0.5);  // 初始化透明度
-                    linesG.name = name;  // 0_9, 4_10, ...
-                    // console.log(name, "加载完毕");
-                    local_models.push(linesG);
-                    resolve(name);
-                });
+            //     let material = new THREE.LineBasicMaterial({
+            //         // vertexColors: false,  // 千万不能设置为true！！！！血的教训
+            //         transparent: true, // 可定义透明度
+            //         opacity: 1,
+            //         depthWrite: false, 
+            //     });
+            //     mats.push(material);
+            // }
+            // var linesG = new THREE.LineSegments(geometry, mats);
+
+            geometry.computeVertexNormals();
+            geometry.normalizeNormals();
+
+
+            let material = new THREE.MeshLambertMaterial({
+                transparent: true, // 可定义透明度
+                opacity: 0.6,
+                depthWrite: false,
+                side: THREE.DoubleSide,
+                flatShading: true,
+                // vertexColors: true,
+                color: 0x576eb8, 
             });
-            promise.then(()=>{
-                var model = findModel2(name);
-                scene.add(model);
-                console.log(name, "加载完毕！");
-                return ;
-            })
-        }
-    }
+
+            var tube = new THREE.Mesh(geometry, material);
+
+            //need update 我不知道有没有用，感觉没用
+            // linesG.geometry.colorsNeedUpdate = true;
+            // linesG.geometry.groupsNeedUpdate = true;
+            // linesG.material.needsUpdate = true;
+            
+            tube.name = partName;
+            console.log(partName, "加载完毕");
+
+            local_models.push(tube);
+
+            scene.add(tube);
+
+            curPart = tube;
+
+            resolve(partName);
+        });
+    });
+    promise.then(()=>{
+        // var model = findModel2(name);
+        // console.log(name, "加载完毕！");
+        return ;
+    })
+
 }
 
 
 // 暂时先用最简单的点距
-function getDisdance(lon1, lat1, lon2, lat2){
-    return Math.pow((lon1-lon2), 2) + Math.pow((lat1-lat2), 2);
+function getDisdance(px1, py1, px2, py2){
+    return Math.pow((px1-px2), 2) + Math.pow((py1-py2), 2);
 }
 
 // 根据模型名从数组中找到模型
@@ -321,6 +349,15 @@ function findModel2(name){
     return undefined;   // 没有找到
 }
 
+// 计算涡旋属于哪一个part
+function choosePart(px, py){
+    if(py-px>125)  // 左上角
+        return 1;
+    else if(py-px<-125)  // 右下角
+        return 2;
+    else return 3;  // 中央
+}
+
 
 
 function animate() {
@@ -330,7 +367,9 @@ function animate() {
         console.log(selected_pos);
         updateSign = false;
 
-        xy2lonlat(selected_pos.x, selected_pos.y);
+        // 鼠标mx my转换为panel的px py，再从json中找最近的涡旋
+        var pxy = mxy2pxy(selected_pos.x, selected_pos.y);
+        getNearestEddy(pxy[0], pxy[1]);
     }
     render();
     stats.update();
