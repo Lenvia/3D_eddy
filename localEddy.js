@@ -18,20 +18,11 @@ var renderWidth , renderHeight;
 setRenderSize();
 
 
-const raycaster = new THREE.Raycaster();  // 射线
-const mouse = new THREE.Vector2();  // 鼠标二维坐标
-
-const days = [];  // 一共60天
-const exDays = [-1]; // 扩展天数，第一个是-1
-for (var i =0; i<=59; i++){
-    days.push(i);
-    exDays.push(i);
-}
-
-
+// 任何时候窗口只有一个part
 var curPart;
-var curPartName;
 
+var existedCones = [];  // 场上存在的标记
+var existedEddy = [];  // 场上存在的涡旋
 
 init();
 
@@ -63,8 +54,6 @@ function init() {
     controls.maxDistance = 10000;  // 最远距离
     // controls.maxPolarAngle = Math.PI / 2;  // 限制竖直方向上最大旋转角度。（y轴正向为0度）
     controls.target.z = 0;
-
-    
     controls.update();
 
 
@@ -72,13 +61,7 @@ function init() {
     var axesHelper = new THREE.AxesHelper(1500);
     scene.add(axesHelper);
 
-
     createSea();
-
-
-    // 加载涡旋模型
-    // loadAllEddies();
-
 
     //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
     var ambient = new THREE.AmbientLight(0xffffff);
@@ -136,15 +119,13 @@ function showSpecifiedArea(tarArr){
         // console.log(partIndex);
         var partName = String(currentMainDay)+"_"+String(partIndex);
 
-        if(partName == curPartName)  //  不需要加载
-                return ;
+        if(curPart!=undefined && partName == curPart.name)  //  不需要重载
+            return ;
         else{
-            console.log(curPart);
-            deleteModel(curPart);  // 删除之前的
+            deleteModel(curPart);  // 删除模型的geometry和材质
             scene.remove(curPart);
             //重新加载，并且更新curPartName
             loadLocalEddy(partName);
-            curPartName = partName;
         }
     }
 }
@@ -204,7 +185,37 @@ function loadLocalEddy(partName){
         // console.log(name, "加载完毕！");
         return ;
     })
+}
 
+// 显示当前涡旋的指示器
+function showPointer(index) {
+    var info = eddyFeature['info'][currentMainDay];
+    var cpx = info[index][0];  // cpx指的是在panel上的cx
+    var cpy = info[index][1];
+
+    var cxy = pxy2xy(cpx, cpy);
+
+    // 在涡核处显示标记
+    var geometryTri = new THREE.ConeGeometry( 20, 100, 3 );
+    geometryTri.rotateX( -Math.PI / 2 );
+    // 直接setPosition好像不行，还是平移吧
+    geometryTri.translate(cxy[0], cxy[1], 50);
+    
+    var cone = new THREE.Mesh( geometryTri, new THREE.MeshNormalMaterial(
+
+    ) );
+    cone.name = "pointer-"+String(currentMainDay)+"_"+String(index);
+    existedCones.push(cone);
+    scene.add( cone );
+}
+
+function removePointers(){
+    for(let i=0; i<existedCones.length; i++){
+        var item = existedCones[i];
+        deleteModel(item);
+        scene.remove(item);
+    }
+    existedCones.length = 0;  // 清空数组
 }
 
 
@@ -233,10 +244,19 @@ function animate() {
     requestAnimationFrame( animate );
 
     // 监测鼠标点击
-    if(tarArr[0]!= undefined && updateSign){  // 如果涡旋下标tarArr[0]不为空，并且收到更新信号
-        updateSign = false;  // 立刻消除更新信号
+    if(tarArr[0]!= undefined && pitchUpdateSign){  // 如果涡旋下标tarArr[0]不为空，并且收到更新信号
+        pitchUpdateSign = false;  // 立刻消除更新信号
 
+        removePointers();  // 清除原有显示
         showSpecifiedArea(tarArr);
+        showPointer(tarArr[0]);  // 显示该涡旋指示器
+
+    }
+
+    if(switchUpdateSign){  // 如果主界面切换了天数
+        switchUpdateSign = false;  // 消除更新信号
+        removePointers();  // 清除原有显示
+        // 不追踪！
     }
     render();
     stats.update();

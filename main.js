@@ -89,6 +89,8 @@ var downValue_ctrl;
 
 var textures_2d = [];
 
+var selected_pos = undefined;  // 被鼠标选中的pos
+
 
 
 init();
@@ -768,7 +770,7 @@ function setGUI(){
 
     // 日期相关
     currentMainDay = -1;
-    var lastDay = -1;
+    lastDay = -1;
     var lastLine;  // 当前显示的线，上次显示的线
     var site, last_site;
     // 默认属性值
@@ -821,11 +823,12 @@ function setGUI(){
             land_2d.material.map = textures_2d[currentMainDay];
         }
 
-        removeCores();
+        removePointers();
         if(currentMainDay!=-1){
-            showCores();  // 显示当日涡核
+            showPointers();  // 显示当日涡核指示器
         }
         
+        switchUpdateSign = true; //向局部窗口发送信号该更新了
         
     });
 
@@ -1084,7 +1087,7 @@ function updateMid(){
 }
 
 // 在图中显示涡核
-function showCores(){
+function showPointers(){
     if(currentMainDay<0)
         return;
     var info = eddyFeature['info'][currentMainDay];
@@ -1111,7 +1114,7 @@ function showCores(){
     }
 }
 
-function removeCores(){
+function removePointers(){
     for(let i=0; i<existedCones.length; i++){
         var item = existedCones[i];
         deleteModel(item);
@@ -1593,12 +1596,11 @@ function onMouseClick(event){
                 // 这里换成普通的MeshLambertMaterial
                 var hex = 0xff0000;
                 changePointer(tarArr[0], hex)
-                updateSign = true;  // 向局部板块释放涡旋更新信号
+                pitchUpdateSign = true;  // 向局部板块释放涡旋更新信号
             }
             
         }
-    }
-    
+    }   
 }
 
 function getMouseXY(event){

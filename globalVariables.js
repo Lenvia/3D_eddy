@@ -18,6 +18,8 @@ var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
 
 var currentMainDay;  // （主面板）当前日期
+var lastDay;  // （主面板）上一日
+
 var day_ctrl;
 var dynamic = false;  // 默认不准动
 
@@ -44,11 +46,12 @@ var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标
 
 
 
-var selected_pos = undefined;  // 被选中的pos，在singleEddy中查询是否有合适的进行显示
+
 // 更新信号
-// 仅selected_pos不为空还不行，必须updateSign也为true才能更新，并且更新后updateSign要设置为false。
-// 当主窗口再次有效点击后才能把updateSign设置为true
-var updateSign = false;
+// 仅selected_pos不为空还不行，必须pitchUpdateSign也为true才能更新，并且更新后 pitchUpdateSign要设置为false。
+// 当主窗口再次有效点击后才能把pitchUpdateSign设置为true
+var pitchUpdateSign = false;
+var switchUpdateSign = false;  // 因为主界面切换日期而引起局部涡旋的更新
 
 var eddyFeature;  // 涡核信息数组
 
@@ -176,29 +179,31 @@ function playAction() {
     
     var startDay = play_start_day;
     console.log(play_start_day);
+    var oriDy;
     if(is3d){
-        var oriDy = dynamic;  // 原始dynamic
+        oriDy = dynamic;  // 原始dynamic
         dynamic = true;  // 不管是不是dy，先设置成动态
-
-        let i=startDay;
-        day_ctrl.setValue(i);  // 先执行一次
-
-        Timer = setInterval(function(){
-            // console.log(i+1);
-            i++;
-            if(i<loadDayNum){
-                // 进度条
-                progress_bar.style.width = i/(loadDayNum-1)*100 + "%";
-                // 原点
-                draggable_point.style.left = i/(loadDayNum-1)*100 + "%";
-                day_ctrl.setValue(i);
-            }
-            else{
-                dynamic = oriDy;
-                clearInterval(Timer);
-            }
-        },3000);
     }
+
+    let i=startDay;
+    day_ctrl.setValue(i);  // 先执行一次
+
+    Timer = setInterval(function(){
+        // console.log(i+1);
+        i++;
+        if(i<loadDayNum){
+            // 进度条
+            progress_bar.style.width = i/(loadDayNum-1)*100 + "%";
+            // 原点
+            draggable_point.style.left = i/(loadDayNum-1)*100 + "%";
+            day_ctrl.setValue(i);
+        }
+        else{
+            if(is3d)
+                dynamic = oriDy;
+            clearInterval(Timer);
+        }
+    },3000);
 }
 
 function pauseAction(){
@@ -283,6 +288,8 @@ function getNearestEddy(px, py){
     }
     return new Array(minIndex, tarCpx, tarCpy);
 }
+
+
 
 
 /**
