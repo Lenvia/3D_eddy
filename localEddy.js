@@ -22,7 +22,7 @@ setRenderSize();
 var curPart;
 
 var existedCones = [];  // 场上存在的标记
-var existedEddy = [];  // 场上存在的涡旋
+var existedEddyIndices = [];  // 场上存在的涡旋的index
 
 init();
 
@@ -216,6 +216,11 @@ function removePointers(){
         scene.remove(item);
     }
     existedCones.length = 0;  // 清空数组
+    
+}
+
+function clearEEI(){  // 清空场上涡旋index数组
+    existedEddyIndices.length = 0;
 }
 
 
@@ -248,14 +253,19 @@ function animate() {
         pitchUpdateSign = false;  // 立刻消除更新信号
 
         removePointers();  // 清除原有显示
+        clearEEI();  // 清空场上涡旋index数组
+
         showSpecifiedArea(tarArr);
+
         showPointer(tarArr[0]);  // 显示该涡旋指示器
+        existedEddyIndices.push(tarArr[0]);  // 放入当前涡旋编号
 
     }
 
     if(switchUpdateSign){  // 如果主界面切换了天数
         switchUpdateSign = false;  // 消除更新信号
         removePointers();  // 清除原有显示
+        clearEEI();  // 清空场上涡旋index数组
         // 不追踪！
     }
     render();

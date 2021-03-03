@@ -163,7 +163,6 @@ function switchView(){
 }
 
 
-
 function sleep(numberMillis) {
     var now = new Date();
     var exitTime = now.getTime() + numberMillis;
@@ -205,7 +204,6 @@ function playAction() {
         }
     },3000);
 }
-
 function pauseAction(){
     clearInterval(Timer);
 }
@@ -289,8 +287,28 @@ function getNearestEddy(px, py){
     return new Array(minIndex, tarCpx, tarCpy);
 }
 
+// 对于第d天的index下标涡旋进行追踪，返回一个数组，表示下一天该涡旋的延续
+function track(d, index){
+    var dayForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
+    return dayForwardsList[index];  // 返回index下标的延续下标集合
+}
 
+// 追踪d天时 curList所有涡旋的延续，并将所有结果放在一个数组中，并去重
+// curList存储的都是第d天的下标
+function track(curList, d){
+    var result = [];
+    var dayForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
+    for(let i=0; i<curList.length; i++){
+        result.concat(dayForwardsList[curList[i]]);
+    }
+    return dedupe(result);
+}
 
+// 数组去重
+function dedupe(array){
+    return Array.from(new Set(array));
+    //这里的 Array.from（）方法是将两类对象转为真正的数组：类似数组的对象和可遍历的对象（包括es6新增的数据结构Set和Map）
+}
 
 /**
  * 坐标转换函数集合！
