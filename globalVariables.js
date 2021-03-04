@@ -281,7 +281,7 @@ function getNearestEddy(px, py){
         var px2 = info[i][0];
         var py2 = info[i][1];
         var currentDis = getDisdance(px, py, px2, py2);
-        console.log(i, currentDis);
+        // console.log(i, currentDis);
 
         if(minDis>currentDis){
             minDis = currentDis;

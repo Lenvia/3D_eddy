@@ -621,7 +621,7 @@ function loadEddiesForDays(){
         console.log("模型加载完毕");
         // 设置属性
         loadAttrArray("OW");
-        loadAttrArray("VORTICITY")
+        // loadAttrArray("VORTICITY");
     })
 }
 

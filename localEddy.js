@@ -18,11 +18,12 @@ var renderWidth , renderHeight;
 setRenderSize();
 
 
-// 任何时候窗口只有一个part
-var curPart;
+
 
 var existedCones = [];  // 场上存在的标记
 var existedEddyIndices = [];  // 场上存在的涡旋的index
+var existedPartNames = [];  // 场上存在的partName
+var willBeAddPartNames = [];  // 需要添加的partName
 
 init();
 
@@ -111,28 +112,43 @@ function createSea(){
 
 
 // 根据目标涡旋下标、中心来显示指定区域
-function showSpecifiedArea(tarArr){
+// function showSpecifiedArea(tarArr){
+//     var minIndex = tarArr[0];  // 目标涡旋下标
+//     // 涡旋中心
+//     var tarCpx = tarArr[1];
+//     var tarCpy = tarArr[2];
+
+//     if(minIndex!=undefined){
+//         // 计算该涡旋属于哪一个part
+//         var partIndex = choosePart(tarCpx, tarCpy);
+//         // console.log(partIndex);
+//         var partName = String(currentMainDay)+"_"+String(partIndex);
+
+//         if(curPart!=undefined && partName == curPart.name)  //  不需要重载
+//             return ;
+//         else{
+//             deleteModel(curPart);  // 删除模型的geometry和材质
+//             scene.remove(curPart);
+//             //重新加载，并且更新curPartName
+//             loadLocalEddy(partName);
+//         }
+//     }
+// }
+
+function getPartNameFromTarArr(tarArr){  // 根据目标涡旋（下标，中心坐标）得到对应的partName
     var minIndex = tarArr[0];  // 目标涡旋下标
     // 涡旋中心
     var tarCpx = tarArr[1];
     var tarCpy = tarArr[2];
 
-    if(minIndex!=undefined){
-        // 计算该涡旋属于哪一个part
-        var partIndex = choosePart(tarCpx, tarCpy);
-        // console.log(partIndex);
-        var partName = String(currentMainDay)+"_"+String(partIndex);
+    var partIndex = choosePart(tarCpx, tarCpy);
+    // console.log(partIndex);
+    var partName = String(currentMainDay)+"_"+String(partIndex);
 
-        if(curPart!=undefined && partName == curPart.name)  //  不需要重载
-            return ;
-        else{
-            deleteModel(curPart);  // 删除模型的geometry和材质
-            scene.remove(curPart);
-            //重新加载，并且更新curPartName
-            loadLocalEddy(partName);
-        }
-    }
+    return partName;
 }
+
+
 
 // 从本地vtk加载模型
 function loadLocalEddy(partName){
@@ -177,8 +193,6 @@ function loadLocalEddy(partName){
             console.log(partName, "加载完毕");
 
             scene.add(tube);
-
-            curPart = tube;
 
             resolve(partName);
         });
@@ -260,6 +274,32 @@ function choosePart(px, py){
     else return 3;  // 中央
 }
 
+// 更新part
+// 在e数组中，保留与w重合的，其他的都删除，并添加w独有的
+function updateParts(){
+    console.log(existedPartNames);
+    console.log(willBeAddPartNames);
+    // 删除e中有的而w中没有的
+    for(let i=0; i<existedPartNames.length; ){  // 注意这里不能简单的i++
+        if(willBeAddPartNames.indexOf(existedPartNames[i]) == -1){  // 需要删除的
+            var curPart = scene.getObjectByName(existedPartNames[i]);
+            deleteModel(curPart);  // 删除模型的geometry和材质
+            scene.remove(curPart);
+            existedPartNames.splice(i, 1);  // 删除当前元素
+        }
+        else i++;
+    }
+    // 向e中添加w中独有的
+    for(let i=0; i<willBeAddPartNames.length; i++){
+        if(existedPartNames.indexOf(willBeAddPartNames[i])==-1){  // w中独有的，需要添加模型
+            loadLocalEddy(willBeAddPartNames[i]);  // 加载模型
+            existedPartNames.push(willBeAddPartNames[i]);  // 放入已加载数组
+        }
+    }
+
+    willBeAddPartNames.length = 0;  // 清空待更新数组
+}
+
 
 
 function animate() {
@@ -272,7 +312,11 @@ function animate() {
         removePointers();  // 清除原有显示
         clearEEI();  // 清空场上涡旋index数组
 
-        showSpecifiedArea(tarArr);
+        // showSpecifiedArea(tarArr);
+        var tempName = getPartNameFromTarArr(tarArr);  // 得到临近涡旋所属的partName
+        willBeAddPartNames.push(tempName);  // 放入exsitedPartNames数组等待添加
+
+        updateParts();
 
         showPointer(tarArr[0]);  // 显示该涡旋指示器
         existedEddyIndices.push(tarArr[0]);  // 放入当前涡旋编号
