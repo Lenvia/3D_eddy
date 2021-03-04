@@ -70,6 +70,10 @@ function init() {
     stats = new Stats();
     container.appendChild( stats.dom );
 
+    var nextDayButton = document.getElementById('nextDay');
+    container.appendChild(nextDayButton);
+
+
     // 窗口缩放时触发
     window.addEventListener( 'resize', onWindowResize, false );
 
@@ -130,6 +134,7 @@ function showSpecifiedArea(tarArr){
     }
 }
 
+// 从本地vtk加载模型
 function loadLocalEddy(partName){
     var promise = new Promise(function(resolve, reject) {
         var vtk_path = ("./resources/local_vtk_folder/".concat(partName,'.vtk'))
@@ -171,8 +176,6 @@ function loadLocalEddy(partName){
             tube.name = partName;
             console.log(partName, "加载完毕");
 
-            local_models.push(tube);
-
             scene.add(tube);
 
             curPart = tube;
@@ -209,6 +212,7 @@ function showPointer(index) {
     scene.add( cone );
 }
 
+// 移除场上所有的指示器
 function removePointers(){
     for(let i=0; i<existedCones.length; i++){
         var item = existedCones[i];
@@ -219,20 +223,33 @@ function removePointers(){
     
 }
 
-function clearEEI(){  // 清空场上涡旋index数组
+// 清空场上涡旋index数组
+function clearEEI(){
     existedEddyIndices.length = 0;
 }
 
+// 显示当前场上涡旋的下一日延续
+function showNextEddies(){
+    if(existedEddyIndices.length==0)  // 如果场上根本没有涡旋，直接return
+        return;
+    if(currentMainDay+1>=dayLimit)  // 没有下一天了
+        return; 
+    console.log(existedEddyIndices);
+    existedEddyIndices = trackAll(existedEddyIndices, currentMainDay); // 获得下一天的延续
+    console.log(existedEddyIndices);
+    removePointers(); // 清除场上所有标记
 
-// 根据模型名从数组中找到模型
-function findModel2(name){
-    for(let i =0; i<local_models.length; i++){
-        if(local_models[i].name==name){
-            return local_models[i];
-        }
+    // 更新curMainDay，但不让其影响局部窗口
+    restrainUpdateSign = true;
+    day_ctrl.setValue(currentMainDay+1);  // 设置为下一天
+
+    // 这时候currentMainDay已经更新为下一天了
+    console.log(currentMainDay);
+    for(let i=0; i<existedEddyIndices.length; i++){
+        showPointer(existedEddyIndices[i]);
     }
-    return undefined;   // 没有找到
 }
+
 
 // 计算涡旋属于哪一个part
 function choosePart(px, py){
@@ -263,11 +280,18 @@ function animate() {
     }
 
     if(switchUpdateSign){  // 如果主界面切换了天数
+        console.log("刷新局部涡旋窗口")
         switchUpdateSign = false;  // 消除更新信号
         removePointers();  // 清除原有显示
         clearEEI();  // 清空场上涡旋index数组
         // 不追踪！
     }
+
+    if(showNextEddiesSign){  // 在局部窗口点击了追踪下一天
+        showNextEddiesSign = false; //清除标记
+        showNextEddies();
+    }
+
     render();
     stats.update();
 }

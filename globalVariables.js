@@ -28,7 +28,7 @@ var draggable_point;
 var Timer;
 
 var play_start_day = 0;  // 播放器起点（默认为0）
-var loadDayNum = 5;  // 加载多少天
+var loadDayNum = 3;  // 加载多少天
 
 var appearFolder;
 var attrFolder;
@@ -44,6 +44,10 @@ var myChart = echarts.init(document.getElementById('echarts-container'));
 
 var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标
 
+var dayLimit = 60;  // 暂定60为最大天数
+
+var showNextEddiesSign = false;  // 窗口点击响应标记，用来控制localEddy.js中showNextEddies()函数
+
 
 
 
@@ -51,7 +55,9 @@ var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标
 // 仅selected_pos不为空还不行，必须pitchUpdateSign也为true才能更新，并且更新后 pitchUpdateSign要设置为false。
 // 当主窗口再次有效点击后才能把pitchUpdateSign设置为true
 var pitchUpdateSign = false;
-var switchUpdateSign = false;  // 因为主界面切换日期而引起局部涡旋的更新
+var switchUpdateSign = false;  // 如果为true，表示主界面切换日期而引起局部涡旋的更新
+
+var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的日期，这里不能再反过来清除局部窗口的元素
 
 var eddyFeature;  // 涡核信息数组
 
@@ -295,12 +301,14 @@ function track(d, index){
 
 // 追踪d天时 curList所有涡旋的延续，并将所有结果放在一个数组中，并去重
 // curList存储的都是第d天的下标
-function track(curList, d){
+function trackAll(curList, d){
     var result = [];
     var dayForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
     for(let i=0; i<curList.length; i++){
-        result.concat(dayForwardsList[curList[i]]);
+        console.log(dayForwardsList[curList[i]]);
+        result = result.concat(dayForwardsList[curList[i]]);
     }
+    // console.log(result);
     return dedupe(result);
 }
 
@@ -356,4 +364,10 @@ function pxy2xy(px, py){
     var x = (px/500 - 0.5)*edgeLen;
     var y = (py/500 - 0.5)*edgeWid;
     return new Array(x,y);
+}
+
+
+// 标记开放函数
+function openShowNextEddiesSign(){
+    showNextEddiesSign = true;
 }

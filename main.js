@@ -787,7 +787,7 @@ function setGUI(){
         currentMainDay = default_opt.currentMainDay;
         currentMainDay = parseInt(currentMainDay);
         console.log("currentMainDay:", currentMainDay);
-        console.log(is3d);
+        // console.log(is3d);
 
         if(is3d){ // 3d视图
             if(lastDay!=-1){  // 清除上次的显示
@@ -828,7 +828,13 @@ function setGUI(){
             showPointers();  // 显示当日涡核指示器
         }
         
-        switchUpdateSign = true; //向局部窗口发送信号该更新了
+        console.log(restrainUpdateSign);
+        if(!restrainUpdateSign)  // 如果没有被抑制（即主窗口自己更新的日期，就会带动局部窗口更新）
+            switchUpdateSign = true; //向局部窗口发送信号该更新了
+        else{  // 局部窗口抑制主窗口改变局部窗口
+            restrainUpdateSign = false;  // 清空
+        }
+        
         
     });
 
