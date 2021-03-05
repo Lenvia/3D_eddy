@@ -135,12 +135,7 @@ function createSea(){
 //     }
 // }
 
-function getPartNameFromTarArr(tarArr){  // 根据目标涡旋（下标，中心坐标）得到对应的partName
-    var minIndex = tarArr[0];  // 目标涡旋下标
-    // 涡旋中心
-    var tarCpx = tarArr[1];
-    var tarCpy = tarArr[2];
-
+function getPartNameFromPxy(tarCpx, tarCpy){  // 根据目标涡旋中心坐标得到对应的partName
     var partIndex = choosePart(tarCpx, tarCpy);
     // console.log(partIndex);
     var partName = String(currentMainDay)+"_"+String(partIndex);
@@ -313,7 +308,7 @@ function animate() {
         clearEEI();  // 清空场上涡旋index数组
 
         // showSpecifiedArea(tarArr);
-        var tempName = getPartNameFromTarArr(tarArr);  // 得到临近涡旋所属的partName
+        var tempName = getPartNameFromPxy(tarArr[1], tarArr[2]);  // 得到临近涡旋所属的partName
         willBeAddPartNames.push(tempName);  // 放入exsitedPartNames数组等待添加
 
         updateParts();
@@ -326,14 +321,29 @@ function animate() {
     if(switchUpdateSign){  // 如果主界面切换了天数
         console.log("刷新局部涡旋窗口")
         switchUpdateSign = false;  // 消除更新信号
+
+        // 清空场上所有part
+        willBeAddPartNames.length = 0;  // 清空待更新数组
+        updateParts();
+
         removePointers();  // 清除原有显示
         clearEEI();  // 清空场上涡旋index数组
         // 不追踪！
     }
 
     if(showNextEddiesSign){  // 在局部窗口点击了追踪下一天
+
         showNextEddiesSign = false; //清除标记
         showNextEddies();
+
+        var info = eddyFeature['info'][currentMainDay];
+        // 这时候日期已经切换了
+        for(let i=0; i<existedEddyIndices.length; i++){
+            var tempName = getPartNameFromPxy(info[existedEddyIndices[i][0]], info[existedEddyIndices[i][1]]);
+            willBeAddPartNames.push(tempName);
+        }
+
+        updateParts();
     }
 
     render();
