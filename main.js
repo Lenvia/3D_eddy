@@ -90,7 +90,7 @@ var downValue_ctrl;
 var textures_2d = [];
 
 var selected_pos = undefined;  // 被鼠标选中的pos
-
+var default_color = 0xff0000;  // 被选中的指针的默认颜色
 
 
 init();
@@ -120,7 +120,7 @@ function init() {
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
     camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
-    camera.position.z = 5000;
+    camera.position.z = 4000;
     camera.position.x = edgeLen*0;
     camera.position.y = edgeWid*0;
 
@@ -1104,12 +1104,13 @@ function showPointers(){
         var cxy = pxy2xy(cpx, cpy);
 
         // 在涡核处显示标记
-        var geometryTri = new THREE.ConeGeometry( 20, 100, 3 );
-        geometryTri.rotateX( -Math.PI / 2 );
+        // var geometryCone = new THREE.ConeGeometry( 20, 100, 3 );
+        var geometryCone = new THREE.ConeGeometry( 30, 150, 3 );
+        geometryCone.rotateX( -Math.PI / 2 );
         // 直接setPosition好像不行，还是平移吧
-        geometryTri.translate(cxy[0], cxy[1], 50);
+        geometryCone.translate(cxy[0], cxy[1], 75);
         
-        var cone = new THREE.Mesh( geometryTri, new THREE.MeshNormalMaterial(
+        var cone = new THREE.Mesh( geometryCone, new THREE.MeshNormalMaterial(
 
         ) );
         scene.add( cone );
@@ -1492,6 +1493,13 @@ function animate() {
     render();
     if(dynamic)  // 只有dynamic为true时才渲染
         DyChange(0.5);
+
+    if(dyeSign){  // 收到染色信号
+        dyeSign = false;  // 取消染色信号
+        for(let i=0; i<existedEddyIndices.length; i++){
+            changePointer(existedEddyIndices[i], default_color);
+        }
+    }
     stats.update();
 }
 
@@ -1588,9 +1596,9 @@ function onMouseClick(event){
         if(pitchMode == true){
             selected_pos = curObj.point;
 
-            // 恢复一下被更改的指示器material
-            if(tarArr[0]!=undefined){
-                recoverPointer(tarArr[0]);
+            // 恢复所有指示器的material
+            for(let i=0; i<existedCones.length; i++){
+                recoverPointer(i);
             }
 
             // 鼠标mx my转换为panel的px py，再从json中找最近的涡旋
@@ -1600,8 +1608,7 @@ function onMouseClick(event){
             if(tarArr[0]!=undefined){
                 // 因为原来的材质是MeshNormalMaterial，是不能改变颜色的
                 // 这里换成普通的MeshLambertMaterial
-                var hex = 0xff0000;
-                changePointer(tarArr[0], hex)
+                changePointer(tarArr[0], default_color)
                 pitchUpdateSign = true;  // 向局部板块释放涡旋更新信号
             }
             

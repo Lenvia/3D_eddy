@@ -21,7 +21,7 @@ setRenderSize();
 
 
 var existedCones = [];  // 场上存在的标记
-var existedEddyIndices = [];  // 场上存在的涡旋的index
+
 var existedPartNames = [];  // 场上存在的partName
 var willBeAddPartNames = [];  // 需要添加的partName
 
@@ -208,10 +208,10 @@ function showPointer(index) {
     var cxy = pxy2xy(cpx, cpy);
 
     // 在涡核处显示标记
-    var geometryTri = new THREE.ConeGeometry( 20, 100, 3 );
+    var geometryTri = new THREE.ConeGeometry( 30, 150, 3 );
     geometryTri.rotateX( -Math.PI / 2 );
     // 直接setPosition好像不行，还是平移吧
-    geometryTri.translate(cxy[0], cxy[1], 50);
+    geometryTri.translate(cxy[0], cxy[1], 75);
     
     var cone = new THREE.Mesh( geometryTri, new THREE.MeshNormalMaterial(
 
@@ -336,12 +336,16 @@ function animate() {
         showNextEddiesSign = false; //清除标记
         showNextEddies();
 
+        // console.log(existedEddyIndices);
+
         var info = eddyFeature['info'][currentMainDay];
         // 这时候日期已经切换了
         for(let i=0; i<existedEddyIndices.length; i++){
-            var tempName = getPartNameFromPxy(info[existedEddyIndices[i][0]], info[existedEddyIndices[i][1]]);
+            var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
             willBeAddPartNames.push(tempName);
         }
+
+        dyeSign = true;  // 提示主窗口去染色
 
         updateParts();
     }

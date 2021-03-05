@@ -46,20 +46,22 @@ var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标
 
 var dayLimit = 60;  // 暂定60为最大天数
 
-var showNextEddiesSign = false;  // 窗口点击响应标记，用来控制localEddy.js中showNextEddies()函数
 
-
-
-
-// 更新信号
-// 仅selected_pos不为空还不行，必须pitchUpdateSign也为true才能更新，并且更新后 pitchUpdateSign要设置为false。
-// 当主窗口再次有效点击后才能把pitchUpdateSign设置为true
-var pitchUpdateSign = false;
-var switchUpdateSign = false;  // 如果为true，表示主界面切换日期而引起局部涡旋的更新
-
-var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的日期，这里不能再反过来清除局部窗口的元素
+var existedEddyIndices = [];  // 场上存在的涡旋的index
 
 var eddyFeature;  // 涡核信息数组
+
+// 更新信号
+// 主窗口触发
+var pitchUpdateSign = false;  // 主窗口选择涡旋了
+var switchUpdateSign = false;  // 如果为true，表示主界面切换日期而引起局部涡旋的更新
+
+
+// 局部窗口触发
+var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的日期，这里不能再反过来清除局部窗口的元素
+
+var showNextEddiesSign = false;  // 窗口点击响应标记，用来控制localEddy.js中showNextEddies()函数
+var dyeSign = false;  // 提醒主窗口去染色
 
 
 
