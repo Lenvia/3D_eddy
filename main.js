@@ -94,6 +94,11 @@ var default_color = 0xff0000;  // 被选中的指针的默认颜色
 
 var Timer;
 
+var ppsArray = [];
+var existedPpsArray = [];
+
+var tex_pps_day = 30;  // 2d和pps加载天数
+
 
 init();
 
@@ -154,6 +159,8 @@ function init() {
     // showProgressModal("loadingFrames");
     // 加载涡旋模型
     loadEddiesForDays();
+
+    // loadPPS();  // 加载需要播放的迹线引导的流线
     
     // 设置交互面板
     setGUI();
@@ -191,7 +198,7 @@ function onWindowResize() {
 
 
 function loadTexture2d(){
-    for(let i=0; i<30; i++){
+    for(let i=0; i<tex_pps_day; i++){
         var str;
         if(i<9)
             str = '0'+String(i+1);  // 图片下标是从1开始的
@@ -629,7 +636,7 @@ function loadEddiesForDays(){
 
 // 初始化透明度
 function initLineOpacity(curLine, k){
-    // k为轨迹段数和长线总段数只比
+    // k为轨迹段数和长线总段数之比（可以理解成滑动窗口）
     var attributes = curLine.geometry.attributes;
     var mats = curLine.material;
 
@@ -644,7 +651,7 @@ function initLineOpacity(curLine, k){
         var startIndex = attributes.startNum.array[i];
 
         for(var j=0; j<l; j++){ // 轨迹段数
-            var curIndex = (j)%L + startIndex;
+            var curIndex = (L-j)%L + startIndex;
             mats[curIndex].opacity = 1 - diff*j;
         }
     }
@@ -1428,12 +1435,21 @@ function resetCtrl(){
 }
 
 // 把所有线条颜色都变成白色，透明度变为1
-function resetMaterial(curLine){
-    if(curLine==undefined)
+function resetMaterial(cur){
+    if(cur==undefined)
         return;
-    for(var i=0; i<curLine.material.length; i++){
-        curLine.material[i].color = new THREE.Color(1, 1, 1);
-        curLine.material[i].opacity = 1.0;
+    for(var i=0; i<cur.material.length; i++){
+        cur.material[i].color = new THREE.Color(1, 1, 1);
+        cur.material[i].opacity = 1.0;
+    }
+}
+// 把所有线条颜色都变成白色，透明度变为0
+function resetMaterial0(cur){
+    if(cur==undefined)
+        return;
+    for(var i=0; i<cur.material.length; i++){
+        cur.material[i].color = new THREE.Color(1, 1, 1);
+        cur.material[i].opacity = 0;
     }
 }
 
@@ -1508,7 +1524,7 @@ function DyChange(k){
                 mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
             }
             // 赋值为1的
-            var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex-1 + L)%L+startIndex;
+            var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex+1)%L+startIndex;
             mats[next_mOpaIndex].opacity = 1;
             attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
         }
@@ -1641,8 +1657,161 @@ $('#draggable-point').draggable({
     }
 });
 
+function loadPPS(){
+    let arr = []; //promise返回值的数组
+    for (let i = 0; i<tex_pps_day; i++){
+        arr[i] = new Promise((resolve, reject)=>{
+            // 加载一天的形状
+            var d = i;
+            var vtk_path = ("./resources/pps_whole_vtk_file/force_2_pp_10000/".concat(d, ".vtk"));
+            var loader = new VTKLoader();
+            console.log("loading", vtk_path);
+            loader.load( vtk_path, function ( geometry ) {  // 异步加载
+                geometry.translate(-0.5, -0.5, 0);
+                var positions = geometry.attributes.position.array;
+                // 改变顶点高度值
+                for ( let j = 0;  j < positions.length; j += 3 ) {
+                    // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
+                    positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
+                }
+
+                geometry.scale(edgeLen, edgeWid, scaleHeight);
+
+                var sectionNums = geometry.attributes.sectionNum.array;
+                var startNums = geometry.attributes.startNum.array;
+
+                // 转化为无索引格式，用来分组
+                geometry = geometry.toNonIndexed();
+
+                geometry.attributes.sectionNum.array = sectionNums;
+                geometry.attributes.startNum.array = startNums;
+                // 这个count具体我不知道是啥，对于position.count可以理解为点的个数，且position.length正好是count的三倍
+                geometry.attributes.sectionNum.count = geometry.attributes.sectionNum.array.length;
+                geometry.attributes.startNum.count = geometry.attributes.startNum.array.length;
+                
+                    // 默认初始透明度最大的下标在开头
+                geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( startNums, 1 ));
+
+                var vertexNum = geometry.attributes.position.count;
+                
+                var opa = []; // 顶点透明度，用来改变线条透明度
+                for (var i = 0; i<vertexNum; i++){
+                    opa.push(1);  // 默认1；但是初始是以下面的material为准
+                }
+                geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
+
+                
+                var groupId;  // 组号
+
+                var mats = [];
+
+                for (var i =0; i<vertexNum; i+=2){
+                    groupId = i/2;
+                    geometry.addGroup(i, 2, groupId);  // 无索引形式(startIndex, count, groupId)
+
+                    let material = new THREE.LineBasicMaterial({
+                        // vertexColors: false,  // 千万不能设置为true！！！！血的教训
+                        transparent: true, // 可定义透明度
+                        opacity: 0.8,
+                        depthWrite: false, 
+                    });
+                    mats.push(material);
+                }
+                var linesG = new THREE.LineSegments(geometry, mats);
+
+                //need update 我不知道有没有用，感觉没用
+                linesG.geometry.colorsNeedUpdate = true;
+                linesG.geometry.groupsNeedUpdate = true;
+                linesG.material.needsUpdate = true;
+                
+                linesG.name = "pps"+String(d);  // pps0, pps1, ...
+                ppsArray[i] = linesG;
+                scene.add(linesG);
+
+                resolve(i);
+            });
+        });
+    }
+}
+
+// 根据模型名从数组中找到模型
+// function findPPS(name){
+//     for(let i =0; i<ppsArray.length; i++){
+//         if(ppsArray[i].name==name){
+//             return ppsArray[i];
+//         }
+//     }
+//     return undefined;   // 没有找到
+// }
+
+// 初始化透明度（非循环）
+function initLineOpacity2(cur, k){
+    // k为轨迹段数和长线总段数之比（可以理解成滑动窗口）
+    var attributes = cur.geometry.attributes;
+    var mats = cur.material;
+    
+    for(var i=0; i<attributes.sectionNum.count; i++){  // 对于每一组长线i
+        
+        var L = attributes.sectionNum.array[i];  // 长线包含的线段数
+        
+        var l = parseInt(k*L);  // 轨迹段数
+        var diff = 1/l;  // 透明度变化单位
+        var startIndex = attributes.startNum.array[i];
+
+        mats[startIndex].opacity = 1;  // 只给开头设置为1
+        for(let j=1; j<L; j++){  // 把其他的都变成0
+            mats[startIndex+j].opacity = 0;
+        }
+        
+    }
+}
+
+// 动态变化透明度（非循环）
+function DyChange2(cur, k){
+    if(cur != undefined){
+        var attributes = cur.geometry.attributes;
+        var mats = cur.material;
+
+        for(var i=0; i<attributes.sectionNum.count; i++){  // 对于每一组长线i
+            var L = attributes.sectionNum.array[i];  // 长线包含的线段数
+            var l = parseInt(k*L);  // 轨迹段数
+            var diff = 1/l;  // 透明度变化单位
+
+            var startIndex = attributes.startNum.array[i];
+            for(var j=startIndex; j<startIndex+L; j++){  // 对于每个小线段
+                mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
+            }
+            if(attributes.mOpaIndex<startIndex+L-1){  // 如果到头了就不设置为1的了
+                // 赋值为1的
+                var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex+1)%L+startIndex;
+                mats[next_mOpaIndex].opacity = 1;
+                attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
+            }
+            
+        }
+    }
+}
 
 function playAction() {
+    for(let i=0; i<play_start_day; i++){  // 清除场景中以前的
+        if(scene.getObjectByName(ppsArray[i].name)!=undefined){
+            scene.remove(ppsArray[i]);
+        }
+    }
+
+    for(let i=play_start_day; i<tex_pps_day; i++){
+        if(scene.getObjectByName(ppsArray[i].name)==undefined){
+            scene.add(ppsArray[i]);
+        }
+        // 初始化颜色和透明度
+        resetMaterial0(ppsArray[i]);
+    }
+}
+function pauseAction(){
+    clearInterval(Timer);
+}
+
+function back_up_playAction(){
     // console.log(Timer);
     
     var startDay = play_start_day;
@@ -1673,15 +1842,22 @@ function playAction() {
         }
     },1000);
 }
-function pauseAction(){
-    clearInterval(Timer);
-}
 
 
 
 function animate() {
     requestAnimationFrame( animate );
     render();
+
+
+    if(is3d){  
+        console.log("is3d: ", is3d);
+        document.getElementById("audio-player-container").style.display="block";
+    }
+    else{   // 2d形式就不显示进度条了
+        document.getElementById("audio-player-container").style.display="none";
+    }
+
     if(dynamic)  // 只有dynamic为true时才渲染
         DyChange(0.5);
 

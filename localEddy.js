@@ -277,6 +277,7 @@ function updateParts(){
 function animate() {
     requestAnimationFrame( animate );
 
+
     // 监测鼠标点击
     if(tarArr[0]!= undefined && pitchUpdateSign){  // 如果涡旋下标tarArr[0]不为空，并且收到更新信号
         pitchUpdateSign = false;  // 立刻消除更新信号
