@@ -25,7 +25,7 @@ var dynamic = false;  // 默认不准动
 
 var progress_bar;
 var draggable_point;
-var Timer;
+
 
 var play_start_day = 0;  // 播放器起点（默认为0）
 var loadDayNum = 3;  // 加载多少天
@@ -59,10 +59,12 @@ var switchUpdateSign = false;  // 如果为true，表示主界面切换日期而
 
 // 局部窗口触发
 var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的日期，这里不能再反过来清除局部窗口的元素
-
-var showNextEddiesSign = false;  // 窗口点击响应标记，用来控制localEddy.js中showNextEddies()函数
 var dyeSign = false;  // 提醒主窗口去染色
 
+// DOM组件绑定函数信号
+var showNextEddiesSign = false;  // DOM点击响应标记，用来控制localEddy.js中showNextEddies()函数
+var playActionSign = false;  // DOM点击响应标记，表示播放迹线
+var pauseActionSign = false;  // 暂停播放
 
 
 
@@ -171,6 +173,7 @@ function switchView(){
 }
 
 
+//numberMillis 毫秒
 function sleep(numberMillis) {
     var now = new Date();
     var exitTime = now.getTime() + numberMillis;
@@ -181,40 +184,6 @@ function sleep(numberMillis) {
     }
 }
 
-function playAction() {
-    // console.log(Timer);
-    
-    var startDay = play_start_day;
-    console.log(play_start_day);
-    var oriDy;
-    if(is3d){
-        oriDy = dynamic;  // 原始dynamic
-        dynamic = true;  // 不管是不是dy，先设置成动态
-    }
-
-    let i=startDay;
-    day_ctrl.setValue(i);  // 先执行一次
-
-    Timer = setInterval(function(){
-        // console.log(i+1);
-        i++;
-        if(i<loadDayNum){
-            // 进度条
-            progress_bar.style.width = i/(loadDayNum-1)*100 + "%";
-            // 原点
-            draggable_point.style.left = i/(loadDayNum-1)*100 + "%";
-            day_ctrl.setValue(i);
-        }
-        else{
-            if(is3d)
-                dynamic = oriDy;
-            clearInterval(Timer);
-        }
-    },3000);
-}
-function pauseAction(){
-    clearInterval(Timer);
-}
 
 
 function updateEcharts(attr, d){
@@ -368,8 +337,18 @@ function pxy2xy(px, py){
     return new Array(x,y);
 }
 
-
+/**
+ * 来自DOM触发的信号
+ */
 // 标记开放函数
 function openShowNextEddiesSign(){
     showNextEddiesSign = true;
+}
+
+function openPlayActionSign(){
+    playActionSign = true;
+}
+
+function openPauseAction(){
+    pauseActionSign = true;
 }

@@ -92,6 +92,8 @@ var textures_2d = [];
 var selected_pos = undefined;  // 被鼠标选中的pos
 var default_color = 0xff0000;  // 被选中的指针的默认颜色
 
+var Timer;
+
 
 init();
 
@@ -1488,24 +1490,7 @@ function findModel(site){
     return undefined;   // 没有找到
 }
 
-function animate() {
-    requestAnimationFrame( animate );
-    render();
-    if(dynamic)  // 只有dynamic为true时才渲染
-        DyChange(0.5);
 
-    if(dyeSign){  // 收到染色信号
-        dyeSign = false;  // 取消染色信号
-        for(let i=0; i<existedEddyIndices.length; i++){
-            changePointer(existedEddyIndices[i], default_color);
-        }
-    }
-    stats.update();
-}
-
-function render() {
-    renderer.render( scene, camera );
-}
 
 // 动态变化透明度
 function DyChange(k){
@@ -1656,8 +1641,70 @@ $('#draggable-point').draggable({
     }
 });
 
-//numberMillis 毫秒
+
+function playAction() {
+    // console.log(Timer);
+    
+    var startDay = play_start_day;
+    console.log(play_start_day);
+    var oriDy;
+    if(is3d){
+        oriDy = dynamic;  // 原始dynamic
+        dynamic = true;  // 不管是不是dy，先设置成动态
+    }
+
+    let i=startDay;
+    day_ctrl.setValue(i);  // 先执行一次
+
+    Timer = setInterval(function(){
+        // console.log(i+1);
+        i++;
+        if(i<loadDayNum){
+            // 进度条
+            progress_bar.style.width = i/(loadDayNum-1)*100 + "%";
+            // 原点
+            draggable_point.style.left = i/(loadDayNum-1)*100 + "%";
+            day_ctrl.setValue(i);
+        }
+        else{
+            if(is3d)
+                dynamic = oriDy;
+            clearInterval(Timer);
+        }
+    },1000);
+}
+function pauseAction(){
+    clearInterval(Timer);
+}
 
 
 
+function animate() {
+    requestAnimationFrame( animate );
+    render();
+    if(dynamic)  // 只有dynamic为true时才渲染
+        DyChange(0.5);
 
+    if(dyeSign){  // 收到染色信号
+        dyeSign = false;  // 取消染色信号
+        for(let i=0; i<existedEddyIndices.length; i++){
+            changePointer(existedEddyIndices[i], default_color);
+        }
+    }
+
+    if(playActionSign){  // 播放信号
+        playActionSign = false;
+        playAction();
+    }
+
+    if(pauseActionSign){  // 收到暂停播放信号
+        pauseActionSign = false;
+        pauseAction();
+    }
+
+    stats.update();
+}
+
+function render() {
+    renderer.render( scene, camera );
+}

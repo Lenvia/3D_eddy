@@ -111,29 +111,6 @@ function createSea(){
 }
 
 
-// 根据目标涡旋下标、中心来显示指定区域
-// function showSpecifiedArea(tarArr){
-//     var minIndex = tarArr[0];  // 目标涡旋下标
-//     // 涡旋中心
-//     var tarCpx = tarArr[1];
-//     var tarCpy = tarArr[2];
-
-//     if(minIndex!=undefined){
-//         // 计算该涡旋属于哪一个part
-//         var partIndex = choosePart(tarCpx, tarCpy);
-//         // console.log(partIndex);
-//         var partName = String(currentMainDay)+"_"+String(partIndex);
-
-//         if(curPart!=undefined && partName == curPart.name)  //  不需要重载
-//             return ;
-//         else{
-//             deleteModel(curPart);  // 删除模型的geometry和材质
-//             scene.remove(curPart);
-//             //重新加载，并且更新curPartName
-//             loadLocalEddy(partName);
-//         }
-//     }
-// }
 
 function getPartNameFromPxy(tarCpx, tarCpy){  // 根据目标涡旋中心坐标得到对应的partName
     var partIndex = choosePart(tarCpx, tarCpy);
@@ -148,7 +125,7 @@ function getPartNameFromPxy(tarCpx, tarCpy){  // 根据目标涡旋中心坐标�
 // 从本地vtk加载模型
 function loadLocalEddy(partName){
     var promise = new Promise(function(resolve, reject) {
-        var vtk_path = ("./resources/local_vtk_folder/".concat(partName,'.vtk'))
+        var vtk_path = ("./resources/local_vtk_folder/force_2_pp_10000/".concat(partName,'.vtk'))
         var loader = new VTKLoader();
 
         loader.load( vtk_path, function ( geometry ) {  // 异步加载

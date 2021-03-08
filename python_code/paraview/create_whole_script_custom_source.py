@@ -46,7 +46,7 @@ renderView1.Update()
 for i in range(5):
     day = i
 
-    vtkDir = os.path.join(rootDir, 'whole_vtk_file',  'vec'+str(day)+'.vtk')
+    vtkDir = os.path.join(rootDir, '../whole_vtk_file', 'vec' + str(day) + '.vtk')
 
     # create a new 'Legacy VTK Reader'
     vtk_model = LegacyVTKReader(FileNames=[vtkDir])
