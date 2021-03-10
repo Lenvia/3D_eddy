@@ -123,7 +123,7 @@ function init() {
     // console.log(progress_bar);
 
     div_start_time = document.getElementById('start-time');
-    div_start_time.innerHTML = "000000";
+    div_start_time.innerHTML = "0";
     container.appendChild(audio_player);
 
     container.appendChild( renderer.domElement );
@@ -155,7 +155,7 @@ function init() {
     loadTexture2d();
 
     createSea();
-    // createLand();
+    createLand();
     createChannel();
     create2d();
 
@@ -174,6 +174,9 @@ function init() {
     //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
     var ambient = new THREE.AmbientLight(0xffffff);
     scene.add(ambient);
+    // var light = new THREE.DirectionalLight( 0xFFFFFF );
+    // var lighthelper = new THREE.DirectionalLightHelper( light, 5 );
+    // scene.add( lighthelper );
 
     container.addEventListener( 'mousemove', onMouseMove, false );
     container.addEventListener( 'click', onMouseClick, false);
@@ -244,9 +247,10 @@ function createSea(){
     // 海水箱子的长、宽
     var boxLen = edgeLen, boxWid = edgeLen;
     const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
-    const material2 = new THREE.MeshDepthMaterial({
+    const material2 = new THREE.MeshPhongMaterial({
         // color: 0x1E90FF,
-        color: 0x191970,
+        color: 0xb4968,
+        // color: 0x191970,
         transparent: true,
         opacity: 0.5,
         depthWrite: false, 
@@ -320,15 +324,18 @@ function createLand(){
         planeGeometry.scale(edgeLen, edgeWid, 1);
 
         var material = new THREE.MeshBasicMaterial( {
-            color: 0xA0522D,
+            color: 0x123456,
             side: THREE.DoubleSide,
             transparent: true, // 可定义透明度
-            opacity: 0.9,
+            depthWrite: false,
+            opacity: 0.8,
         } );
     
         surface = new THREE.Mesh( planeGeometry, material);
         surface.name = "surface";
         scene.add( surface );
+
+        console.log(surface.material);
 
         if(!is3d){  // 如果当前模式不是3d，隐藏
             surface.visible = false;
@@ -559,7 +566,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_1000_0_8.vtk"));
+            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_3000_0_8.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -636,7 +643,7 @@ function loadEddiesForDays(){
     Promise.all(arr).then((res)=>{
         console.log("模型加载完毕");
         // 设置属性
-        // loadAttrArray("OW");
+        loadAttrArray("OW");
         // loadAttrArray("VORTICITY");
     })
 }
@@ -898,7 +905,7 @@ function setGUI(){
     });
 
     // 设置下界
-    downValue_ctrl = attrFolder.add(default_opt, 'downValue').onChange(function(){
+    downValue_ctrl = attrFolder.add(default_opt, 'downValue', -5, 5).step(0.0001).onFinishChange(function(){
         downValue = default_opt.downValue;
         console.log("downValue:", downValue);
 
@@ -910,7 +917,7 @@ function setGUI(){
     });
 
     // 设置上界
-    upValue_ctrl = attrFolder.add(default_opt, 'upValue').onChange(function(){
+    upValue_ctrl = attrFolder.add(default_opt, 'upValue', -5, 5).step(0.0001).onFinishChange(function(){
         upValue = default_opt.upValue;
         console.log("upValue:", upValue);
 
