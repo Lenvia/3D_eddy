@@ -244,13 +244,14 @@ function createSea(){
     // 海水箱子的长、宽
     var boxLen = edgeLen, boxWid = edgeLen;
     const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
-    const material2 = new THREE.MeshLambertMaterial({
+    const material2 = new THREE.MeshDepthMaterial({
         // color: 0x1E90FF,
         color: 0x191970,
         transparent: true,
         opacity: 0.5,
         depthWrite: false, 
-        vertexColors: true,
+        // wireframe: true,
+        // vertexColors: true,
     }); //材质对象Material
 
     geometry2.translate(0, 0, -biasZ/2);
@@ -1440,7 +1441,7 @@ function resetCtrl(){
     getCurrentValue();  // 更新current
 }
 
-// 把所有线条颜色都变成白色，透明度变为1
+// 把所有线条颜色都变成白色，透明度变为1，并且最大透明度数组恢复
 function resetMaterial(cur){
     if(cur==undefined)
         return;
@@ -1448,8 +1449,9 @@ function resetMaterial(cur){
         cur.material[i].color = new THREE.Color(1, 1, 1);
         cur.material[i].opacity = 1.0;
     }
+    cur.geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( cur.geometry.attributes.startNum.array, 1 ));
 }
-// 把所有线条颜色都变成白色，透明度变为0
+// 把所有线条颜色都变成白色，透明度变为0，并且最大透明度数组恢复
 function resetMaterial0(cur){
     if(cur==undefined)
         return;
@@ -1457,6 +1459,7 @@ function resetMaterial0(cur){
         cur.material[i].color = new THREE.Color(1, 1, 1);
         cur.material[i].opacity = 0;
     }
+    cur.geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( cur.geometry.attributes.startNum.array, 1 ));
 }
 
 // 更新currentColor和currentOpacity
@@ -1533,7 +1536,7 @@ function DyChange(k){
             var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex+1)%L+startIndex;
             mats[next_mOpaIndex].opacity = 1;
             attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
-        }
+        }cur.geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( cur.geometry.attributes.startNum.array, 1 ));
     }
 }
 
@@ -1790,7 +1793,7 @@ function DyChange2(cur, k){  // k=1
                 mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
                 temp.push(mats[j].opacity);
             }
-            if(cur.name=="pps0" && i==0)
+            if(cur.name=="pps5" && i==0)
                 console.log(temp);
 
             if(attributes.mOpaIndex.array[i]<startIndex+L-1){  // 如果到头了就不设置为1的了
@@ -1823,10 +1826,11 @@ function prepareAction() {
         //     scene.add(ppsArray[i]);
         // }
         // 初始化颜色和透明度
+        
         resetMaterial0(ppsArray[i]);
     }
 
-    frameNum = 0;  // 清空帧计数
+    frameNum = play_start_day*intervalNum*stayNum;  // 清空帧计数
     readySign = true;  // 准备播放
 }
 function pauseAction(){
@@ -1866,13 +1870,10 @@ function back_up_playAction(){
 }
 
 
-var intervalNum = 5;  // 每隔intervalNum帧刷新一下动画
-var stayNum = 8;  // 每刷新stayNum次跳到下一天
+intervalNum = 5;  // 每隔intervalNum帧刷新一下动画
+stayNum = 8;  // 每刷新stayNum次跳到下一天
 
 function animate() {
-    requestAnimationFrame( animate );
-    render();
-
     if(is3d){  
         // console.log("is3d: ", is3d);
         document.getElementById("audio-player-container").style.display="block";
@@ -1905,13 +1906,13 @@ function animate() {
     if(readySign){  // 开始播放
         if(frameNum>=tex_pps_day*intervalNum*stayNum){ // 比如若有30天，那么当frameNum == 30*3*5 = 450的时候就已经播放完了
             readySign = false;
-            console.log("结束播放");
             
             if(tempCurLine!=undefined){
                 curLine = tempCurLine;
                 tempCurLine = undefined;
                 scene.add(curLine);
             }
+            console.log("结束播放");
         }
 
         if(frameNum%intervalNum==0){ // 更新帧
@@ -1929,23 +1930,28 @@ function animate() {
                     }
                 }
 
-                // 这时候再添加？
-                if(scene.getObjectByName(ppsArray[curI].name)==undefined){
-                    scene.add(ppsArray[curI]);
+                if(readySign){
+                    // 这时候再添加？
+                    if(scene.getObjectByName(ppsArray[curI].name)==undefined){
+                        scene.add(ppsArray[curI]);
+                    }
+                    initLineOpacity2(ppsArray[curI]);
                 }
-
-                initLineOpacity2(ppsArray[curI]);
             }
-            console.log("当前为: ", Math.floor(curI));
-            DyChange2(ppsArray[Math.floor(curI)], 1);
-        } 
+            if(readySign){
+                console.log("当前为: ", Math.floor(curI));
+                DyChange2(ppsArray[Math.floor(curI)], 1);
+            }
+        }
 
         frameNum++;  // 要放到后面
-        // console.log(frameNum);
+        console.log(frameNum);
     }
     
-
     stats.update();
+
+    requestAnimationFrame( animate );
+    render();
 }
 
 function render() {
