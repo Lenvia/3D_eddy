@@ -8,6 +8,7 @@ import { VTKLoader } from './VTKLoader3.js';
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 
 var container, stats;  // 容器，状态监控器
+var aux_container;
 var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 
 
@@ -18,12 +19,12 @@ var renderWidth , renderHeight;
 setRenderSize();
 
 
-
-
 var existedCones = [];  // 场上存在的标记
 
 var existedPartNames = [];  // 场上存在的partName
 var willBeAddPartNames = [];  // 需要添加的partName
+
+var eddyForwards = eddyFeature['forward'];  // 向未来追踪
 
 init();
 
@@ -77,6 +78,10 @@ function init() {
 
     // 窗口缩放时触发
     window.addEventListener( 'resize', onWindowResize, false );
+
+
+    // 拓扑容器
+    aux_container = document.getElementById('auxiliary-container');
 
     animate();
 }
@@ -220,9 +225,9 @@ function showNextEddies(){
         return;
     if(currentMainDay+1>=dayLimit)  // 没有下一天了
         return; 
-    console.log(existedEddyIndices);
+    // console.log(existedEddyIndices);
     existedEddyIndices = trackAll(existedEddyIndices, currentMainDay); // 获得下一天的延续
-    console.log(existedEddyIndices);
+    // console.log(existedEddyIndices);
     removePointers(); // 清除场上所有标记
 
     // 更新curMainDay，但不让其影响局部窗口
@@ -230,7 +235,7 @@ function showNextEddies(){
     day_ctrl.setValue(currentMainDay+1);  // 设置为下一天
 
     // 这时候currentMainDay已经更新为下一天了
-    console.log(currentMainDay);
+    // console.log(currentMainDay);
     for(let i=0; i<existedEddyIndices.length; i++){
         showPointer(existedEddyIndices[i]);
     }
@@ -249,8 +254,8 @@ function choosePart(px, py){
 // 更新part
 // 在e数组中，保留与w重合的，其他的都删除，并添加w独有的
 function updateParts(){
-    console.log(existedPartNames);
-    console.log(willBeAddPartNames);
+    // console.log(existedPartNames);
+    // console.log(willBeAddPartNames);
     // 删除e中有的而w中没有的
     for(let i=0; i<existedPartNames.length; ){  // 注意这里不能简单的i++
         if(willBeAddPartNames.indexOf(existedPartNames[i]) == -1){  // 需要删除的
@@ -272,6 +277,96 @@ function updateParts(){
     willBeAddPartNames.length = 0;  // 清空待更新数组
 }
 
+// 每当点击涡旋or切换日期时，更新拓扑图
+function updateTopo(){
+    // var nodes = new vis.DataSet([
+    //     // { id: 1, label: "Node 1" },
+    // ]);
+
+    // 创建边数据数组
+    // var edges = new vis.DataSet([
+    //     // { from: 1, to: 3 },
+    // ]);
+
+    var nodes = [];
+    var edges = [];
+
+    var queue = new Array();  // 创建一个队列，使用push和shift入队和出队
+    var idQueue = new Array();
+    // 从json数组中追踪
+    queue.push(String(currentMainDay)+"-"+String(tarArr[0]));  // 把当前涡旋的名称放进去
+
+    idQueue.push(1);
+    
+    while(queue.length!=0){  // 当队列不为空
+        var curId = idQueue[0];
+        var curName = queue[0];
+
+        // 把当前节点放到nodes中
+        // 如果是首节点，染成红色
+        if(curId==1){
+            
+            nodes.push({
+                id: curId,
+                label: curName,
+                color:'#ff0000',
+            });
+        }
+        else{
+            nodes.push({
+                id: curId,
+                label: curName,
+            });
+        }
+        
+
+        var d = parseInt(curName.split("-")[0]);
+        var index = parseInt(curName.split("-")[1]);
+
+        if(d+1>=tex_pps_day)  // 不用向后追踪了
+            break;
+
+        var forwards = eddyForwards[d][index];  // 得到它后继下标
+        for(let i=0; i<forwards.length; i++){
+            queue.push(String(d+1)+"-"+String(forwards[i]));  // 涡旋入队
+            console.log(curName+" -> "+ String(d+1)+"-"+String(forwards[i]));
+            var tempId = idQueue[idQueue.length-1]+1;  // 比末尾的节点id再大1，末尾元素不能用arr[-1]啊啊啊啊啊啊那是py用法
+            idQueue.push(tempId);
+
+            // 添加边，现在不用添加点！
+            edges.push({
+                from: curId,
+                to: tempId,
+            });
+        }
+
+        // console.log(nodes);
+
+        queue.shift();  // 当前节点出队
+        idQueue.shift();
+    }
+
+
+    // 将数据赋值给vis 数据格式化器
+    var data = {
+        nodes: nodes,
+        edges: edges
+    };
+    var options = {
+        nodes:{
+            shape:"circle",
+        },
+        layout:{
+            hierarchical:{
+                direction: "LR",
+            },
+        },
+    };
+
+    // 初始化关系图
+    network = new vis.Network(aux_container, data, options);
+}
+
 
 
 function animate() {
@@ -279,6 +374,7 @@ function animate() {
 
 
     // 监测鼠标点击
+    // tarArr 最近的涡旋的下标、中心坐标
     if(tarArr[0]!= undefined && pitchUpdateSign){  // 如果涡旋下标tarArr[0]不为空，并且收到更新信号
         pitchUpdateSign = false;  // 立刻消除更新信号
 
@@ -293,6 +389,8 @@ function animate() {
 
         showPointer(tarArr[0]);  // 显示该涡旋指示器
         existedEddyIndices.push(tarArr[0]);  // 放入当前涡旋编号
+
+        updateTopo();
 
     }
 

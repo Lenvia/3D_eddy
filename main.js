@@ -98,8 +98,6 @@ var Timer;
 var ppsArray = new Array(tex_pps_day);
 var existedPpsArray = [];
 
-var tex_pps_day = 10;  // 2d和pps加载天数
-
 var readySign = false;  // 准备好了，可以播放
 var frameNum = 0;  // 当前帧数
 var intervalNum;  // 每隔intervalNum帧刷新一下动画
@@ -643,7 +641,7 @@ function loadEddiesForDays(){
     Promise.all(arr).then((res)=>{
         console.log("模型加载完毕");
         // 设置属性
-        loadAttrArray("OW");
+        // loadAttrArray("OW");
         // loadAttrArray("VORTICITY");
     })
 }
@@ -1766,7 +1764,7 @@ function loadPPS(){
     }
     Promise.all(arr).then(()=>{
         console.log("pps加载完毕");
-        console.log(ppsArray);
+        // console.log(ppsArray);
     })
 }
 

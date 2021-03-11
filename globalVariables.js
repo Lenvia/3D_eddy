@@ -26,9 +26,10 @@ var dynamic = false;  // 默认不准动
 var progress_bar;
 var draggable_point;
 
-
+var dayLimit = 60;  // 暂定60为最大天数
 var play_start_day = 0;  // 播放器起点（默认为0）
-var loadDayNum = 3;  // 加载多少天
+var loadDayNum = 3;  // 3d流线加载多少天
+var tex_pps_day = 10;  // 2d和pps加载天数
 
 var appearFolder;
 var attrFolder;
@@ -39,17 +40,19 @@ var funcFolder;
 var whole_models = [];
 var local_models = [];
 
-var myChart = echarts.init(document.getElementById('echarts-container'));
+var myChart = echarts.init(document.getElementById('auxiliary-container'));
 
 
 var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标
 
-var dayLimit = 60;  // 暂定60为最大天数
+
 
 
 var existedEddyIndices = [];  // 场上存在的涡旋的index
 
 var eddyFeature;  // 涡核信息数组
+
+var network;  // 拓扑图
 
 // 更新信号
 // 主窗口触发
@@ -72,9 +75,6 @@ var pauseActionSign = false;  // 暂停播放
 loadDepth();
 // 加载涡核信息数组
 loadEddyFeatures();
-
-
-
 
 /*
     预加载
@@ -110,7 +110,7 @@ function loadEddyFeatures(){
         async: false,  // 异步设置为否
         success: function(res) { //请求成功完成后要执行的方法 
             eddyFeature = res;  // 包含三个字段：info, forward, backward。其中info[天数][下标] = [cx, cy, area, bx, by, br]
-            console.log(eddyFeature);
+            // console.log(eddyFeature);
         }
     })
 }
@@ -183,8 +183,6 @@ function sleep(numberMillis) {
             return;
     }
 }
-
-
 
 function updateEcharts(attr, d){
     if(d==-1)
@@ -276,7 +274,7 @@ function trackAll(curList, d){
     var result = [];
     var dayForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
     for(let i=0; i<curList.length; i++){
-        console.log(dayForwardsList[curList[i]]);
+        // console.log(dayForwardsList[curList[i]]);
         result = result.concat(dayForwardsList[curList[i]]);
     }
     // console.log(result);
