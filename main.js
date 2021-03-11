@@ -1004,7 +1004,9 @@ function setGUI(){
         updateColor(curLine);  // 更新material
     });
 
-    // console.log(color0_ctrl);
+
+    console.log(color0_ctrl.domElement.parentElement.firstChild.innerHTML);
+
 
 
     
@@ -1113,6 +1115,21 @@ function updateMid(){
     mid2 = downValue+0.4*difValue;
     mid3 = downValue+0.6*difValue;
     mid4 = downValue+0.8*difValue;
+
+    if(color0_ctrl!=undefined){  // 非第一次加载
+        // 修改html界面上的标签显示
+        color0_ctrl.domElement.parentElement.firstChild.innerHTML = downValue.toFixed(3)+'~'+mid1.toFixed(3);
+        color1_ctrl.domElement.parentElement.firstChild.innerHTML = mid1.toFixed(3)+'~'+mid2.toFixed(3);
+        color2_ctrl.domElement.parentElement.firstChild.innerHTML = mid2.toFixed(3)+'~'+mid3.toFixed(3);
+        color3_ctrl.domElement.parentElement.firstChild.innerHTML = mid3.toFixed(3)+'~'+mid4.toFixed(3);
+        color4_ctrl.domElement.parentElement.firstChild.innerHTML = mid4.toFixed(3)+'~'+upValue.toFixed(3);
+
+        opa0_ctrl.domElement.parentElement.firstChild.innerHTML = downValue.toFixed(3)+'~'+mid1.toFixed(3);
+        opa1_ctrl.domElement.parentElement.firstChild.innerHTML = mid1.toFixed(3)+'~'+mid2.toFixed(3);
+        opa2_ctrl.domElement.parentElement.firstChild.innerHTML = mid2.toFixed(3)+'~'+mid3.toFixed(3);
+        opa3_ctrl.domElement.parentElement.firstChild.innerHTML = mid3.toFixed(3)+'~'+mid4.toFixed(3);
+        opa4_ctrl.domElement.parentElement.firstChild.innerHTML = mid4.toFixed(3)+'~'+upValue.toFixed(3);
+    }    
 }
 
 // 在图中显示涡核
