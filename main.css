@@ -19,7 +19,7 @@
 	background-color: #1b76dd;
 }
 
-#container3{
+#auxiliary-container{
 	position: absolute;
 	right: 0px;
 	bottom: 0px;
@@ -44,6 +44,9 @@
 	color: white;
 	font-family: sans-serif;
 	font-weight: bold;
+
+	/* 默认不显示 */
+	display: none;
 }
 
 #progressModal #name {
@@ -88,6 +91,9 @@
 
 #frameLabel{
 	z-index:10;
+
+	/* 默认不显示 */
+	display: none;
 }
 
 
@@ -215,4 +221,31 @@
 
 .draggable {
 	float: left; margin: 0 10px 10px 0;
+}
+
+/* 局部涡旋板块按钮 */
+#day-change-button-container{
+	position: absolute;
+	right:0px;
+	bottom: 0px;
+	width: 30%;
+	height: 10%;
+	
+}
+
+#nextDay{
+	position: absolute;
+	transform: translate(-50%, 0%);
+	width: 30%;
+	height: 50%;
+	right: 10%;
+}
+
+#preDay{
+	position: absolute;
+	transform: translate(-50%, 0%);
+	width: 30%;
+	height: 50%;
+	left: 10%;
+	
 }

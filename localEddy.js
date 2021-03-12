@@ -72,8 +72,8 @@ function init() {
     stats = new Stats();
     container.appendChild( stats.dom );
 
-    var nextDayButton = document.getElementById('nextDay');
-    container.appendChild(nextDayButton);
+    var dayChangeButtonContainer = document.getElementById('day-change-button-container');
+    container.appendChild(dayChangeButtonContainer);
 
 
     // 窗口缩放时触发
@@ -239,6 +239,10 @@ function showNextEddies(){
     for(let i=0; i<existedEddyIndices.length; i++){
         showPointer(existedEddyIndices[i]);
     }
+}
+// 回溯上一日涡旋
+function showPreEddiesSign(){
+
 }
 
 
@@ -410,7 +414,7 @@ function animate() {
     if(showNextEddiesSign){  // 在局部窗口点击了追踪下一天
 
         showNextEddiesSign = false; //清除标记
-        showNextEddies();
+        showNextEddies();  // 执行完毕后currentMainDay已经增加了
 
         // console.log(existedEddyIndices);
 
@@ -425,6 +429,22 @@ function animate() {
 
         updateParts();
     }
+
+    // if(showPreEddiesSign){  // 在局部窗口点击了追踪上一天
+    //     showPreEddiesSign = false;  // 清除标记
+
+    //     showPreEddiesSign();
+    //     var info = eddyFeature['info'][currentMainDay];
+    //     // 这时候日期已经切换了
+    //     for(let i=0; i<existedEddyIndices.length; i++){
+    //         var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
+    //         willBeAddPartNames.push(tempName);
+    //     }
+
+    //     dyeSign = true;  // 提示主窗口去染色
+
+    //     updateParts();
+    // }
 
     render();
     stats.update();

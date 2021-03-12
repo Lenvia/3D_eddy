@@ -66,6 +66,7 @@ var dyeSign = false;  // 提醒主窗口去染色
 
 // DOM组件绑定函数信号
 var showNextEddiesSign = false;  // DOM点击响应标记，用来控制localEddy.js中showNextEddies()函数
+var showPreEddiesSign = false;  // showPreEddiesSign()响应
 var playActionSign = false;  // DOM点击响应标记，表示播放迹线
 var pauseActionSign = false;  // 暂停播放
 
@@ -342,6 +343,10 @@ function pxy2xy(px, py){
 function openShowNextEddiesSign(){
     showNextEddiesSign = true;
 }
+function openShowPreEddiesSign(){
+    showPreEddiesSign = true;
+}
+
 
 function openPlayActionSign(){
     playActionSign = true;
