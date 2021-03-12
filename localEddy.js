@@ -25,6 +25,7 @@ var existedPartNames = [];  // 场上存在的partName
 var willBeAddPartNames = [];  // 需要添加的partName
 
 var eddyForwards = eddyFeature['forward'];  // 向未来追踪
+var eddyBackwards = eddyFeature['backward'];  // 向以前回溯
 
 init();
 
@@ -241,8 +242,20 @@ function showNextEddies(){
     }
 }
 // 回溯上一日涡旋
-function showPreEddiesSign(){
+function showPreEddies(){
+    if(existedEddyIndices.length==0)
+        return;
+    if(currentMainDay-1<0)
+        return;
+    existedEddyIndices = backtrackAll(existedEddyIndices, currentMainDay);  // 获得上一天
+    removePointers();
 
+    restrainUpdateSign = true;
+    day_ctrl.setValue(currentMainDay-1);
+
+    for(let i =0; i<existedEddyIndices.length; i++){
+        showPointer(existedEddyIndices[i]);
+    }
 }
 
 
@@ -302,14 +315,17 @@ function updateTopo(){
 
     idQueue.push(1);
     
+    var curId, curName;
+    var maxId = -1;
     while(queue.length!=0){  // 当队列不为空
-        var curId = idQueue[0];
-        var curName = queue[0];
+        curId = idQueue[0];
+        curName = queue[0];
+
+        maxId = Math.max(maxId, curId);
 
         // 把当前节点放到nodes中
         // 如果是首节点，染成红色
         if(curId==1){
-            
             nodes.push({
                 id: curId,
                 label: curName,
@@ -322,13 +338,18 @@ function updateTopo(){
                 label: curName,
             });
         }
+        // console.log(nodes);
         
 
         var d = parseInt(curName.split("-")[0]);
         var index = parseInt(curName.split("-")[1]);
 
-        if(d+1>=tex_pps_day)  // 不用向后追踪了
+        if(d+1>=tex_pps_day){  // 不用向后追踪了
+            // 记得出队！！！
+            queue.shift();  // 当前节点出队
+            idQueue.shift();
             break;
+        }
 
         var forwards = eddyForwards[d][index];  // 得到它后继下标
         for(let i=0; i<forwards.length; i++){
@@ -349,6 +370,61 @@ function updateTopo(){
         queue.shift();  // 当前节点出队
         idQueue.shift();
     }
+
+    // 当上一个循环结束后，curId+1就是接下来要放的id
+    var flag = true;  // 是首节点第一个回溯的点吗？
+    // 再把首节点放进去
+    queue.push(String(currentMainDay)+"-"+String(tarArr[0]));  // 把当前涡旋的名称放进去
+    idQueue.push(1);
+    while(queue.length!=0){  // 当队列不为空
+        curId = idQueue[0];
+        curName = queue[0];
+
+        // 把当前节点放到nodes中，如果是首节点就不用了
+        if(curId!=1){
+            nodes.push({
+                id: curId,
+                label: curName,
+            });
+        }
+        // console.log(nodes);
+        
+        var d = parseInt(curName.split("-")[0]);
+        var index = parseInt(curName.split("-")[1]);
+
+        if(d-1<0){  // 不用向前追踪了
+            queue.shift();  // 当前节点出队
+            idQueue.shift();
+            break;
+        }
+
+        var backwards = eddyBackwards[d][index];  // 得到它后继下标
+        for(let i=0; i<backwards.length; i++){
+            queue.push(String(d-1)+"-"+String(backwards[i]));  // 涡旋入队
+
+            console.log(String(d-1)+"-"+String(backwards[i])+" -> " + curName);
+            // 如果是首节点，那么最大的是maxId，而不是idQueue的末尾
+            // 并且这个条件只能用一次！！！！！！
+            if(curId==1 && flag){  
+                var tempId = maxId +1;
+                flag = false;
+            }
+            else{
+                var tempId = idQueue[idQueue.length-1]+1;  // 比末尾的节点id再大1，末尾元素不能用arr[-1]啊啊啊啊啊啊那是py用法
+            }
+            idQueue.push(tempId);
+
+            // 添加边，现在不用添加点！
+            edges.push({
+                from: tempId,
+                to: curId,
+            });
+        }
+
+        queue.shift();  // 当前节点出队
+        idQueue.shift();
+    }
+
 
 
     // 将数据赋值给vis 数据格式化器
@@ -430,21 +506,20 @@ function animate() {
         updateParts();
     }
 
-    // if(showPreEddiesSign){  // 在局部窗口点击了追踪上一天
-    //     showPreEddiesSign = false;  // 清除标记
+    if(showPreEddiesSign){  // 在局部窗口点击了追踪上一天
+        showPreEddiesSign = false;  // 清除标记
+        showPreEddies();
+        var info = eddyFeature['info'][currentMainDay];
+        // 这时候日期已经切换了
+        for(let i=0; i<existedEddyIndices.length; i++){
+            var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
+            willBeAddPartNames.push(tempName);
+        }
 
-    //     showPreEddiesSign();
-    //     var info = eddyFeature['info'][currentMainDay];
-    //     // 这时候日期已经切换了
-    //     for(let i=0; i<existedEddyIndices.length; i++){
-    //         var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
-    //         willBeAddPartNames.push(tempName);
-    //     }
+        dyeSign = true;  // 提示主窗口去染色
 
-    //     dyeSign = true;  // 提示主窗口去染色
-
-    //     updateParts();
-    // }
+        updateParts();
+    }
 
     render();
     stats.update();

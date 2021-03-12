@@ -282,6 +282,15 @@ function trackAll(curList, d){
     return dedupe(result);
 }
 
+function backtrackAll(curList, d){
+    var result = [];
+    var dayBackwardsList = eddyFeature['backward'][d];
+    for(let i =0; i<curList.length; i++){
+        result = result.concat(dayBackwardsList[curList[i]]);
+    }
+    return dedupe(result);
+}
+
 // 数组去重
 function dedupe(array){
     return Array.from(new Set(array));

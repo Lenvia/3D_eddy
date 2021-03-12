@@ -1656,7 +1656,7 @@ function recoverPointer(index){
     existedCones[index].material = new THREE.MeshNormalMaterial();
 }
 function changePointer(index, hex){
-    existedCones[index].material = new THREE.MeshLambertMaterial({
+    existedCones[index].material = new THREE.MeshPhongMaterial({
         color: hex,
     });
 }
