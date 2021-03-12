@@ -307,13 +307,16 @@ function updateTopo(){
 
     var nodes = [];
     var edges = [];
+    var existedNodesMap = new Map();  // 涡旋名->拓扑图节点id； 用于去重，对于map里存在的，不让它入队
 
     var queue = new Array();  // 创建一个队列，使用push和shift入队和出队
     var idQueue = new Array();
     // 从json数组中追踪
-    queue.push(String(currentMainDay)+"-"+String(tarArr[0]));  // 把当前涡旋的名称放进去
-
+    var fisrtName = String(currentMainDay)+"-"+String(tarArr[0]);
+    queue.push(fisrtName);  // 把当前涡旋的名称放进去
     idQueue.push(1);
+
+    existedNodesMap.set(fisrtName, 1);
     
     var curId, curName;
     var maxId = -1;
@@ -352,11 +355,21 @@ function updateTopo(){
         }
 
         var forwards = eddyForwards[d][index];  // 得到它后继下标
+        var tempId;
         for(let i=0; i<forwards.length; i++){
-            queue.push(String(d+1)+"-"+String(forwards[i]));  // 涡旋入队
-            console.log(curName+" -> "+ String(d+1)+"-"+String(forwards[i]));
-            var tempId = idQueue[idQueue.length-1]+1;  // 比末尾的节点id再大1，末尾元素不能用arr[-1]啊啊啊啊啊啊那是py用法
-            idQueue.push(tempId);
+            var tarName = String(d+1)+"-"+String(forwards[i]);
+
+            if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
+                tempId = idQueue[idQueue.length-1]+1;  // 比末尾的节点id再大1
+                queue.push(tarName);  // 涡旋入队
+                idQueue.push(tempId);
+                existedNodesMap.set(tarName, tempId);
+            }
+            else{  // 不用入队
+                tempId = existedNodesMap.get(tarName);
+            }
+            
+            console.log(curName+" -> "+ tarName);
 
             // 添加边，现在不用添加点！
             edges.push({
@@ -399,20 +412,28 @@ function updateTopo(){
         }
 
         var backwards = eddyBackwards[d][index];  // 得到它后继下标
+        var tempId;
+        
         for(let i=0; i<backwards.length; i++){
-            queue.push(String(d-1)+"-"+String(backwards[i]));  // 涡旋入队
+            var tarName = String(d-1)+"-"+String(backwards[i]);
 
-            console.log(String(d-1)+"-"+String(backwards[i])+" -> " + curName);
-            // 如果是首节点，那么最大的是maxId，而不是idQueue的末尾
-            // 并且这个条件只能用一次！！！！！！
-            if(curId==1 && flag){  
-                var tempId = maxId +1;
-                flag = false;
+            if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
+                // 如果是首节点，那么最大的是maxId，而不是idQueue的末尾
+                // 并且这个条件只能用一次！！！！！！
+                if(curId==1 && flag){
+                    tempId = maxId +1;
+                    flag = false;
+                }
+                else{
+                    tempId = idQueue[idQueue.length-1]+1;  // 比末尾的节点id再大1，末尾元素不能用arr[-1]啊啊啊啊啊啊那是py用法
+                }
+                queue.push(tarName);  // 涡旋入队
+                idQueue.push(tempId);
+                existedNodesMap.set(tarName, tempId);
             }
-            else{
-                var tempId = idQueue[idQueue.length-1]+1;  // 比末尾的节点id再大1，末尾元素不能用arr[-1]啊啊啊啊啊啊那是py用法
+            else{  // 不用入队
+                tempId = existedNodesMap.get(tarName);
             }
-            idQueue.push(tempId);
 
             // 添加边，现在不用添加点！
             edges.push({
@@ -434,11 +455,25 @@ function updateTopo(){
     };
     var options = {
         nodes:{
-            shape:"circle",
+            shape:'circle',
+        },
+        edges:{
+            arrows:{
+                to: {
+                    enabled: true,
+                    imageHeight: undefined,
+                    imageWidth: undefined,
+                    scaleFactor: 1,
+                    src: undefined,
+                    type: 'arrow',
+                },
+            },
         },
         layout:{
             hierarchical:{
-                direction: "LR",
+                direction: 'LR',
+                sortMethod: 'directed',
+                shakeTowards: 'roots',  // roots, leaves
             },
         },
     };
