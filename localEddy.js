@@ -25,6 +25,9 @@ var existedCones = [];  // 场上存在的标记
 var existedPartNames = [];  // 场上存在的partName
 var willBeAddPartNames = [];  // 需要添加的partName
 
+var existedNodesMap = new Map();  // 涡旋名->拓扑图节点id； 用于去重，对于map里存在的，不让它入队
+var topoData, topoOptions;  // 拓扑图元素
+
 var eddyForwards = eddyFeature['forward'];  // 向未来追踪
 var eddyBackwards = eddyFeature['backward'];  // 向以前回溯
 
@@ -228,16 +231,34 @@ function showNextEddies(){
     if(currentMainDay+1>=dayLimit)  // 没有下一天了
         return; 
     // console.log(existedEddyIndices);
+
+    // 清理一下拓扑图里的红色节点
+    for(let i=0; i<existedEddyIndices.length; i++){
+        var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
+        var id = existedNodesMap.get(name);
+        topoData.nodes[id-1].color="#00BFFF";  // 变为蓝色
+    }
+
+    removePointers(); // 清除场上所有标记
+
     existedEddyIndices = trackAll(existedEddyIndices, currentMainDay); // 获得下一天的延续
     // console.log(existedEddyIndices);
-    removePointers(); // 清除场上所有标记
+    
 
     // 更新curMainDay，但不让其影响局部窗口
     restrainUpdateSign = true;
     day_ctrl.setValue(currentMainDay+1);  // 设置为下一天
 
-    // 这时候currentMainDay已经更新为下一天了
-    // console.log(currentMainDay);
+    // 设置场上红色节点
+    for(let i=0; i<existedEddyIndices.length; i++){
+        var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
+        var id = existedNodesMap.get(name);
+        topoData.nodes[id-1].color="#ff0000";  // 变为红色
+    }
+    // 更新topo图
+    network = new vis.Network(aux_container, topoData, topoOptions);
+
+    // 这时候currentMainDay已经更新为下一天了（下面showPointer需要用到currentMainDay）
     for(let i=0; i<existedEddyIndices.length; i++){
         showPointer(existedEddyIndices[i]);
     }
@@ -248,15 +269,35 @@ function showPreEddies(){
         return;
     if(currentMainDay-1<0)
         return;
-    existedEddyIndices = backtrackAll(existedEddyIndices, currentMainDay);  // 获得上一天
+
+    // 清理一下拓扑图里的红色节点
+    for(let i=0; i<existedEddyIndices.length; i++){
+        var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
+        var id = existedNodesMap.get(name);
+        topoData.nodes[id-1].color="#00BFFF";  // 变为蓝色
+    }
+
     removePointers();
+    existedEddyIndices = backtrackAll(existedEddyIndices, currentMainDay);  // 获得上一天
 
     restrainUpdateSign = true;
     day_ctrl.setValue(currentMainDay-1);
 
+    // 设置场上红色节点
+    for(let i=0; i<existedEddyIndices.length; i++){
+        var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
+        var id = existedNodesMap.get(name);
+        topoData.nodes[id-1].color="#ff0000";  // 变为红色
+    }
+    // 更新topo图
+    network = new vis.Network(aux_container, topoData, topoOptions);
+
     for(let i =0; i<existedEddyIndices.length; i++){
         showPointer(existedEddyIndices[i]);
     }
+
+
+    
 }
 
 
@@ -296,22 +337,15 @@ function updateParts(){
 }
 
 // 每当点击涡旋or切换日期时，更新拓扑图
-function updateTopo(){
-    // var nodes = new vis.DataSet([
-    //     // { id: 1, label: "Node 1" },
-    // ]);
-
-    // 创建边数据数组
-    // var edges = new vis.DataSet([
-    //     // { from: 1, to: 3 },
-    // ]);
-
+function loadTopo(){
     var nodes = [];
     var edges = [];
-    var existedNodesMap = new Map();  // 涡旋名->拓扑图节点id； 用于去重，对于map里存在的，不让它入队
 
     var queue = new Array();  // 创建一个队列，使用push和shift入队和出队
     var idQueue = new Array();
+
+    existedNodesMap.clear();  // 每次新选择的时候清空
+
     // 从json数组中追踪
     var fisrtName = String(currentMainDay)+"-"+String(tarArr[0]);
     queue.push(fisrtName);  // 把当前涡旋的名称放进去
@@ -340,6 +374,7 @@ function updateTopo(){
             nodes.push({
                 id: curId,
                 label: curName,
+                color:'#00BFFF',
             });
         }
         // console.log(nodes);
@@ -399,6 +434,7 @@ function updateTopo(){
             nodes.push({
                 id: curId,
                 label: curName,
+                color:'#00BFFF',
             });
         }
         // console.log(nodes);
@@ -450,11 +486,11 @@ function updateTopo(){
 
 
     // 将数据赋值给vis 数据格式化器
-    var data = {
+    topoData = {
         nodes: nodes,
         edges: edges
     };
-    var options = {
+    topoOptions = {
         nodes:{
             shape:'circle',
         },
@@ -463,7 +499,6 @@ function updateTopo(){
                 to: {
                     enabled: true,
                     scaleFactor: 1,
-                    src: undefined,
                     type: 'arrow',
                 },
             },
@@ -478,7 +513,7 @@ function updateTopo(){
     };
 
     // 初始化关系图
-    network = new vis.Network(aux_container, data, options);
+    network = new vis.Network(aux_container, topoData, topoOptions);
 }
 
 
@@ -504,7 +539,7 @@ function animate() {
         showPointer(tarArr[0]);  // 显示该涡旋指示器
         existedEddyIndices.push(tarArr[0]);  // 放入当前涡旋编号
 
-        updateTopo();
+        loadTopo();
 
     }
 
@@ -515,6 +550,9 @@ function animate() {
         // 清空场上所有part
         willBeAddPartNames.length = 0;  // 清空待更新数组
         updateParts();
+
+        // 清除拓扑图
+        network = new vis.Network(aux_container, null, null);
 
         removePointers();  // 清除原有显示
         clearEEI();  // 清空场上涡旋index数组
