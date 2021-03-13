@@ -1,8 +1,8 @@
-var myChart = echarts.init(document.getElementById('container3'));
+var myChart = echarts.init(document.getElementById('auxiliary-container'));
 
-loadDataInfo();
+updateEcharts();
 
-function loadDataInfo(){
+function updateEcharts(){
     var attr_data_path = ("./echarts/OW/OW_0.json");
     
     $.ajax({

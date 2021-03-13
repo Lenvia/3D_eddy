@@ -7,7 +7,7 @@ import { VTKLoader } from './VTKLoader3.js';
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 
-var container, stats;  // 容器，状态监控器
+var container;  // 容器，状态监控器
 var aux_container;
 var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 
@@ -15,8 +15,9 @@ var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 
-var renderWidth , renderHeight;
-setRenderSize();
+var renderWidth , renderHeight;  // 不含单位px
+var containerWidth, containerHeight;
+
 
 
 var existedCones = [];  // 场上存在的标记
@@ -33,6 +34,8 @@ init();
 function init() {
     container = document.getElementById( 'container2' );
     container.innerHTML = "";
+
+    setRenderSize();
 
     renderer = new THREE.WebGLRenderer( { antialias: true } );  // 抗锯齿
     renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
@@ -70,8 +73,6 @@ function init() {
     var ambient = new THREE.AmbientLight(0xffffff);
     scene.add(ambient);
 
-    stats = new Stats();
-    container.appendChild( stats.dom );
 
     var dayChangeButtonContainer = document.getElementById('day-change-button-container');
     container.appendChild(dayChangeButtonContainer);
@@ -461,8 +462,6 @@ function updateTopo(){
             arrows:{
                 to: {
                     enabled: true,
-                    imageHeight: undefined,
-                    imageWidth: undefined,
                     scaleFactor: 1,
                     src: undefined,
                     type: 'arrow',
@@ -557,7 +556,6 @@ function animate() {
     }
 
     render();
-    stats.update();
 }
 
 function render() {
@@ -565,5 +563,14 @@ function render() {
 }
 
 function setRenderSize() {
-    renderWidth = 0.5*window.innerWidth, renderHeight = 0.6*window.innerHeight;
+    containerWidth = String(getStyle(container, "width"));
+    containerHeight = String(getStyle(container, "height"));
+
+    containerWidth = containerWidth.slice(0, containerWidth.length-2);  // 去掉末尾的px
+    containerHeight = containerHeight.slice(0, containerHeight.length-2);
+
+    renderWidth = parseInt(containerWidth);
+    renderHeight = parseInt(containerHeight);
+    // renderWidth = 0.5*window.innerWidth, renderHeight = 0.6*window.innerHeight;
+    // console.log(renderWidth, renderHeight);
 }

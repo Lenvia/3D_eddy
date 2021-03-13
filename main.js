@@ -17,7 +17,8 @@ var maxH;  // 产生的山脉最大高度
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 
 var renderWidth, renderHeight;
-setRenderSize();
+var containerWidth, containerHeight;
+
 
 let helper;  // 鼠标helper
 
@@ -111,6 +112,8 @@ function init() {
     container = document.getElementById( 'container' );
     container.innerHTML = "";
 
+    setRenderSize();
+    
     renderer = new THREE.WebGLRenderer( { antialias: true } );  // 抗锯齿
     renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
     renderer.setSize( renderWidth, renderHeight );  // 尺寸
@@ -1661,8 +1664,16 @@ function changePointer(index, hex){
     });
 }
 
+
 function setRenderSize() {
-    renderWidth = 0.5*window.innerWidth, renderHeight = window.innerHeight;
+    containerWidth = String(getStyle(container, "width"));
+    containerHeight = String(getStyle(container, "height"));
+
+    containerWidth = containerWidth.slice(0, containerWidth.length-2);  // 去掉末尾的px
+    containerHeight = containerHeight.slice(0, containerHeight.length-2);
+
+    renderWidth = parseInt(containerWidth);
+    renderHeight = parseInt(containerHeight);
 }
 
 

@@ -364,3 +364,12 @@ function openPlayActionSign(){
 function openPauseAction(){
     pauseActionSign = true;
 }
+
+// 获得DOM的style
+function getStyle(obj,attr){
+    if(obj.currentStyle){//兼容IE
+            return obj.currentStyle[attr];
+    }else{
+            return getComputedStyle(obj,false)[attr];
+    }
+}

@@ -945,7 +945,7 @@ function setGUI(){
     });
 
     // 切换属性
-    gui.add(default_opt, 'currentAttr', ['OW', 'vorticity']).onChange(function(){
+    gui.add(default_opt, 'currentAttr', ['OW', 'VORTICITY']).onChange(function(){
         currentAttr = default_opt.currentAttr;
         console.log("currentAttr:", currentAttr);
 
