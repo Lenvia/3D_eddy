@@ -92,7 +92,7 @@ var downValue_ctrl;
 var textures_2d = [];
 
 var selected_pos = undefined;  // 被鼠标选中的pos
-var default_color = 0xff0000;  // 被选中的指针的默认颜色
+var specific_color = 0xff0000;  // 被选中的指针的默认颜色
 
 var Timer;
 
@@ -1642,7 +1642,7 @@ function onMouseClick(event){
             if(tarArr[0]!=undefined){
                 // 因为原来的材质是MeshNormalMaterial，是不能改变颜色的
                 // 这里换成普通的MeshLambertMaterial
-                changePointer(tarArr[0], default_color)
+                changePointer(tarArr[0], specific_color)
                 pitchUpdateSign = true;  // 向局部板块释放涡旋更新信号
             }
             
@@ -1821,13 +1821,13 @@ function DyChange2(cur, k){  // k=1
             var diff = 1/l;  // 透明度变化单位
 
             var startIndex = attributes.startNum.array[i];
-            var temp = [];
+            // var temp = [];
             for(var j=startIndex; j<startIndex+L; j++){  // 对于每个小线段
                 mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
-                temp.push(mats[j].opacity);
+                // temp.push(mats[j].opacity);
             }
-            if(cur.name=="pps5" && i==0)
-                console.log(temp);
+            // if(cur.name=="pps5" && i==0)
+            //     console.log(temp);
 
             if(attributes.mOpaIndex.array[i]<startIndex+L-1){  // 如果到头了就不设置为1的了
                 // 赋值为1的
@@ -1921,7 +1921,7 @@ function animate() {
     if(dyeSign){  // 收到染色信号
         dyeSign = false;  // 取消染色信号
         for(let i=0; i<existedEddyIndices.length; i++){
-            changePointer(existedEddyIndices[i], default_color);
+            changePointer(existedEddyIndices[i], specific_color);
         }
     }
 

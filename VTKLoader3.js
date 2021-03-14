@@ -293,9 +293,9 @@ VTKLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 			geometry.setAttribute( 'position', new Float32BufferAttribute( positions, 3 ) );
 
 
-			console.log("indices.length: ", indices.length);  // 7032
-			console.log("positions.length: ", positions.length);  // 3600
-			console.log("positions.count: ", geometry.attributes.position.count)  // 1200
+			// console.log("indices.length: ", indices.length);  // 7032
+			// console.log("positions.length: ", positions.length);  // 3600
+			// console.log("positions.count: ", geometry.attributes.position.count)  // 1200
 
 			for(let i=0; i<positions.length; i++){
 				colors.push(Math.random());

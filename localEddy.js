@@ -27,6 +27,9 @@ var willBeAddPartNames = [];  // 需要添加的partName
 
 var existedNodesMap = new Map();  // 涡旋名->拓扑图节点id； 用于去重，对于map里存在的，不让它入队
 var topoData, topoOptions;  // 拓扑图元素
+var defaultNodeColor = '#00BFFF';
+var specificNodeColor = '#ff0000';
+var chosenTopoNodeId;
 
 var eddyForwards = eddyFeature['forward'];  // 向未来追踪
 var eddyBackwards = eddyFeature['backward'];  // 向以前回溯
@@ -236,7 +239,7 @@ function showNextEddies(){
     for(let i=0; i<existedEddyIndices.length; i++){
         var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
         var id = existedNodesMap.get(name);
-        topoData.nodes[id-1].color="#00BFFF";  // 变为蓝色
+        topoData.nodes[id-1].color=defaultNodeColor;  // 变为蓝色
     }
 
     removePointers(); // 清除场上所有标记
@@ -253,10 +256,11 @@ function showNextEddies(){
     for(let i=0; i<existedEddyIndices.length; i++){
         var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
         var id = existedNodesMap.get(name);
-        topoData.nodes[id-1].color="#ff0000";  // 变为红色
+        topoData.nodes[id-1].color=specificNodeColor;  // 变为红色
     }
     // 更新topo图
     network = new vis.Network(aux_container, topoData, topoOptions);
+    bindClickEvent();
 
     // 这时候currentMainDay已经更新为下一天了（下面showPointer需要用到currentMainDay）
     for(let i=0; i<existedEddyIndices.length; i++){
@@ -274,7 +278,7 @@ function showPreEddies(){
     for(let i=0; i<existedEddyIndices.length; i++){
         var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
         var id = existedNodesMap.get(name);
-        topoData.nodes[id-1].color="#00BFFF";  // 变为蓝色
+        topoData.nodes[id-1].color=defaultNodeColor;  // 变为蓝色
     }
 
     removePointers();
@@ -287,10 +291,11 @@ function showPreEddies(){
     for(let i=0; i<existedEddyIndices.length; i++){
         var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
         var id = existedNodesMap.get(name);
-        topoData.nodes[id-1].color="#ff0000";  // 变为红色
+        topoData.nodes[id-1].color=specificNodeColor;  // 变为红色
     }
     // 更新topo图
     network = new vis.Network(aux_container, topoData, topoOptions);
+    bindClickEvent();
 
     for(let i =0; i<existedEddyIndices.length; i++){
         showPointer(existedEddyIndices[i]);
@@ -367,14 +372,14 @@ function loadTopo(){
             nodes.push({
                 id: curId,
                 label: curName,
-                color:'#ff0000',
+                color:specificNodeColor,
             });
         }
         else{
             nodes.push({
                 id: curId,
                 label: curName,
-                color:'#00BFFF',
+                color:defaultNodeColor,
             });
         }
         // console.log(nodes);
@@ -434,7 +439,7 @@ function loadTopo(){
             nodes.push({
                 id: curId,
                 label: curName,
-                color:'#00BFFF',
+                color:defaultNodeColor,
             });
         }
         // console.log(nodes);
@@ -514,9 +519,36 @@ function loadTopo(){
 
     // 初始化关系图
     network = new vis.Network(aux_container, topoData, topoOptions);
+    bindClickEvent();
+
+    
 }
 
+// 鼠标点击拓扑图上的节点后，更新拓扑图
+// 将该节点染色
+function updateTopo(nodeId){
+    // 清理一下拓扑图里的红色节点
+    for(let i=0; i<existedEddyIndices.length; i++){
+        var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
+        var id = existedNodesMap.get(name);
+        topoData.nodes[id-1].color=defaultNodeColor;  // 变为蓝色
+    }
+    // 将该节点变为红色
+    topoData.nodes[nodeId-1].color=specificNodeColor;
 
+    // 更新topo图
+    network = new vis.Network(aux_container, topoData, topoOptions);
+    bindClickEvent();
+}
+
+function bindClickEvent(){
+    network.on("click",function(params){//绑定点击事件
+        if(params.nodes.length>0){
+            chosenTopoNodeId = params.nodes[0];
+            topoClickSign = true;
+        }
+    });
+}
 
 function animate() {
     requestAnimationFrame( animate );
@@ -591,6 +623,40 @@ function animate() {
         dyeSign = true;  // 提示主窗口去染色
 
         updateParts();
+    }
+
+    if(topoClickSign){  // 点击了拓扑图上的节点
+        topoClickSign = false;
+        updateTopo(chosenTopoNodeId);  // 清除其他节点颜色，并将被选择节点染色
+        var tarName = topoData.nodes[chosenTopoNodeId-1].label;  // 目标涡旋的名称
+
+        // 更新主界面
+        restrainUpdateSign = true;  // 抑制主界面对局部窗口的更改
+        var tarDay = parseInt(tarName.split('-')[0]);
+        day_ctrl.setValue(tarDay);
+
+        // 此时日期已经改变了
+
+        // 在主界面上显示红色标记
+        var tarIndex = parseInt(tarName.split('-')[1]);
+        clearEEI();  // 清空场上涡旋index数组
+        existedEddyIndices.push(tarIndex);
+        dyeSign = true;  // 通知主界面去染色
+
+        // 局部Part更新
+        removePointers();  // 清除所有指示器
+        willBeAddPartNames.length = 0;  // 清空待更新数组
+        // 得到对应的part
+        var info = eddyFeature['info'][currentMainDay];
+        var cpx = info[tarIndex][0];  // cpx指的是在panel上的cx
+        var cpy = info[tarIndex][1];
+    
+        var cxy = pxy2xy(cpx, cpy);
+        var tempName = getPartNameFromPxy(cxy[1], cxy[2]);  // 得到临近涡旋所属的partName
+        willBeAddPartNames.push(tempName);  // 放入exsitedPartNames数组等待添加
+        updateParts();
+        showPointer(tarIndex);  // 显示该涡旋指示器
+
     }
 
     render();

@@ -69,6 +69,7 @@ var showNextEddiesSign = false;  // DOM点击响应标记，用来控制localEdd
 var showPreEddiesSign = false;  // showPreEddiesSign()响应
 var playActionSign = false;  // DOM点击响应标记，表示播放迹线
 var pauseActionSign = false;  // 暂停播放
+var topoClickSign = false;  // 鼠标点击了拓扑图节点
 
 
 
