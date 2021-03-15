@@ -1154,9 +1154,10 @@ function showPointers(){
         // 直接setPosition好像不行，还是平移吧
         geometryCone.translate(cxy[0], cxy[1], 75);
         
-        var cone = new THREE.Mesh( geometryCone, new THREE.MeshNormalMaterial(
-
-        ) );
+        var cone = new THREE.Mesh( geometryCone, new THREE.MeshNormalMaterial({
+            transparent: true,
+            opacity: 0.7
+        }));
         scene.add( cone );
         
         existedCones.push(cone);

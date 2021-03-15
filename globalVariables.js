@@ -40,7 +40,9 @@ var funcFolder;
 var whole_models = [];
 var local_models = [];
 
-var myChart = echarts.init(document.getElementById('auxiliary-container'));
+var topo_container = document.getElementById('topo-container');
+var echarts_container = document.getElementById('echarts-container');
+var echarts_window = echarts.init(echarts_container);
 
 
 var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标
@@ -138,6 +140,9 @@ function switchView(){
     if(is3d){
         is3d = false;  // 切换成2d
 
+        echarts_container.style.zIndex = 1;
+        topo_container.style.zIndex = 2;
+
         if(sea!=undefined)
             sea.visible = false;
         if(surface!=undefined)
@@ -146,6 +151,8 @@ function switchView(){
             channel.visible = false;
         if(land_2d!=undefined)
             land_2d.visible = true;
+
+        
 
         appearFolder.domElement.style="display:none;";
         colorFolder.domElement.style="display:none;";
@@ -157,6 +164,9 @@ function switchView(){
     else{
         is3d = true;
 
+        echarts_container.style.zIndex = 2;
+        topo_container.style.zIndex = 1;
+
         if(sea!=undefined)
             sea.visible = true;
         if(surface!=undefined)
@@ -165,6 +175,8 @@ function switchView(){
             channel.visible = true;
         if(land_2d!=undefined)
             land_2d.visible = false;
+        
+        
         
         appearFolder.domElement.style="display:";
         colorFolder.domElement.style="display:";
@@ -221,7 +233,7 @@ function updateEcharts(attr, d){
             };
 
             // 使用刚指定的配置项和数据显示图表。
-            myChart.setOption(option);
+            echarts_window.setOption(option);
         }
     })
 }

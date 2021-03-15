@@ -19,13 +19,24 @@
 	background-color: #1b76dd;
 }
 
-#auxiliary-container{
+#topo-container{
 	position: absolute;
 	right: 0px;
 	bottom: 0px;
 	width: 50%;
 	height: 40%;
 	background-color: #ffffff;
+	z-index: 2;
+}
+
+#echarts-container{
+	position: absolute;
+	right: 0px;
+	bottom: 0px;
+	width: 50%;
+	height: 40%;
+	background-color: #ffffff;
+	z-index: 1;
 }
 
 #progressModal {
