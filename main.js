@@ -644,7 +644,7 @@ function loadEddiesForDays(){
     Promise.all(arr).then((res)=>{
         console.log("模型加载完毕");
         // 设置属性
-        // loadAttrArray("OW");
+        loadAttrArray("OW");
         // loadAttrArray("VORTICITY");
     })
 }
@@ -1079,19 +1079,22 @@ function setGUI(){
     })
 
     var func_opt = new function(){
-        this.play = function(){
-            alert("------------");
+        this.random = function(){
+            setRandom();
+            assignAllColor(curLine);
+            updateColor(curLine);  // 更新material
         };
         this.reset = function(){
             resetCtrl();
             resetMaterial(curLine);
+            updateColor(curLine);  // 更新material
         };
     };
 
     funcFolder = gui.addFolder('functions');
     
     // 播放
-    funcFolder.add(func_opt, 'play');
+    funcFolder.add(func_opt, 'random');
     funcFolder.add(func_opt, 'reset');
 
 
@@ -1456,6 +1459,23 @@ function resetCtrl(){
     color2_ctrl.setValue([255, 255, 255]);
     color3_ctrl.setValue([255, 255, 255]);
     color4_ctrl.setValue([255, 255, 255]);
+
+    opa0_ctrl.setValue(1.0);
+    opa1_ctrl.setValue(1.0);
+    opa2_ctrl.setValue(1.0);
+    opa3_ctrl.setValue(1.0);
+    opa4_ctrl.setValue(1.0);
+
+    getCurrentValue();  // 更新current
+}
+
+// 随即设定颜色
+function setRandom(){
+    color0_ctrl.setValue([Math.floor(255*Math.random()), Math.floor(255*Math.random()), Math.floor(255*Math.random())]);
+    color1_ctrl.setValue([Math.floor(255*Math.random()), Math.floor(255*Math.random()), Math.floor(255*Math.random())]);
+    color2_ctrl.setValue([Math.floor(255*Math.random()), Math.floor(255*Math.random()), Math.floor(255*Math.random())]);
+    color3_ctrl.setValue([Math.floor(255*Math.random()), Math.floor(255*Math.random()), Math.floor(255*Math.random())]);
+    color4_ctrl.setValue([Math.floor(255*Math.random()), Math.floor(255*Math.random()), Math.floor(255*Math.random())]);
 
     opa0_ctrl.setValue(1.0);
     opa1_ctrl.setValue(1.0);
