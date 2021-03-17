@@ -7,15 +7,17 @@ ensembleNo = 1;
 metricThreshold = 100;
 normThreshold = 1000;
 
-dataFile = sprintf('circ%d.nc',ensembleNo);
+dataFile = sprintf('eke%d.nc',ensembleNo);
 surfaces = logical(zeros(500,500,60));
 
-for timestep = 1:10
-    bed = ncread(dataFile, 'circ', [1,1,1,timestep], [inf,inf,1,1]);
+for timestep = 1:30
+    bed = ncread(dataFile, 'eke', [1,1,timestep], [inf,inf,1]);
     bed = fliplr(single(bed));  % fliplr  ×óÓÒ·­×ª¾ØÕó 
     bed = bed';
-    gcf = imagesc(bed);
-    saveas(gcf, sprintf('/Users/yy/Documents/MATLAB/circ%d/circ%dTimestep%d.png',ensembleNo,ensembleNo,timestep));
+    clims = [0 3500];
+    gcf = imagesc(bed, clims);
+    colorbar
+    saveas(gcf, sprintf('/Users/yy/Documents/MATLAB/eke%d/eke%dTimestep%d.png',ensembleNo,ensembleNo,timestep));
 %     surfaces(:,:,timestep) = logical(bed);
 %     imwrite(bed,sprintf('/Users/yy/Documents/MATLAB/circ%d/circ%dTimestep%d.png',ensembleNo,ensembleNo,timestep));
 end
