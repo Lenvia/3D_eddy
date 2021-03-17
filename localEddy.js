@@ -27,11 +27,14 @@ var willBeAddPartNames = [];  // 需要添加的partName
 var existedNodesMap = new Map();  // 涡旋名->拓扑图节点id； 用于去重，对于map里存在的，不让它入队
 var topoData, topoOptions;  // 拓扑图元素
 var defaultNodeColor = '#00BFFF';
+var cycNodeColor = '#faf955';  // 气旋颜色，黄色
+var anticycNodeColor = '#382da1';  // 反气旋颜色，蓝紫色
 var specificNodeColor = '#ff0000';
 var chosenTopoNodeId;
 
 var eddyForwards = eddyFeature['forward'];  // 向未来追踪
 var eddyBackwards = eddyFeature['backward'];  // 向以前回溯
+var eddyInfo = eddyFeature['info'];
 
 init();
 
@@ -174,7 +177,7 @@ function loadLocalEddy(partName){
             // linesG.material.needsUpdate = true;
             
             tube.name = partName;
-            console.log(partName, "加载完毕");
+            // console.log(partName, "加载完毕");
 
             scene.add(tube);
 
@@ -240,14 +243,18 @@ function showNextEddies(){
         for(let i=0; i<existedEddyIndices.length; i++){
             var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
             var id = existedNodesMap.get(name);
-            topoData.nodes[id-1].color=defaultNodeColor;  // 变为蓝色
+            if(id!=undefined){
+                var curColor = getCurColor(currentMainDay, existedEddyIndices[i]);
+                topoData.nodes[id-1].color=curColor;
+            }
+            
         }
     }
 
     removePointers(); // 清除场上所有标记
 
     existedEddyIndices = trackAll(existedEddyIndices, currentMainDay); // 获得下一天的延续
-    // console.log(existedEddyIndices);
+    console.log(existedEddyIndices);
     
 
     // 更新curMainDay，但不让其影响局部窗口
@@ -259,7 +266,8 @@ function showNextEddies(){
         for(let i=0; i<existedEddyIndices.length; i++){
             var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
             var id = existedNodesMap.get(name);
-            topoData.nodes[id-1].color=specificNodeColor;  // 变为红色
+            if(id!=undefined)  // 这里特别提醒，因为有的后继不在这条线，强行染色会报错
+                topoData.nodes[id-1].color=specificNodeColor;  // 变为红色
         }
         // 更新topo图
         network = new vis.Network(topo_container, topoData, topoOptions);
@@ -283,7 +291,10 @@ function showPreEddies(){
         for(let i=0; i<existedEddyIndices.length; i++){
             var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
             var id = existedNodesMap.get(name);
-            topoData.nodes[id-1].color=defaultNodeColor;  // 变为蓝色
+            if(id!=undefined){
+                var curColor = getCurColor(currentMainDay, existedEddyIndices[i]);
+                topoData.nodes[id-1].color=curColor;
+            }
         }
     }
 
@@ -298,7 +309,8 @@ function showPreEddies(){
         for(let i=0; i<existedEddyIndices.length; i++){
             var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
             var id = existedNodesMap.get(name);
-            topoData.nodes[id-1].color=specificNodeColor;  // 变为红色
+            if(id!=undefined)  // 这里特别提醒，因为有的前驱不在这条线上，强行染色会报错
+                topoData.nodes[id-1].color=specificNodeColor;  // 变为红色
         }
         // 更新topo图
         network = new vis.Network(topo_container, topoData, topoOptions);
@@ -308,11 +320,7 @@ function showPreEddies(){
     for(let i =0; i<existedEddyIndices.length; i++){
         showPointer(existedEddyIndices[i]);
     }
-
-
-    
 }
-
 
 // 计算涡旋属于哪一个part
 function choosePart(px, py){
@@ -349,6 +357,14 @@ function updateParts(){
     willBeAddPartNames.length = 0;  // 清空待更新数组
 }
 
+function getCurColor(d, index){
+    var curCirc = eddyInfo[d][index][6];  // 气旋和反气旋
+    // console.log(curCirc);
+    if(curCirc>0)
+        return cycNodeColor;
+    else return anticycNodeColor;
+}
+
 // 每当点击涡旋or切换日期时，更新拓扑图
 function loadTopo(){
     var nodes = [];
@@ -366,13 +382,16 @@ function loadTopo(){
 
     existedNodesMap.set(fisrtName, 1);
     
-    var curId, curName;
+    var curId, curName,curColor;
     var maxId = -1;
     while(queue.length!=0){  // 当队列不为空
         curId = idQueue[0];
         curName = queue[0];
 
         maxId = Math.max(maxId, curId);
+
+        var d = parseInt(curName.split("-")[0]);
+        var index = parseInt(curName.split("-")[1]);
 
         // 把当前节点放到nodes中
         // 如果是首节点，染成红色
@@ -384,18 +403,16 @@ function loadTopo(){
             });
         }
         else{
+            curColor = getCurColor(d, index);
+
             nodes.push({
                 id: curId,
                 label: curName,
-                color:defaultNodeColor,
+                color:curColor,
             });
         }
         // console.log(nodes);
         
-
-        var d = parseInt(curName.split("-")[0]);
-        var index = parseInt(curName.split("-")[1]);
-
         if(d+1>=tex_pps_day){  // 不用向后追踪了
             // 记得出队！！！
             queue.shift();  // 当前节点出队
@@ -418,7 +435,7 @@ function loadTopo(){
                 tempId = existedNodesMap.get(tarName);
             }
             
-            console.log(curName+" -> "+ tarName);
+            // console.log(curName+" -> "+ tarName);
 
             // 添加边，现在不用添加点！
             edges.push({
@@ -442,18 +459,20 @@ function loadTopo(){
         curId = idQueue[0];
         curName = queue[0];
 
+        var d = parseInt(curName.split("-")[0]);
+        var index = parseInt(curName.split("-")[1]);
+
         // 把当前节点放到nodes中，如果是首节点就不用了
         if(curId!=1){
+            curColor = getCurColor(d, index);
             nodes.push({
                 id: curId,
                 label: curName,
-                color:defaultNodeColor,
+                color:curColor,
             });
+            console.log(curName, curColor);
         }
         // console.log(nodes);
-        
-        var d = parseInt(curName.split("-")[0]);
-        var index = parseInt(curName.split("-")[1]);
 
         if(d-1<0){  // 不用向前追踪了
             queue.shift();  // 当前节点出队
@@ -496,8 +515,6 @@ function loadTopo(){
         idQueue.shift();
     }
 
-
-
     // 将数据赋值给vis 数据格式化器
     topoData = {
         nodes: nodes,
@@ -535,11 +552,15 @@ function loadTopo(){
 // 鼠标点击拓扑图上的节点后，更新拓扑图
 // 将该节点染色
 function updateTopo(nodeId){
+    // 这时候时间还没有变
     // 清理一下拓扑图里的红色节点
     for(let i=0; i<existedEddyIndices.length; i++){
         var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
         var id = existedNodesMap.get(name);
-        topoData.nodes[id-1].color=defaultNodeColor;  // 变为蓝色
+
+        var curColor = getCurColor(currentMainDay, existedEddyIndices[i]);
+        topoData.nodes[id-1].color=curColor;  // 变为指定颜色
+        console.log("清理节点:", name, "变为", curColor)  // faf黄色 382蓝色
     }
     // 将该节点变为红色
     topoData.nodes[nodeId-1].color=specificNodeColor;
@@ -640,6 +661,7 @@ function animate() {
         topoClickSign = false;
         updateTopo(chosenTopoNodeId);  // 清除其他节点颜色，并将被选择节点染色
         var tarName = topoData.nodes[chosenTopoNodeId-1].label;  // 目标涡旋的名称
+        // console.log(tarName);
 
         // 更新主界面
         restrainUpdateSign = true;  // 抑制主界面对局部窗口的更改
@@ -661,9 +683,13 @@ function animate() {
         var info = eddyFeature['info'][currentMainDay];
         var cpx = info[tarIndex][0];  // cpx指的是在panel上的cx
         var cpy = info[tarIndex][1];
+
+        // console.log(cpx, cpy);
     
         var cxy = pxy2xy(cpx, cpy);
-        var tempName = getPartNameFromPxy(cxy[1], cxy[2]);  // 得到临近涡旋所属的partName
+
+        // console.log(cxy);
+        var tempName = getPartNameFromPxy(cxy[0], cxy[1]);  // 得到临近涡旋所属的partName
         willBeAddPartNames.push(tempName);  // 放入exsitedPartNames数组等待添加
         updateParts();
         showPointer(tarIndex);  // 显示该涡旋指示器
