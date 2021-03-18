@@ -4,7 +4,7 @@
 
 const edgeLen = 3000;  // 地形（海水、山脉）长度
 const edgeWid = edgeLen;  // 地形宽度
-const scaleHeight = 0.5; //缩放高度
+const scaleHeight = 10*edgeLen/200000; //高度缩放倍数
 
 // 主界面变量
 var is3d = true;
@@ -13,7 +13,7 @@ var channel;  // 峡谷地形
 var surface;  // 表面陆地
 var land_2d;  // 2d
 
-var biasZ = 2000;  // 海底山脉向下移动（默认为2000，如果生成地形这个值会更新）
+var biasZ = 4000*scaleHeight;  // 海底山脉向下移动（默认为4000m，如果生成地形这个值会更新）
 var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
 
@@ -28,7 +28,7 @@ var draggable_point;
 
 var dayLimit = 60;  // 暂定60为最大天数
 var play_start_day = 0;  // 播放器起点（默认为0）
-var loadDayNum = 3;  // 3d流线加载多少天
+var loadDayNum = 1;  // 3d流线加载多少天
 var tex_pps_day = 10;  // 2d和pps加载天数
 
 var appearFolder;
@@ -318,12 +318,15 @@ function dedupe(array){
 function xyz2ijk(x, y, z){
     var orix = x/edgeLen + 0.5;
     var oriy = y/edgeWid + 0.5;
-    var oriz = -z/scaleHeight;
+    var oriz = parseFloat((-z/scaleHeight).toFixed(1));
 
 
     var i = Math.floor(orix/0.002);
     var j = Math.floor(oriy/0.002);
     var k = re_depth.get(oriz);
+
+    if(k==undefined)
+        console.log(oriz)
     // console.log(oriz);
 
     return new Array(i, j, k);

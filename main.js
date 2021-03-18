@@ -567,7 +567,7 @@ function loadEddiesForDays(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_3000_0_8.vtk"));
+            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, ".vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -582,7 +582,7 @@ function loadEddiesForDays(){
                     // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
                     positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
                 }
-
+                
                 geometry.scale(edgeLen, edgeWid, scaleHeight);
 
                 var sectionNums = geometry.attributes.sectionNum.array;
