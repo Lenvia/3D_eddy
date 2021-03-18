@@ -30,6 +30,8 @@ var defaultNodeColor = '#00BFFF';
 var cycNodeColor = '#faf955';  // 气旋颜色，黄色
 var anticycNodeColor = '#382da1';  // 反气旋颜色，蓝紫色
 var specificNodeColor = '#ff0000';
+var cycFontColor = '#000000';  // 气旋标签文字颜色
+var anticycFontColor = '#ffffff';  // 反气旋标签文字颜色
 var chosenTopoNodeId;
 
 var eddyForwards = eddyFeature['forward'];  // 向未来追踪
@@ -193,7 +195,7 @@ function loadLocalEddy(partName){
 
 // 显示当前涡旋的指示器
 function showPointer(index) {
-    var info = eddyFeature['info'][currentMainDay];
+    var info = eddyInfo[currentMainDay];
     var cpx = info[index][0];  // cpx指的是在panel上的cx
     var cpy = info[index][1];
 
@@ -357,6 +359,13 @@ function updateParts(){
     willBeAddPartNames.length = 0;  // 清空待更新数组
 }
 
+function getFontColor(nodeColor){
+    console.log(nodeColor);
+    if(nodeColor==cycNodeColor)
+        return cycFontColor;
+    else return anticycFontColor;
+}
+
 function getCurColor(d, index){
     var curCirc = eddyInfo[d][index][6];  // 气旋和反气旋
     // console.log(curCirc);
@@ -365,10 +374,15 @@ function getCurColor(d, index){
     else return anticycNodeColor;
 }
 
+function getCurValue(d, index){
+    return eddyInfo[d][index][7];  // 能量
+}
+
 // 每当点击涡旋or切换日期时，更新拓扑图
 function loadTopo(){
     var nodes = [];
     var edges = [];
+    var minValue,maxValue;  // 最小最大属性值，用来缩放
 
     var queue = new Array();  // 创建一个队列，使用push和shift入队和出队
     var idQueue = new Array();
@@ -382,7 +396,7 @@ function loadTopo(){
 
     existedNodesMap.set(fisrtName, 1);
     
-    var curId, curName,curColor;
+    var curId, curName,curColor, curValue, curFontColor;
     var maxId = -1;
     while(queue.length!=0){  // 当队列不为空
         curId = idQueue[0];
@@ -396,19 +410,35 @@ function loadTopo(){
         // 把当前节点放到nodes中
         // 如果是首节点，染成红色
         if(curId==1){
+            curValue = getCurValue(d, index);
+            var originColor = getCurColor(d, index);
+            curFontColor = getFontColor(originColor);
+            minValue = curValue;
+            maxValue = curValue;
             nodes.push({
                 id: curId,
                 label: curName,
                 color:specificNodeColor,
+                value: curValue,
+                font:{
+                    color: curFontColor,
+                },
             });
         }
         else{
             curColor = getCurColor(d, index);
-
+            curValue = getCurValue(d, index);
+            curFontColor = getFontColor(curColor);
+            minValue = Math.min(minValue, curValue);
+            maxValue = Math.max(maxValue, curValue);
             nodes.push({
                 id: curId,
                 label: curName,
                 color:curColor,
+                value: curValue,
+                font:{
+                    color: curFontColor,
+                },
             });
         }
         // console.log(nodes);
@@ -465,12 +495,20 @@ function loadTopo(){
         // 把当前节点放到nodes中，如果是首节点就不用了
         if(curId!=1){
             curColor = getCurColor(d, index);
+            curValue = getCurValue(d, index);
+            curFontColor = getFontColor(curColor);
+            minValue = Math.min(minValue, curValue);
+            maxValue = Math.max(maxValue, curValue);
             nodes.push({
                 id: curId,
                 label: curName,
                 color:curColor,
+                value:curValue,
+                font:{
+                    color: curFontColor,
+                },
             });
-            console.log(curName, curColor);
+            // console.log(curName, curColor);
         }
         // console.log(nodes);
 
@@ -523,6 +561,26 @@ function loadTopo(){
     topoOptions = {
         nodes:{
             shape:'circle',
+            scaling: {
+                min: minValue,
+                max: maxValue,
+                label: {
+                    enabled: true,
+                    min: 14,
+                    max: 30,
+                    maxVisible: 30,
+                    drawThreshold: 5
+                },
+                customScalingFunction: function (min,max,total,value) {
+                  if (max === min) {
+                    return 0.5;
+                  }
+                  else {
+                    let scale = 1 / (max - min);
+                    return Math.max(0,(value - min)*scale);
+                  }
+                }
+            },
         },
         edges:{
             arrows:{
@@ -546,6 +604,7 @@ function loadTopo(){
     network = new vis.Network(topo_container, topoData, topoOptions);
     bindClickEvent();
 
+    console.log(minValue, maxValue);
     
 }
 
@@ -630,7 +689,7 @@ function animate() {
 
         // console.log(existedEddyIndices);
 
-        var info = eddyFeature['info'][currentMainDay];
+        var info = eddyInfo[currentMainDay];
         // 这时候日期已经切换了
         for(let i=0; i<existedEddyIndices.length; i++){
             var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
@@ -645,7 +704,7 @@ function animate() {
     if(showPreEddiesSign){  // 在局部窗口点击了追踪上一天
         showPreEddiesSign = false;  // 清除标记
         showPreEddies();
-        var info = eddyFeature['info'][currentMainDay];
+        var info = eddyInfo[currentMainDay];
         // 这时候日期已经切换了
         for(let i=0; i<existedEddyIndices.length; i++){
             var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
@@ -680,7 +739,7 @@ function animate() {
         removePointers();  // 清除所有指示器
         willBeAddPartNames.length = 0;  // 清空待更新数组
         // 得到对应的part
-        var info = eddyFeature['info'][currentMainDay];
+        var info = eddyInfo[currentMainDay];
         var cpx = info[tarIndex][0];  // cpx指的是在panel上的cx
         var cpy = info[tarIndex][1];
 
