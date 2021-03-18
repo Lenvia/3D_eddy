@@ -1449,7 +1449,8 @@ function updateOpacity(curLine){
         return;
 
     for(var i=0; i<curLine.material.length; i++){
-        curLine.material[i].opacity = (curLine.geometry.attributes.opacity.array[2*i] + curLine.geometry.attributes.opacity.array[2*i+1])/2;
+        // curLine.material[i].opacity = (curLine.geometry.attributes.opacity.array[2*i] + curLine.geometry.attributes.opacity.array[2*i+1])/2;
+        curLine.material[i].opacity = Math.min(curLine.geometry.attributes.opacity.array[2*i], curLine.geometry.attributes.opacity.array[2*i+1]);
     }
 }
 
@@ -1582,7 +1583,8 @@ function DyChange(k){
             var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex+1)%L+startIndex;
             mats[next_mOpaIndex].opacity = 1;
             attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
-        }cur.geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( cur.geometry.attributes.startNum.array, 1 ));
+        }
+
     }
 }
 
@@ -1860,6 +1862,7 @@ function DyChange2(cur, k){  // k=1
                 attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
             }
         }
+        cur.geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( cur.geometry.attributes.startNum.array, 1 ));
 
         
     }
