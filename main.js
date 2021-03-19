@@ -247,7 +247,7 @@ function createHelper(){
 function createSea(){
     // 海水箱子的长、宽
     var boxLen = edgeLen, boxWid = edgeLen;
-    const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
+    const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, boxHeight);
     const material2 = new THREE.MeshPhongMaterial({
         // color: 0x1E90FF,
         color: 0xb4968,
@@ -259,7 +259,7 @@ function createSea(){
         // vertexColors: true,
     }); //材质对象Material
 
-    geometry2.translate(0, 0, -biasZ/2);
+    geometry2.translate(0, 0, -boxHeight/2);
     sea = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
     sea.position.set(0,0,0);
     sea.name = "sea";

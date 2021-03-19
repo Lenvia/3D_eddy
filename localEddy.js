@@ -17,10 +17,10 @@ const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
 var renderWidth , renderHeight;  // 不含单位px
 var containerWidth, containerHeight;
 
+var tubeHeightFactor = 500;  // 控制流管高度
 
 
 var existedCones = [];  // 场上存在的标记
-
 var existedPartNames = [];  // 场上存在的partName
 var willBeAddPartNames = [];  // 需要添加的partName
 
@@ -110,7 +110,7 @@ function onWindowResize() {
 function createSea(){
     // 海水箱子的长、宽
     var boxLen = edgeLen, boxWid = edgeLen;
-    const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, biasZ);
+    const geometry2 = new THREE.BoxGeometry(boxLen, boxWid, boxHeight);
     const material2 = new THREE.MeshLambertMaterial({
         // color: 0x1E90FF,
         color: 0x191970,
@@ -120,7 +120,7 @@ function createSea(){
         vertexColors: true,
     }); //材质对象Material
 
-    geometry2.translate(0, 0, -biasZ/2);
+    geometry2.translate(0, 0, -boxHeight/2);
     var mesh2 = new THREE.Mesh(geometry2, material2); //网格模型对象Mesh
     mesh2.position.set(0,0,0);
     // console.log(mesh2);
@@ -149,12 +149,20 @@ function loadLocalEddy(partName){
             geometry.translate(-0.5, -0.5, 0);
             
             var positions = geometry.attributes.position.array;
+
+            var biasZ = [];
             for ( let j = 0;  j < positions.length; j += 3 ) {
                 // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
-                positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
+                var realLayer = positions[j+2]*50;
+                var apprLayer = Math.round(realLayer);  // 四舍五入
+                biasZ.push(realLayer-apprLayer);  // 记录此后应当偏移多少
+                positions[j+2] = -depth_array[apprLayer]+biasZ[j/3]*tubeHeightFactor;
             }
 
             geometry.scale(edgeLen, edgeWid, scaleHeight);
+            positions = geometry.attributes.position.array;
+
+            // console.log(biasZ);
 
             geometry.computeVertexNormals();
             geometry.normalizeNormals();
@@ -172,11 +180,6 @@ function loadLocalEddy(partName){
             });
 
             var tube = new THREE.Mesh(geometry, material);
-
-            //need update 我不知道有没有用，感觉没用
-            // linesG.geometry.colorsNeedUpdate = true;
-            // linesG.geometry.groupsNeedUpdate = true;
-            // linesG.material.needsUpdate = true;
             
             tube.name = partName;
             // console.log(partName, "加载完毕");
@@ -187,8 +190,6 @@ function loadLocalEddy(partName){
         });
     });
     promise.then(()=>{
-        // var model = findModel2(name);
-        // console.log(name, "加载完毕！");
         return ;
     })
 }

@@ -4,7 +4,7 @@
 
 const edgeLen = 3000;  // 地形（海水、山脉）长度
 const edgeWid = edgeLen;  // 地形宽度
-const scaleHeight = 10*edgeLen/200000; //高度缩放倍数
+const scaleHeight = 5*edgeLen/200000; //高度缩放倍数
 
 // 主界面变量
 var is3d = true;
@@ -13,7 +13,7 @@ var channel;  // 峡谷地形
 var surface;  // 表面陆地
 var land_2d;  // 2d
 
-var biasZ = 4000*scaleHeight;  // 海底山脉向下移动（默认为4000m，如果生成地形这个值会更新）
+var boxHeight = 4000*scaleHeight;  // 海底深度（默认为4000m）
 var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
 
