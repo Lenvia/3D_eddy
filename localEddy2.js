@@ -687,9 +687,19 @@ function loadTopo(curDay, curIndex){
 
 
     // 更新
-    network.redraw();
     network.focus(chosenTopoNodeId, {
         scale: 1,
+    })
+    network.body.emitter.emit("_requestRedraw");
+    // 重新设置物理引擎！！！要不然redraw之后不显示节点
+    // 我自己试出来的！！！
+    network.body.emitter.emit("resetPhysics");
+    // network.body.emitter.emit("startSimulation");
+    // network.body.emitter.emit("_dataUpdated");
+    // network.body.emitter.emit('_dataChanged');
+    network.redraw();
+    network.focus(chosenTopoNodeId, {
+        scale: 0.8,
     })
 }
 
