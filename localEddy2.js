@@ -34,6 +34,7 @@ var existedNodesMap = new Map();  // 场上显示的节点map
 var topoData, topoOptions;  // 拓扑图元素
 var defaultNodeColor = "#00BFFF";
 var defaultNodeOpacity = 0.2;
+var defaultEdgeOpacity = 1;
 var cycNodeColor = "#faf955";  // 气旋颜色，黄色
 var anticycNodeColor = "#382da1";  // 反气旋颜色，蓝紫色
 var specificNodeColor = "#ff0000";
@@ -476,7 +477,7 @@ function preLoadTopo(){
                             from: curId,
                             to: tempId,
                             color:{
-                                opacity: defaultNodeOpacity,
+                                opacity: defaultEdgeOpacity,
                             }
                         });
                     }
@@ -528,6 +529,7 @@ function preLoadTopo(){
         layout:{
             hierarchical:{
                 direction: 'LR',
+                nodeSpacing: 150,
                 sortMethod: 'directed',
                 shakeTowards: 'roots',  // roots, leaves
             },
@@ -694,7 +696,7 @@ function loadTopo(curDay, curIndex){
     // 重新设置物理引擎！！！要不然redraw之后不显示节点
     // 我自己试出来的！！！
     network.body.emitter.emit("resetPhysics");
-    // network.body.emitter.emit("startSimulation");
+    network.body.emitter.emit("startSimulation");
     // network.body.emitter.emit("_dataUpdated");
     // network.body.emitter.emit('_dataChanged');
     network.redraw();
