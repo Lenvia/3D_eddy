@@ -27,11 +27,12 @@ U = np.array([], dtype=np.float64)
 V = np.array([], dtype=np.float64)
 W = np.array([], dtype=np.float64)
 
-for day in range(6, 30):
+for day in range(0, 1):
     print("day:", day)
     # 赋值
     for i, var in enumerate(varSet):
         var_info = f.variables[var]  # 获取变量信息
+        # print(var_info)
         var_data = f[var][day][:]  # 获取变量的数据
         # print(var_data.shape)
         # var_data = np.array(var_data)  # 转化为np.array数组
@@ -44,43 +45,36 @@ for day in range(6, 30):
 
     # U.shape(50, 500, 500)  层数、纬度、经度
     # vec.shape = (500, 500, 50) 应该是（纬度，经度，层数）
-    # npy_to_vtk.py自己会调换经纬！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！1
 
-    vec = np.zeros(shape=(500, 500, 50, 3))
+    for i in range(W.shape[0]):
+        for j in range(W.shape[1]):
+            for k in range(W.shape[2]):
+                if W[i][j][k] != 0:
+                    print(W[i][j][k])
 
-
-    vec2 = []
-    vec2.append(U)
-    vec2.append(V)
-    vec2.append(W)
-
-    vec2 = np.array(vec2)
+    # vec2 = []
+    # vec2.append(U)
+    # vec2.append(V)
+    # vec2.append(W)
+    #
+    # # npy_to_vtk.py自己会调换经纬！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+    # vec2 = np.array(vec2)  # (3, 50, 500, 500)
+    # vec2 = vec2.transpose([2, 3, 1, 0])  # (500, 500, 50, 3) 纬度，经度，层数，3
+    #
     # print(vec2.shape)
-    vec2 = vec2.transpose([2, 3, 1, 0])
-
-    print(vec2.shape)
+    # dict_ = {'x': vec2, 'y': 4}  # x表示数据，y表示x的维数
     #
-    # print(vec.shape)
+    # tarDir = 'whole_npy_file/'
+    # if not os.path.exists(tarDir):
+    #     os.makedirs(tarDir)
     #
-    # for i in range(500):
-    #     for j in range(500):
-    #         for k in range(50):
-    #             vec[i][j][k][0] = U[k][i][j]
-    #             vec[i][j][k][1] = V[k][i][j]
-    #             vec[i][j][k][2] = W[k][i][j]
+    # file = tarDir + 'vec' + str(day) + '.npy'
     #
-    dict_ = {'x': vec2, 'y': 4}  # x表示数据，y表示x的维数
+    # np.save(file, dict_)
+    # print('successfully saved!')
 
-    tarDir = 'whole_npy_file/'
-    if not os.path.exists(tarDir):
-        os.makedirs(tarDir)
-
-    file = tarDir + 'vec' + str(day) + '.npy'
-
-    np.save(file, dict_)
-    print('successfully saved!')
-    dict_load = np.load(file, allow_pickle=True)
-    dict_load = dict_load.item()
+    # dict_load = np.load(file, allow_pickle=True)
+    # dict_load = dict_load.item()
     # print(dict_load)
 
 

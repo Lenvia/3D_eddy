@@ -5,8 +5,7 @@ clc;
 %% Parameters
 dataFile = '/Users/yy/Downloads/resources_EA/COMBINED_2011013100.nc';
 newFileName = 'ensemble1Eddies.nc';
-circFileName = 'circ1.nc';
-ekeFileName = 'eke1.nc';
+attrFileName = '3dAttr1.nc';
 
 nbr = 15; % 9;
 nu = 4; %5;  %像是扩展搜索半径
@@ -16,8 +15,7 @@ queueMaxElements = 125000;  % max_eddy_cells_search
 
 % Open the file
 ncid = netcdf.create(newFileName,'NC_WRITE');
-ncid2 = netcdf.create(circFileName,'NC_WRITE');
-ncid3 = netcdf.create(ekeFileName, 'NC_WRITE');
+ncid2 = netcdf.create(attrFileName,'NC_WRITE');
 
 % Define the dimensions
 dimidt = netcdf.defDim(ncid,'time',60);
@@ -28,10 +26,7 @@ dimiddepth = netcdf.defDim(ncid,'depth',50);
 dimidt2 = netcdf.defDim(ncid2,'time',60);
 dimidlat2 = netcdf.defDim(ncid2,'latitude',500);
 dimidlon2 = netcdf.defDim(ncid2,'longitude',500);
-
-dimidt3 = netcdf.defDim(ncid3,'time',60);
-dimidlat3 = netcdf.defDim(ncid3,'latitude',500);
-dimidlon3 = netcdf.defDim(ncid3,'longitude',500);
+dimiddepth2 = netcdf.defDim(ncid2,'depth',50);
 
 % Define IDs for the dimension variables (pressure,time,latitude,...)
 date_ID=netcdf.defVar(ncid,'time','double',[dimidt]);
@@ -42,21 +37,17 @@ depth_ID=netcdf.defVar(ncid,'depth','NC_FLOAT',[dimiddepth]);
 date_ID2=netcdf.defVar(ncid2,'time','double',[dimidt2]);
 latitude_ID2=netcdf.defVar(ncid2,'latitude','NC_FLOAT',[dimidlat2]);
 longitude_ID2=netcdf.defVar(ncid2,'longitude','NC_FLOAT',[dimidlon2]);
-
-date_ID3=netcdf.defVar(ncid3,'time','double',[dimidt3]);
-latitude_ID3=netcdf.defVar(ncid3,'latitude','NC_FLOAT',[dimidlat3]);
-longitude_ID3=netcdf.defVar(ncid3,'longitude','NC_FLOAT',[dimidlon3]);
+depth_ID2=netcdf.defVar(ncid2,'depth','NC_FLOAT',[dimiddepth2]);
 
 
 % Define the main variable ()
 isEddy_ID = netcdf.defVar(ncid,'isEddy','NC_BYTE',[dimidlon dimidlat dimiddepth dimidt]);
-circ_ID = netcdf.defVar(ncid2, 'circ', 'NC_SHORT', [dimidlon2 dimidlat2 dimidt2]);
-eke_ID = netcdf.defVar(ncid3, 'eke', 'NC_DOUBLE', [dimidlon3 dimidlat3 dimidt3]);
+circ_ID = netcdf.defVar(ncid2, 'circ', 'NC_SHORT', [dimidlon2 dimidlat2 dimiddepth2 dimidt2]);
+eke_ID = netcdf.defVar(ncid2, 'eke', 'NC_DOUBLE', [dimidlon2 dimidlat2 dimiddepth2 dimidt2]);
 
 % We are done defining the NetCdf
 netcdf.endDef(ncid);
 netcdf.endDef(ncid2);
-netcdf.endDef(ncid3);
 
 %% Reading Data
 longitude = ncread(dataFile, 'XC');
@@ -73,6 +64,7 @@ netcdf.putVar(ncid,depth_ID,depth);
 netcdf.putVar(ncid2,date_ID2,timeS);
 netcdf.putVar(ncid2,latitude_ID2,latitude);
 netcdf.putVar(ncid2,longitude_ID2,longitude);
+netcdf.putVar(ncid2,depth_ID2,depth);
 
 %% Per Timestamp Processing
 
@@ -105,8 +97,8 @@ for timestamp = 1:30
     end
     [disx, disy, grid_area] = grid_cell_area(xx, yy);
     
-    circulation_mask = zeros(nx, ny);  % 只记录表面
-    eke_mask = zeros(nx, ny);
+    circulation_mask = zeros(nx, ny, nz);
+    eke_mask = zeros(nx, ny, nz);
     
     % processing data
     [gradUx, gradUy, ~] = gradient(U);
@@ -262,8 +254,8 @@ for timestamp = 1:30
         else circ = -1;
         end
         
-        circulation_mask = circulation_mask + circ*eddie_mask(:,:,1);
-        eke_mask = eke_mask + total_eke*eddie_mask(:,:,1);
+        circulation_mask = circulation_mask + circ*eddie_mask(:,:,:);
+        eke_mask = eke_mask + total_eke*eddie_mask(:,:,:);
     end
     newData = uint8(newData);
     
@@ -275,17 +267,13 @@ for timestamp = 1:30
     countLoc2 = [m,n,1];
     
     netcdf.putVar(ncid,isEddy_ID,startLoc,countLoc,newData);
-    % 这时候数据是正好的，第一维随经度增加而增加，第二维随纬度增加而增加
-    % matlab是矩阵，而通常我们用的是坐标轴。 具体的图像应该是使用矩阵img再逆时针旋转90度
-    netcdf.putVar(ncid2, circ_ID, startLoc2,countLoc2, circulation_mask);
-    
-    netcdf.putVar(ncid3, eke_ID, startLoc2,countLoc2, eke_mask);
+    netcdf.putVar(ncid2, circ_ID, startLoc,countLoc, circulation_mask);
+    netcdf.putVar(ncid2, eke_ID, startLoc,countLoc, eke_mask);
 end
 
 %% Closing things
 % We're done, close the netcdf
 netcdf.close(ncid);
 netcdf.close(ncid2);
-netcdf.close(ncid3);
 load handel
 % sound(y,Fs)

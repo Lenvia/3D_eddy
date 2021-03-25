@@ -33,6 +33,6 @@ def write_ply_label(day):
 
 
 if __name__ == '__main__':
-    write_ply_label(2)
+    write_ply_label(0)
 
 

@@ -1,4 +1,4 @@
-var myChart = echarts.init(document.getElementById('auxiliary-container'));
+var topo_container = echarts.init(document.getElementById('topo-container'));
 
 updateEcharts();
 
@@ -32,7 +32,7 @@ function updateEcharts(){
             };
 
             // 使用刚指定的配置项和数据显示图表。
-            myChart.setOption(option);
+            topo_container.setOption(option);
         }
     })
 }

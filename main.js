@@ -644,7 +644,7 @@ function loadEddiesForDays(){
     Promise.all(arr).then((res)=>{
         console.log("模型加载完毕");
         // 设置属性
-        loadAttrArray("OW");
+        // loadAttrArray("OW");
         // loadAttrArray("VORTICITY");
     })
 }

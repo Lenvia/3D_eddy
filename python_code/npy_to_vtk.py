@@ -6,10 +6,10 @@ import os
 
 
 def write_vtk(vec,file_name):
-    # 读出来numpyarray传到vec，file-name是输出
+    # 读出来numpyArray传到vec，file-name是输出
     dims = vec.shape
-    # print(dims)  # (500, 500, 50, 3)  应该是（纬度，经度，层数）
-    x = np.arange(0, 1, 1/dims[1], dtype='float64')
+    # print(dims)  # (500, 500, 50, 3)
+    x = np.arange(0, 1, 1/dims[1], dtype='float64')  # np.arange(起点，终点，步长）
     # print(len(x))
     y = np.arange(0, 1, 1/dims[0], dtype='float64')
     if dims[-1] == 2:  # 判断是否是二维

@@ -68,7 +68,7 @@ def load_netcdf4(filename):  # name of the netCDF data file
     uvel = f.variables['U'][day, :, :132, 336:]  # 纬向速度
     vvel = f.variables['V'][day, :, :132, 336:]  # 经线速度
 
-    print(lon)
+    # print(lon)
 
     # Load time in hours from 1950-01-01
     t = f.variables['T_AX'][:]  # 时间数组
@@ -147,6 +147,12 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
 
     # Compute OW, straight and then normalized with its standard deviation
     OW_raw = normal_strain ** 2 + shear_strain ** 2 - vorticity ** 2
+
+    # for i in range(OW_raw.shape[0]):
+    #     for j in range(OW_raw.shape[1]):
+    #         for k in range(OW_raw.shape[2]):
+    #             if OW_raw[i][j][k]!=0:
+    #                 print(OW_raw[i][j][k])
     OW_mean = OW_raw.sum() / n_ocean_cells
     OW_std = np.sqrt(np.sum((np.multiply(ocean_mask,(OW_raw - OW_mean)) ** 2)) / n_ocean_cells)
     OW = OW_raw / OW_std
@@ -172,7 +178,7 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
           '\nTo identify eddies over the full domain, set max_evaluation_points to a high number like 1e4.')
 
     local_mins = local_peaks(OW, OW_start, max_evaluation_points)
-    num_mins = local_mins.shape[1]
+    num_mins = local_mins.shape[1]  # 候选点的个数
 
 
     ########################################################################
@@ -434,15 +440,15 @@ def local_peaks(A,A_start,max_evaluation_points):
 # Using the scipy.signal.fing_peaks function with flattened array and unravelling it, probably much faster.
     A_flat = A.flatten()
     peaks = sg.find_peaks(-A_flat,height=-A_start)
-    print(peaks)
+    # print(peaks)
     n_minima = len(peaks[0])
-    print(n_minima)
+    # print(n_minima)
     local_min = np.asarray(np.unravel_index(peaks[0],A.shape))
-    print(local_min)
-    print(local_min.shape)
-    print(local_min.shape[1])
+    # print(local_min)
+    # print(local_min.shape)
+    # print(local_min.shape[1])
     sample = np.random.randint(0,local_min.shape[1],size = np.min((max_evaluation_points,n_minima)))
-    print(sample)
+    # print(sample)
 
     return local_min[:,sample]
 
@@ -571,26 +577,26 @@ if __name__ == '__main__':
 
     lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, levels = eddy_detection(
         lon, lat, depth, uvel, vvel, day, R2_criterion, OW_start, max_evaluation_points, min_eddie_cells)
-
-    print("successfully detected!")
-
-    tarDir = 'result2/small' + str(day)
-
-    if not os.path.exists(tarDir):
-        os.makedirs(tarDir)
-
-    joblib.dump(t, tarDir + '/t.pkl')
-    joblib.dump(lon, tarDir + '/lon.pkl')
-    joblib.dump(lat, tarDir + '/lat.pkl')
-    joblib.dump(uvel, tarDir + '/uvel.pkl')
-    joblib.dump(vvel, tarDir + '/vvel.pkl')
-    joblib.dump(vorticity, tarDir + '/vorticity.pkl')
-    joblib.dump(OW, tarDir + '/OW.pkl')
-    joblib.dump(OW_eddies, tarDir + '/OW_eddies.pkl')
-    joblib.dump(eddie_census, tarDir + '/eddie_census.pkl')
-    joblib.dump(nEddies, tarDir + '/nEddies.pkl')
-    joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
-    joblib.dump(levels, tarDir + '/levels.pkl')
-
-    print("start plot")
-    plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
+    #
+    # print("successfully detected!")
+    #
+    # tarDir = 'result2/small' + str(day)
+    #
+    # if not os.path.exists(tarDir):
+    #     os.makedirs(tarDir)
+    #
+    # joblib.dump(t, tarDir + '/t.pkl')
+    # joblib.dump(lon, tarDir + '/lon.pkl')
+    # joblib.dump(lat, tarDir + '/lat.pkl')
+    # joblib.dump(uvel, tarDir + '/uvel.pkl')
+    # joblib.dump(vvel, tarDir + '/vvel.pkl')
+    # joblib.dump(vorticity, tarDir + '/vorticity.pkl')
+    # joblib.dump(OW, tarDir + '/OW.pkl')
+    # joblib.dump(OW_eddies, tarDir + '/OW_eddies.pkl')
+    # joblib.dump(eddie_census, tarDir + '/eddie_census.pkl')
+    # joblib.dump(nEddies, tarDir + '/nEddies.pkl')
+    # joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
+    # joblib.dump(levels, tarDir + '/levels.pkl')
+    #
+    # print("start plot")
+    # plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)

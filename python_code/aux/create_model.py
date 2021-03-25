@@ -27,25 +27,25 @@ def generateMesh(day):
     pcd.colors = o3d.utility.Vector3dVector(point_cloud[:,3:6]/255)
     pcd.normals = o3d.utility.Vector3dVector(point_cloud[:,6:9])
     #
-    # o3d.visualization.draw_geometries([pcd])
+    o3d.visualization.draw_geometries([pcd])
 
-    distances = pcd.compute_nearest_neighbor_distance()
-    avg_dist = np.mean(distances)
-    print(avg_dist)
-    radius = 2*avg_dist
-
-    bpa_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(pcd,o3d.utility.DoubleVector([radius, radius * 2]))
-
-    dec_mesh = bpa_mesh.simplify_quadric_decimation(max_pieces)
-
-    print("去除重复...")
-    dec_mesh.remove_degenerate_triangles()
-    dec_mesh.remove_duplicated_triangles()
-    dec_mesh.remove_duplicated_vertices()
-    dec_mesh.remove_non_manifold_edges()
-
-    print("正在写入...")
-    o3d.io.write_triangle_mesh(output_path+"bpa_mesh_"+str(day)+".ply", dec_mesh)
+    # distances = pcd.compute_nearest_neighbor_distance()
+    # avg_dist = np.mean(distances)
+    # print(avg_dist)
+    # radius = 2*avg_dist
+    #
+    # bpa_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(pcd,o3d.utility.DoubleVector([radius, radius * 2]))
+    #
+    # dec_mesh = bpa_mesh.simplify_quadric_decimation(max_pieces)
+    #
+    # print("去除重复...")
+    # dec_mesh.remove_degenerate_triangles()
+    # dec_mesh.remove_duplicated_triangles()
+    # dec_mesh.remove_duplicated_vertices()
+    # dec_mesh.remove_non_manifold_edges()
+    #
+    # print("正在写入...")
+    # o3d.io.write_triangle_mesh(output_path+"bpa_mesh_"+str(day)+".ply", dec_mesh)
 
 
 def show(day):
@@ -56,4 +56,4 @@ def show(day):
 
 if __name__ == '__main__':
     generateMesh(0)
-    show(0)
+    # show(0)
