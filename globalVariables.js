@@ -1,70 +1,85 @@
-/*
-    整个html下的全局变量
-*/
-
+/**
+ * 预设全局变量
+ */
 const edgeLen = 3000;  // 地形（海水、山脉）长度
 const edgeWid = edgeLen;  // 地形宽度
 const scaleHeight = 5*edgeLen/200000; //高度缩放倍数
-
-// 主界面变量
-var is3d = true;
-var sea;  // 海
-var seaFrame;  // 海框架
-var channel;  // 峡谷地形
-var surface;  // 表面陆地
-var land_2d;  // 2d
-
 var boxHeight = 4000*scaleHeight;  // 海底深度（默认为4000m）
-var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
-var re_depth = new Map();  // 反向映射，通过高度映射第几层
-
-var currentMainDay;  // （主面板）当前日期
-var lastDay;  // （主面板）上一日
-
-var day_ctrl;
-var dynamic = false;  // 默认不准动
-
-var progress_bar;
-var draggable_point;
+var tubeHeightFactor = 500;  // 控制流管高度
 
 var dayLimit = 60;  // 暂定60为最大天数
 var play_start_day = 0;  // 播放器起点（默认为0）
 var loadDayNum = 1;  // 3d流线加载多少天
 var tex_pps_day = 10;  // 2d和pps加载天数
 
+/**
+ * 预加载变量
+ */
+// 本地加载
+var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
+var re_depth = new Map();  // 反向映射，通过高度映射第几层
+var eddyFeature;  // 涡核信息数组
+
+// 组件绑定
+var topo_container = document.getElementById('topo-container');
+var echarts_container = document.getElementById('echarts-container');
+var echarts_window = echarts.init(echarts_container);
+
+
+/**
+ * 主界面变量
+ */
+// 主界面参数
+var dynamic = false;  // 默认不准动
+var currentMainDay;  // （主面板）当前日期
+var lastDay;  // （主面板）上一日
+
+// 主界面模型
+var sea;  // 海
+var seaFrame;  // 海框架
+var channel;  // 峡谷地形
+var surface;  // 表面陆地
+var land_2d;  // 2d
+
+// 主界面模型存放
+var whole_models = [];
+var local_models = [];
+
+// 主界面gui
+var day_ctrl;
 var appearFolder;
 var attrFolder;
 var colorFolder;
 var opaFolder;
 var funcFolder;
 
-var whole_models = [];
-var local_models = [];
-
-var topo_container = document.getElementById('topo-container');
-var echarts_container = document.getElementById('echarts-container');
-var echarts_window = echarts.init(echarts_container);
+// 主界面pps
+var audio_progress_bar;
+var draggable_point;
 
 
-var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标
-
-
-var existedEddyIndices = [];  // 场上存在的涡旋的index
-
-var eddyFeature;  // 涡核信息数组
+/**
+ * 局部窗口变量
+ */
 
 var network;  // 拓扑图
 
-// 更新信号
+/**
+ * 主副窗口共享变量
+ */
+var is3d = true;
+var existedEddyIndices = [];  // 场上存在的涡旋的index
+var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标【从主窗口触发】
+
+/**
+ * 更新信号
+ */
 // 主窗口触发
 var pitchUpdateSign = false;  // 主窗口选择涡旋了
 var switchUpdateSign = false;  // 如果为true，表示主界面切换日期而引起局部涡旋的更新
-
-
 // 局部窗口触发
 var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的日期，这里不能再反过来清除局部窗口的元素
 var dyeSign = false;  // 提醒主窗口去染色
-
 // DOM组件绑定函数信号
 var showNextEddiesSign = false;  // DOM点击响应标记，用来控制localEddy.js中showNextEddies()函数
 var showPreEddiesSign = false;  // showPreEddiesSign()响应
@@ -74,10 +89,9 @@ var topoClickSign = false;  // 鼠标点击了拓扑图节点
 
 
 
-// 加载深度数组
-loadDepth();
-// 加载涡核信息数组
-loadEddyFeatures();
+
+loadDepth();  // 加载深度数组
+loadEddyFeatures();  // 加载涡核信息数组
 
 /*
     预加载

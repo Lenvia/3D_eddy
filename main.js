@@ -7,23 +7,21 @@ import { OBJLoader } from './node_modules/three/examples/jsm/loaders/OBJLoader.j
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 
+/**
+ * 框架组件
+ */
 var container, stats;  // 容器，状态监控器
 var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
-var audio_player;
-var div_start_time;
 
-
+/**
+ * 预设变量
+ */
+// 窗口大小
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
-
 var renderWidth, renderHeight;
 var containerWidth, containerHeight;
 
-
-let helper;  // 鼠标helper
-
-const raycaster = new THREE.Raycaster();  // 射线
-const mouse = new THREE.Vector2();  // 鼠标二维坐标
-
+// 天数
 const days = [];  // 一共60天
 const exDays = [-1]; // 扩展天数，第一个是-1
 for (var i =0; i<=59; i++){
@@ -31,21 +29,28 @@ for (var i =0; i<=59; i++){
     exDays.push(i);
 }
 
+/**
+ * 涡旋模型
+ */
+var curLine;  // 当前流线
+var tempCurLine;  // 在点击播放时，如果有curLine 先隐藏
+var curModel;  // 当前涡旋立体形状
+var textures_2d = [];
 
+/**
+ * 涡旋位置指示器
+ */
 var existedCones = [];  // 场上存在的标记
+var selected_pos = undefined;  // 被鼠标选中的pos
+var specific_color = 0xff0000;  // 被选中的指针的默认颜色
 
-// 进度条模块
-var progressModal, progressBar, progressLabel, progressBackground;
-var frameLabel;
-
-
-// gui参数
+/**
+ * gui板块
+ */
 var gui;
 var default_opt;  // 默认设置
 
-// 本界面唯一变量
-var curLine;  // 当前流线
-var tempCurLine;  // 在点击播放时，如果有curLine 先隐藏
+// gui参数
 var currentAttr;  // 当前属性
 var upValue;  // 属性上界
 var downValue;  // 属性下界
@@ -56,51 +61,50 @@ var hideChannel = false; // 隐藏海峡
 var hideSurface = false;  // 隐藏陆地
 var pitchMode = false;  // 选中模式（选择涡旋）
 
-var curModel;  // 当前涡旋立体形状
-
-
 // 当前gui颜色面板值
 var currentColor0 = [];
 var currentColor1 = [];
 var currentColor2 = [];
 var currentColor3 = [];
 var currentColor4 = [];
+
 //当前gui透明度面板值
-var currentOpacity0
-var currentOpacity1;
-var currentOpacity2;
-var currentOpacity3;
-var currentOpacity4;
+var currentOpacity0, currentOpacity1, currentOpacity2, currentOpacity3, currentOpacity4;
 
 // 实现双向绑定（重置面板）
-var color0_ctrl;
-var color1_ctrl;
-var color2_ctrl;
-var color3_ctrl;
-var color4_ctrl;
-
-var opa0_ctrl;
-var opa1_ctrl;
-var opa2_ctrl;
-var opa3_ctrl;
-var opa4_ctrl;
-
+var color0_ctrl, color1_ctrl, color2_ctrl, color3_ctrl, color4_ctrl;
+var opa0_ctrl, opa1_ctrl, opa2_ctrl, opa3_ctrl, opa4_ctrl;
 var upValue_ctrl;
 var downValue_ctrl;
 
-var textures_2d = [];
 
-var selected_pos = undefined;  // 被鼠标选中的pos
-var specific_color = 0xff0000;  // 被选中的指针的默认颜色
+/**
+ * pps
+ */
+// 播放组件
+var audio_player;  // 播放条
+var div_start_time;
 
+// 播放逻辑
 var Timer;
-
 var ppsArray = new Array(tex_pps_day);
-
 var readySign = false;  // 准备好了，可以播放
 var frameNum = 0;  // 当前帧数
 var intervalNum;  // 每隔intervalNum帧刷新一下动画
 var stayNum;  // 每刷新stayNum次跳到下一天
+
+/**
+ * 辅助
+ */
+var helper;  // 鼠标helper
+const raycaster = new THREE.Raycaster();  // 射线
+const mouse = new THREE.Vector2();  // 鼠标二维坐标
+
+/**
+ * 进度条板块
+ */
+var progressModal, progressBar, progressLabel, progressBackground;
+var frameLabel;
 
 
 init();
@@ -117,9 +121,9 @@ function init() {
     renderer.setSize( renderWidth, renderHeight );  // 尺寸
 
     audio_player = document.getElementById('audio-player-container');
-    progress_bar = document.getElementById("audio-progress-bar");
+    audio_progress_bar = document.getElementById("audio-progress-bar");
     draggable_point = document.getElementById("draggable-point");
-    // console.log(progress_bar);
+    // console.log(audio_progress_bar);
 
     div_start_time = document.getElementById('start-time');
     div_start_time.innerHTML = "0";
@@ -2003,7 +2007,7 @@ function back_up_playAction(){
         i++;
         if(i<loadDayNum){
             // 进度条
-            progress_bar.style.width = i/(loadDayNum-1)*100 + "%";
+            audio_progress_bar.style.width = i/(loadDayNum-1)*100 + "%";
             // 原点
             draggable_point.style.left = i/(loadDayNum-1)*100 + "%";
             day_ctrl.setValue(i);

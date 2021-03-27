@@ -7,32 +7,53 @@ import { VTKLoader } from './VTKLoader3.js';
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
 
+/**
+ * 框架组件
+ */
 var container;  // 容器，状态监控器
 var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 
-
-const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
-const worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
-
+/**
+ * 预设变量
+ */
+// 窗口大小
 var renderWidth , renderHeight;  // 不含单位px
 var containerWidth, containerHeight;
 
-var tubeHeightFactor = 500;  // 控制流管高度
+// 特征
+var eddyForwards = eddyFeature['forward'];  // 向未来追踪
+var eddyBackwards = eddyFeature['backward'];  // 向以前回溯
+var eddyInfo = eddyFeature['info'];
 
 
+
+/**
+ * 局部窗口
+ */
 var existedCones = [];  // 场上存在的标记
 var existedPartNames = [];  // 场上存在的partName
 var willBeAddPartNames = [];  // 需要添加的partName
 
-// 场上红色节点name
-// 如果是通过上一日下一日按钮切换，不用管
-// 这个数组是专门处理点击切换和日期切换
-var specificNodeNames = [];  
+/**
+ * 拓扑窗口
+ */
 
+var topoData, topoOptions;  // 拓扑图组件
+var chosenTopoNodeId;  // 被鼠标点击的拓扑节点id
+
+// 映射
 var globalNodesMap = new Map();  // 涡旋名->拓扑图节点id； 用于去重，对于map里存在的，不让它入队
 var existedNodesMap = new Map();  // 场上显示的节点map
-var topoData, topoOptions;  // 拓扑图元素
-var defaultNodeColor = "#00BFFF";
+
+
+/*
+    场上红色节点name
+    如果是通过上一日下一日按钮切换，不用管
+    这个数组是专门处理点击切换和日期切换
+*/
+var specificNodeNames = [];  
+
+// 拓扑组件样式
 var defaultNodeOpacity = 0.2;
 var defaultEdgeOpacity = 1;
 var cycNodeColor = "#faf955";  // 气旋颜色，黄色
@@ -40,11 +61,9 @@ var anticycNodeColor = "#382da1";  // 反气旋颜色，蓝紫色
 var specificNodeColor = "#ff0000";
 var cycFontColor = "#000000";  // 气旋标签文字颜色
 var anticycFontColor = "#ffffff";  // 反气旋标签文字颜色
-var chosenTopoNodeId;
+var defaultNodeColor = "#00BFFF";
 
-var eddyForwards = eddyFeature['forward'];  // 向未来追踪
-var eddyBackwards = eddyFeature['backward'];  // 向以前回溯
-var eddyInfo = eddyFeature['info'];
+
 
 init();
 
