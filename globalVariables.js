@@ -9,6 +9,7 @@ const scaleHeight = 5*edgeLen/200000; //高度缩放倍数
 // 主界面变量
 var is3d = true;
 var sea;  // 海
+var seaFrame;  // 海框架
 var channel;  // 峡谷地形
 var surface;  // 表面陆地
 var land_2d;  // 2d
@@ -46,8 +47,6 @@ var echarts_window = echarts.init(echarts_container);
 
 
 var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标
-
-
 
 
 var existedEddyIndices = [];  // 场上存在的涡旋的index
@@ -140,6 +139,7 @@ function switchView(){
     if(is3d){
         is3d = false;  // 切换成2d
 
+        echarts_window.clear();
         echarts_container.style.zIndex = 1;
         topo_container.style.zIndex = 2;
 

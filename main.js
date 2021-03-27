@@ -2,6 +2,7 @@ import * as THREE from './node_modules/three/build/three.module.js';
 import Stats from './node_modules/three/examples/jsm/libs/stats.module.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 import { VTKLoader } from './VTKLoader4.js';
+import { OBJLoader } from './node_modules/three/examples/jsm/loaders/OBJLoader.js';
 
 
 THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
@@ -11,8 +12,6 @@ var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 var audio_player;
 var div_start_time;
 
-
-var maxH;  // 产生的山脉最大高度
 
 const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 
@@ -47,8 +46,6 @@ var default_opt;  // 默认设置
 // 本界面唯一变量
 var curLine;  // 当前流线
 var tempCurLine;  // 在点击播放时，如果有curLine 先隐藏
-
-
 var currentAttr;  // 当前属性
 var upValue;  // 属性上界
 var downValue;  // 属性下界
@@ -58,6 +55,8 @@ var keepValue = true;  // 保持设置
 var hideChannel = false; // 隐藏海峡
 var hideSurface = false;  // 隐藏陆地
 var pitchMode = false;  // 选中模式（选择涡旋）
+
+var curModel;  // 当前涡旋立体形状
 
 
 // 当前gui颜色面板值
@@ -97,7 +96,6 @@ var specific_color = 0xff0000;  // 被选中的指针的默认颜色
 var Timer;
 
 var ppsArray = new Array(tex_pps_day);
-var existedPpsArray = [];
 
 var readySign = false;  // 准备好了，可以播放
 var frameNum = 0;  // 当前帧数
@@ -153,31 +151,27 @@ function init() {
     var axesHelper = new THREE.AxesHelper(1500);
     scene.add(axesHelper);
 
-    loadTexture2d();
-
+    // create2d();  // 2d海洋平面
+    // loadTexture2d();  // 海洋平面纹理
+    
     createSea();
+    createSeaFrame();
+
     createLand();
     createChannel();
-    create2d();
-
+    
     createHelper();
-
-    // 显示等待条
-    // showProgressModal("loadingFrames");
-    // 加载涡旋模型
-    loadEddiesForDays();
-
+    // showProgressModal("loadingFrames");  // 显示等待条
+    
+    loadEddiesForDays();  // 加载涡旋模型
     loadPPS();  // 加载需要播放的迹线引导的流线
     
-    // 设置交互面板
-    setGUI();
+    setGUI();  // 设置交互面板
+
 
     //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
     var ambient = new THREE.AmbientLight(0xffffff);
     scene.add(ambient);
-    // var light = new THREE.DirectionalLight( 0xFFFFFF );
-    // var lighthelper = new THREE.DirectionalLightHelper( light, 5 );
-    // scene.add( lighthelper );
 
     container.addEventListener( 'mousemove', onMouseMove, false );
     container.addEventListener( 'click', onMouseClick, false);
@@ -207,6 +201,8 @@ function onWindowResize() {
 
 
 
+
+// 【废弃】载入2d图片
 function loadTexture2d(){
     for(let i=0; i<tex_pps_day; i++){
         var str;
@@ -269,6 +265,59 @@ function createSea(){
         sea.visible = false;
     }
 }
+
+function createSeaFrame(){
+    // 海水箱子的长、宽
+    var boxLen = edgeLen, boxWid = edgeLen;
+    // var geometry = new THREE.BoxGeometry(boxLen, boxWid, boxHeight);
+
+    var geometry = new THREE.BufferGeometry(); //声明一个空几何体对象
+    //类型数组创建顶点位置position数据
+    var vertices = new Float32Array([
+        -0.5, -0.5, 0, //顶点0坐标
+        -0.5, 0.5, 0, //顶点1坐标
+        -0.5, -0.5, -1, //顶点2坐标
+        -0.5, 0.5, -1, //顶点3坐标
+
+        0.5, -0.5, 0, //顶点4坐标
+        0.5, 0.5, 0, //顶点5坐标
+        0.5, -0.5, -1, //顶点6坐标
+        0.5, 0.5, -1, //顶点7坐标
+    ]);
+    // 创建属性缓冲区对象
+    var attribue = new THREE.BufferAttribute(vertices, 3); //3个为一组
+    // 设置几何体attributes属性的位置position属性
+    geometry.attributes.position = attribue
+
+    // Uint16Array类型数组创建顶点索引数据
+    var indices = new Uint16Array([
+        0,1, 0,2, 1,3, 2,3,
+        4,5, 4,6, 5,7, 6,7,
+        0,4, 1,5, 2,6, 3,7
+    ])
+    // 索引数据赋值给几何体的index属性
+    geometry.index = new THREE.BufferAttribute(indices, 1); //1个为一组
+
+    geometry.scale(boxLen, boxWid, boxHeight);
+
+
+    var material = new THREE.LineBasicMaterial({
+        // color: 0x1E90FF,
+        color: 0x000000,
+        // color: 0x191970,
+        transparent: true,
+        opacity: 1,
+        depthWrite: false, 
+        // wireframe: true,
+    }); //材质对象Material
+
+    seaFrame = new THREE.LineSegments(geometry, material);
+    seaFrame.name = "seaFrame";
+    scene.add(seaFrame);
+
+    // console.log(seaFrame);
+}
+
 
 function createLand(){
     // 生成第0层平面
@@ -494,7 +543,7 @@ function createChannel(){
     })
 }
 
-// 2D地图形式
+// 【废弃】2D地图形式
 function create2d(){
     var texture = THREE.ImageUtils.loadTexture('./resources/Ensemble1/Ensemble1TimeStep01.png', {}, function() {
         render();
@@ -644,7 +693,7 @@ function loadEddiesForDays(){
     Promise.all(arr).then((res)=>{
         console.log("模型加载完毕");
         // 设置属性
-        // loadAttrArray("OW");
+        loadAttrArray("OW");
         // loadAttrArray("VORTICITY");
     })
 }
@@ -757,7 +806,35 @@ function loadAttrArray(attr){
     Promise.all(flag0).then((res)=>{
         
     })
-    
+}
+
+// 加载指定day的涡旋立体形状
+function loadEddyModel(day){
+    var object_loader = new OBJLoader();
+    object_loader.load('./resources/objs/mesh_0.obj', function(object) {
+
+        object.traverse( function( child ) {
+            if ( child.isMesh ){
+                child.geometry.computeVertexNormals();
+                child.geometry.computeFaceNormals();
+            }
+        } );
+
+        var meshObj = object.children[0];        
+
+        var positions = meshObj.geometry.attributes.position.array;
+        meshObj.geometry.translate(-0.5, -0.5, 0);
+
+        for ( let j = 0;  j < positions.length; j += 3 ) {
+            // position[k]是0~0.1，先乘500并四舍五入确定层，再对应到深度数组
+            // 这里内外都取负！！！
+            positions[j+2] = -depth_array[-Math.round(positions[j+2]*10*50)];
+        }
+        meshObj.geometry.scale(edgeLen, edgeWid, scaleHeight);
+
+        curModel = meshObj;
+        scene.add(meshObj);
+    });
 }
 
 /*
@@ -838,13 +915,23 @@ function setGUI(){
                 }
                 console.log(curLine.name);
             }
-            
             lastDay = currentMainDay;
+
+            console.log("删除前", curModel);
+            if(curModel!=undefined){
+                deleteModel(curModel);
+                scene.remove(curModel);
+                
+            }
+            console.log("删除后", curModel);
+                
         }
         else{  // 2d视图
             if(curLine!=undefined)  // 去除3d视图显示的流线
-                scene.remove(curLine)
-            land_2d.material.map = textures_2d[currentMainDay];
+                scene.remove(curLine);
+            // land_2d.material.map = textures_2d[currentMainDay];
+
+            loadEddyModel(currentMainDay);
         }
 
         removePointers();
