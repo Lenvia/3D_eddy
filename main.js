@@ -36,6 +36,7 @@ var curLine;  // 当前流线
 var tempCurLine;  // 在点击播放时，如果有curLine 先隐藏
 var curModel;  // 当前涡旋立体形状
 var textures_2d = [];
+var curModels = [];
 
 /**
  * 涡旋位置指示器
@@ -132,7 +133,8 @@ function init() {
     container.appendChild( renderer.domElement );
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color( 0xbfd1e5 );  // 浅蓝色
+    scene.background = new THREE.Color( 0x215362 );  // 蓝绿色
+    // scene.background = new THREE.Color(0x7daae6);
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
     camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
@@ -815,7 +817,7 @@ function loadAttrArray(attr){
 // 加载指定day的涡旋立体形状
 function loadEddyModel(day){
     var object_loader = new OBJLoader();
-    object_loader.load('./resources/objs/mesh_0.obj', function(object) {
+    object_loader.load('./resources/objs/mesh_'+String(day)+'.obj', function(object) {
 
         object.traverse( function( child ) {
             if ( child.isMesh ){
@@ -836,7 +838,11 @@ function loadEddyModel(day){
         }
         meshObj.geometry.scale(edgeLen, edgeWid, scaleHeight);
 
+        // meshObj.material.transparent = true;
+        // meshObj.material.opacity = 0.5;
+
         curModel = meshObj;
+        curModels.push(curModel);
         scene.add(meshObj);
     });
 }
@@ -894,6 +900,13 @@ function setGUI(){
         console.log("currentMainDay:", currentMainDay);
         // console.log(is3d);
 
+        // console.log(curModels);
+        for(let i=0; i<curModels.length; i++){
+            deleteModel(curModels[i]);
+            scene.remove(curModels[i]);
+        }
+        curModels.length = 0;
+
         if(is3d){ // 3d视图
             if(lastDay!=-1){  // 清除上次的显示
                 last_site = "day"+String(lastDay);
@@ -921,14 +934,6 @@ function setGUI(){
             }
             lastDay = currentMainDay;
 
-            console.log("删除前", curModel);
-            if(curModel!=undefined){
-                deleteModel(curModel);
-                scene.remove(curModel);
-                
-            }
-            console.log("删除后", curModel);
-                
         }
         else{  // 2d视图
             if(curLine!=undefined)  // 去除3d视图显示的流线
@@ -1695,8 +1700,8 @@ function onMouseMove( event ) {
             }
         }
         else{
-            if(land_2d!=undefined){
-                intersects = raycaster.intersectObject( land_2d );
+            if(curModel!=undefined){
+                intersects = raycaster.intersectObject( curModel );
             }
         }
         if(intersects.length>0){
@@ -1734,8 +1739,8 @@ function onMouseClick(event){
         }
     }
     else{
-        if(land_2d!=undefined){
-            intersects = raycaster.intersectObject( land_2d );
+        if(curModel!=undefined){
+            intersects = raycaster.intersectObject( curModel );
         }
     }
 
@@ -1821,7 +1826,7 @@ function loadPPS(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./resources/pps_whole_vtk_file/force_2_pp_10000/".concat(d, ".vtk"));
+            var vtk_path = ("./resources/pps_whole_vtk_folder/force_2_pp_10000/".concat(d, ".vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
