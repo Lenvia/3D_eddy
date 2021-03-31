@@ -4,10 +4,12 @@ var anticycNodeColor = "#382da1";  // 反气旋颜色，蓝紫色
 var eddyFeature;  // 涡核信息数组
 
 var gui;
+var default_opt;
 
 var chartDom = document.getElementById('container');
 var myChart = echarts.init(chartDom);
 var option;
+
 
 
 var eddyForwards;
@@ -23,7 +25,6 @@ var existedNodesMap = new Map();
 var info_desc = {  // 第0 1 16分别代表该节点的名字、类别、id
     name: 4,
     circ: 3,
-    // id: 16,
 };
 
 var schema = [
@@ -48,87 +49,25 @@ var axisData = [0,1,2,3,4,5,6,7,8,9,10];
 
 
 
-loadEddyFeatures();
 
-preLoadTopo(2, 19);
 
-myChart.setOption(option = getOption(data));
-// init();
+
+
+
+init();
 
 function init(){
+    loadEddyFeatures();
+    setGUI();
+
+    preLoadTopo(2, 19);
+    myChart.setOption(option = getOption(data));
+
     
 
-    console.log(data);
-    
-    // data = [
-    //     // 维度X   维度Y   大小  颜色...
-    //     [0, Math.random()*100,   Math.random()*100,   cycNodeColor],
-    //     [0, Math.random()*100,   Math.random()*100,   cycNodeColor],
-    //     [2, Math.random()*100,   Math.random()*100,   anticycNodeColor],
-    //     [5, Math.random()*100,   Math.random()*100,   anticycNodeColor],
-    //     [4, Math.random()*100,   Math.random()*100,   anticycNodeColor],
-    //     [3, Math.random()*100,   Math.random()*100,   anticycNodeColor]
-    // ];
-
-    var axisData = [0,1,2,3,4,5,6,7,8,9,10];
-
-
-    option = {
-        title: {
-            text: '笛卡尔坐标系上的 Graph'
-        },
-        tooltip: {},
-        xAxis: {
-            type: 'category',
-            boundaryGap: false,
-            data: axisData,
-            
-        },
-        yAxis: {
-            type: 'value'
-        },
-        series: [
-            {
-                type: 'graph',
-                layout: 'none',
-                coordinateSystem: 'cartesian2d',
-                symbolSize: 40,
-                label: {
-                    show: true,
-                    formatter: function (params) {
-                        // 假设此轴的 type 为 'time'。
-                        return params.data[4];
-                    }
-                },
-                edgeSymbol: ['circle', 'arrow'],
-                edgeSymbolSize: [4, 10],
-
-                links: edges,
-                data: data,
-
-                // symbolSize:(rawValue, params) => {
-                //     // console.log(params);
-                //     params.symbolSize = params.data[2];
-                //     return params.symbolSize
-                // },
-
-                lineStyle: {
-                    color: '#2f4554'
-                },
-                // itemStyle:{
-                //     normal : {
-                //         color : function(params) {
-                //             console.log(params);
-                //             params.color = params.data[3];
-                //             return params.color;
-                //         }
-                //     }
-                // }
-            }
-        ]
-    };
-
-    option && myChart.setOption(option);
+    var guiTopoContainer = document.getElementById('gui_topo');
+    guiTopoContainer.appendChild(gui.domElement);
+    chartDom.appendChild(guiTopoContainer);
 }
 
 
@@ -326,13 +265,17 @@ function getOption(data) {
             borderWidth: 1,
             formatter: function (obj) {
                 var value = obj.value;
-                console.log(value);
-                return '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
-                    + '编号：'+ value[5]+ '</div>'
-
-                    + schema[1].name + '：' + value[1] + '<br>'
-                    + schema[2].name + '：' + value[2] + '<br>'
+                // console.log(value);
+                var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
+                + '编号：'+ value[5]+ '</div>';
+                
+                // 加上y轴意义、大小的意义、类型
+                returnStr = returnStr
+                    + schema[fieldIndices[default_opt.yAxis]].name + '：' + value[1] + '<br>'
+                    + schema[fieldIndices[default_opt.symbolSize]].name + '：' + value[2] + '<br>'
                     + schema[3].name + '：' + value[3] + '<br>';
+                    
+                return returnStr;
             }
         },
         xAxis: {
@@ -360,7 +303,8 @@ function getOption(data) {
                     }
                 },
                 data: data.map(function (item, idx) {
-                    return [item[0], item[1], item[2], item[3], item[4], item[5], idx];  // [day, eke, area, circ, index]
+                    // [day, eke, area, circ, color, name, index]
+                    return [item[0], item[1], item[2], item[3], item[4], item[5], idx];
                 }),
 
                 symbolSize:(rawValue, params) => {
@@ -401,5 +345,53 @@ function getOption(data) {
 function setGUI(){
     gui = new dat.GUI({ autoPlace: false });
 
-    
+    default_opt = new function(){
+        this.yAxis = 'eke';
+        this.symbolSize = 'surface area';
+    };
+
+    // y轴映射
+    gui.add(default_opt, 'yAxis', ['eke', 'surface area']).onChange(function(){
+        if (data) {
+            myChart.setOption({
+                yAxis: {
+                    name: default_opt.yAxis,
+                },
+                series: {
+                    data: data.map(function (item, idx) {
+                        return [
+                            item[0],
+                            item[fieldIndices[default_opt.yAxis]],  // y轴的值
+                            item[fieldIndices[default_opt.symbolSize]],
+                            item[3],
+                            item[4],
+                            item[5],
+                            idx
+                        ];
+                    })
+                }
+            });
+        }
+    });
+
+    // 结点大小映射
+    gui.add(default_opt, 'symbolSize', ['surface area', 'eke']).onChange(function(){
+        if (data) {
+            myChart.setOption({
+                series: {
+                    data: data.map(function (item, idx) {
+                        return [
+                            item[0],
+                            item[fieldIndices[default_opt.yAxis]],
+                            item[fieldIndices[default_opt.symbolSize]],
+                            item[3],
+                            item[4],
+                            item[5],
+                            idx
+                        ];
+                    })
+                }
+            });
+        }
+    });
 }
