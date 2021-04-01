@@ -3,12 +3,12 @@ var cycNodeColor = "#faf955";  // 气旋颜色，黄色
 var anticycNodeColor = "#382da1";  // 反气旋颜色，蓝紫色
 var eddyFeature;  // 涡核信息数组
 
-var gui;
-var default_opt;
+var topo_gui;
+var topo_gui_opt;
 
-var chartDom = document.getElementById('container');
-var myChart = echarts.init(chartDom);
-var option;
+var topo_container = document.getElementById('topo-container');
+var topo_window = echarts.init(topo_container);
+var topo_option;
 
 
 
@@ -22,8 +22,8 @@ var edges = [];
 
 var existedNodesMap = new Map();
 
-var info_desc = {  // 第0 1 16分别代表该节点的名字、类别、id
-    name: 4,
+var info_desc = {  // 第5 3分别代表该节点的名字、类别
+    name: 5,
     circ: 3,
 };
 
@@ -45,10 +45,11 @@ var fieldIndices = schema.reduce(function (obj, item) {
 
 var groupColors = [cycNodeColor, anticycNodeColor];
 
-var axisData = [0,1,2,3,4,5,6,7,8,9,10];
 
-
-
+var xAxisData = [];
+for(let i=0; i<tex_pps_day; i++){
+    xAxisData.push(i);
+}
 
 
 
@@ -58,16 +59,16 @@ init();
 
 function init(){
     loadEddyFeatures();
-    setGUI();
+    setTopoGUI();
 
-    preLoadTopo(2, 19);
-    myChart.setOption(option = getOption(data));
+    loadTopo(2, 19);
+    topo_window.setOption(topo_option = getOption(data));
 
     
 
     var guiTopoContainer = document.getElementById('gui_topo');
-    guiTopoContainer.appendChild(gui.domElement);
-    chartDom.appendChild(guiTopoContainer);
+    guiTopoContainer.appendChild(topo_gui.domElement);
+    topo_container.appendChild(guiTopoContainer);
 }
 
 
@@ -92,7 +93,7 @@ function loadEddyFeatures(){
 }
 
 
-function preLoadTopo(currentMainDay, eddyIndex){
+function loadTopo(curDay, curIndex){
     data = [];
     edges = [];
 
@@ -105,7 +106,7 @@ function preLoadTopo(currentMainDay, eddyIndex){
     var curId, curName,curColor, curCirc, curEke, curArea, curFontColor;
 
     var nextId = 0;
-    var fisrtName = String(currentMainDay)+"-"+String(eddyIndex);
+    var fisrtName = String(curDay)+"-"+String(curIndex);
 
     queue.push(fisrtName);  // 把当前涡旋的名称放进去
     idQueue.push(nextId);
@@ -258,6 +259,15 @@ function getCurColor(d, index){
 
 function getOption(data) {
     return {
+        backgroundColor: new echarts.graphic.RadialGradient(0.3, 0.3, 0.8, [{
+            offset: 0,
+            color: '#f7f8fa'
+        }, 
+        // {
+        //     offset: 1,
+        //     color: '#cdd0d5'
+        // }
+        ]),
         tooltip: {
             padding: 10,
             backgroundColor: '#5fb7fd',
@@ -271,8 +281,8 @@ function getOption(data) {
                 
                 // 加上y轴意义、大小的意义、类型
                 returnStr = returnStr
-                    + schema[fieldIndices[default_opt.yAxis]].name + '：' + value[1] + '<br>'
-                    + schema[fieldIndices[default_opt.symbolSize]].name + '：' + value[2] + '<br>'
+                    + schema[fieldIndices[topo_gui_opt.yAxis]].name + '：' + value[1] + '<br>'
+                    + schema[fieldIndices[topo_gui_opt.symbolSize]].name + '：' + value[2] + '<br>'
                     + schema[3].name + '：' + value[3] + '<br>';
                     
                 return returnStr;
@@ -280,13 +290,19 @@ function getOption(data) {
         },
         xAxis: {
             type: 'category',
-            boundaryGap: false,
-            data: axisData,
+            // boundaryGap: false,
+            data: xAxisData,
         },
         yAxis: {
             name: 'eke',
-            splitLine: {show: false},
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    type:'dashed',
+                }
+            },
             type: 'value',
+            scale: true,
         },
         series: [
             {
@@ -337,32 +353,38 @@ function getOption(data) {
                 progressiveThreshold: 5000
             }
         ],
+        grid: {
+            // left: '8%',
+            // right: '0',
+           bottom: '8%',
+           containLabel: true
+        },
         animationEasingUpdate: 'cubicInOut',
         animationDurationUpdate: 2000
     };
 }
 
-function setGUI(){
-    gui = new dat.GUI({ autoPlace: false });
+function setTopoGUI(){
+    topo_gui = new dat.GUI({ autoPlace: false });
 
-    default_opt = new function(){
+    topo_gui_opt = new function(){
         this.yAxis = 'eke';
         this.symbolSize = 'surface area';
     };
 
     // y轴映射
-    gui.add(default_opt, 'yAxis', ['eke', 'surface area']).onChange(function(){
+    topo_gui.add(topo_gui_opt, 'yAxis', ['eke', 'surface area']).onChange(function(){
         if (data) {
-            myChart.setOption({
+            topo_window.setOption({
                 yAxis: {
-                    name: default_opt.yAxis,
+                    name: topo_gui_opt.yAxis,
                 },
                 series: {
                     data: data.map(function (item, idx) {
                         return [
                             item[0],
-                            item[fieldIndices[default_opt.yAxis]],  // y轴的值
-                            item[fieldIndices[default_opt.symbolSize]],
+                            item[fieldIndices[topo_gui_opt.yAxis]],  // y轴的值
+                            item[fieldIndices[topo_gui_opt.symbolSize]],
                             item[3],
                             item[4],
                             item[5],
@@ -375,15 +397,15 @@ function setGUI(){
     });
 
     // 结点大小映射
-    gui.add(default_opt, 'symbolSize', ['surface area', 'eke']).onChange(function(){
+    topo_gui.add(topo_gui_opt, 'symbolSize', ['surface area', 'eke']).onChange(function(){
         if (data) {
-            myChart.setOption({
+            topo_window.setOption({
                 series: {
                     data: data.map(function (item, idx) {
                         return [
                             item[0],
-                            item[fieldIndices[default_opt.yAxis]],
-                            item[fieldIndices[default_opt.symbolSize]],
+                            item[fieldIndices[topo_gui_opt.yAxis]],
+                            item[fieldIndices[topo_gui_opt.symbolSize]],
                             item[3],
                             item[4],
                             item[5],

@@ -22,6 +22,7 @@ var eddyFeature;  // 涡核信息数组
 
 // 组件绑定
 var topo_container = document.getElementById('topo-container');
+var topo_window = echarts.init(topo_container);
 var echarts_container = document.getElementById('echarts-container');
 var echarts_window = echarts.init(echarts_container);
 
@@ -178,6 +179,7 @@ function switchView(){
     else{
         is3d = true;
 
+        topo_window.clear();
         echarts_container.style.zIndex = 2;
         topo_container.style.zIndex = 1;
 
@@ -257,6 +259,7 @@ function deleteModel(mod){
         return ;
     mod.geometry.dispose(); //删除几何体
     mod.material.dispose(); //删除材质
+    // console.log(mod);
 }
 
 // 暂时先用最简单的点距
