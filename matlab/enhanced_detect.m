@@ -4,11 +4,12 @@ close all;
 clc;
 %% Parameters
 dataFile = '/Users/yy/Downloads/resources_EA/COMBINED_2011013100.nc';
-newFileName = 'ensemble1Eddies.nc';
-attrFileName = '3dAttr1.nc';
+newFileName = 'ensembleEddies.nc';
+%attrFileName = '3dAttr1.nc';
+attrFileName = '3dAttr.nc';
 
 nbr = 15; % 9;
-nu = 4; %5;  %像是扩展搜索半径
+nu = 3; %5;  %像是扩展搜索半径
 queueMaxElements = 125000;  % max_eddy_cells_search
 
 %% New File Definition
@@ -68,7 +69,7 @@ netcdf.putVar(ncid2,depth_ID2,depth);
 
 %% Per Timestamp Processing
 
-for timestamp = 1:5
+for timestamp = 1:10
     folderName = strcat('./result/eddyInfo/', num2str(timestamp-1));
     mkdir(folderName);
     timestamp
@@ -82,7 +83,7 @@ for timestamp = 1:5
     V = ncread(dataFile, 'V', startLoc, countLoc);
     eta = ncread(dataFile, 'ETA', startLoc(2:end), countLoc(2:end));
     
-    U1 = U(:,:,1);
+%     U1 = U(:,:,1);
 %     imagesc(U1);
     
     [nx, ny, nz] = size(U);  % 500*500%50
@@ -99,17 +100,28 @@ for timestamp = 1:5
     end
     [disx, disy, grid_area] = grid_cell_area(xx, yy);
     
+%     aaaa = grid_area(301:500, 1:100);
+    
     circulation_mask = zeros(nx, ny, nz);
     eke_mask = zeros(nx, ny, nz);
     
     % processing data
-    [gradUx, gradUy, ~] = gradient(U);
-    [gradVx, gradVy, ~] = gradient(V);
+%     [gradUx, gradUy, ~] = gradient(U);
+%     [gradVx, gradVy, ~] = gradient(V);
+% 
+%     % OW值
+%     OW = (gradUy - gradVx).^2 + (gradVy + gradUx).^2 - (gradVy - gradUx).^2;
+%      
+%     vorticity = (gradVy - gradUx);
 
-    % OW值
-    OW = (gradUy - gradVx).^2 + (gradVy + gradUx).^2 - (gradVy - gradUx).^2;
+    [du_dx, du_dy] = deriv1_central_diff_3D(U, xx, yy);
+    [dv_dx, dv_dy] = deriv1_central_diff_3D(V, xx, yy);
     
-    vorticity = (gradVy - gradUx);
+    vorticity = dv_dx - du_dy;
+    vv = vorticity(:,:,1);
+    
+    OW = (du_dx - dv_dy).^2 + (du_dy + dv_dx).^2 - vorticity.^2;
+    
     
     % std计算标准差
     % std(A，flag，dim)
@@ -117,6 +129,8 @@ for timestamp = 1:5
     
     %eddy centre detection
     OWcriticalPts = imregionalmin(OW(:,:,1));  % 矩阵行列的局部极值的求解，默认八邻域法，本例返回一个二值逻辑矩阵
+
+    
     surfVmag = ((U(:,:,1)).^2 + (V(:,:,1)).^2);
     surfVcriticalPts = imregionalmin(surfVmag);
     etaCriticalPts = imregionalmin(eta) + imregionalmax(eta);
@@ -124,14 +138,20 @@ for timestamp = 1:5
     fil = ones(nbr);  % 15*15的滤波
     
     OWcriticalPts = nbrOperation(OWcriticalPts,fil);
+    
+    
+    
     surfVcriticalPts = nbrOperation(surfVcriticalPts,fil);
     etaCriticalPts = nbrOperation(etaCriticalPts,fil);
     OWpoints = OW(:,:,1) < -0.2*sigma;  % OW满足条件的点
+    
 
     % .*是矩阵对应位置相乘
     eddyCentres = ((OWcriticalPts .* surfVcriticalPts).* etaCriticalPts) .* OWpoints;
     % 返回矩阵X中非零元素的行和列的索引值。这个语法对于处理稀疏矩阵尤其有用
     [row2,col2] = find(eddyCentres);  % 候选点
+    
+%     imagesc(eddyCentres);
     
     % Applying Geometric Constraints
     % 使用几何法进一步筛选
@@ -176,10 +196,13 @@ for timestamp = 1:5
         % 二维平面搜索
         % Geometric Constraint 3
         signChange = 0;
-        refVal = gradVy(row2(i),col2(i),1) - gradUx(row2(i),col2(i),1);
+%         refVal = gradVy(row2(i),col2(i),1) - gradUx(row2(i),col2(i),1);
+        refVal = vorticity(row2(i), col2(i), 1);
+        
         for x = max(row2(i)-nu,1):min(row2(i)+nu,m)
             for y = max(col2(i)-nu,1):min(col2(i)+nu,n)
-                if (gradVy(x,y,1) - gradUx(x,y,1))*refVal < 0  % 剪切变形率异号
+%                 if (gradVy(x,y,1) - gradUx(x,y,1))*refVal < 0  % 涡度
+                if vorticity(x,y,1)*refVal < 0  % 涡度
                     signChange = 1;
                     break;
                 end
@@ -262,15 +285,24 @@ for timestamp = 1:5
         circulation_mask = circulation_mask + circ*eddie_mask(:,:,:);
         eke_mask = eke_mask + total_eke*eddie_mask(:,:,:);
         
-        if total_area>10  % 过滤小的涡旋
-            dirName = strcat('./result/eddyInfo/',num2str(timestamp-1),'/', num2str(timestamp-1),'-',num2str(id));
+        if total_area>5  % 过滤小的涡旋
+            dirName = strcat('./result1/eddyInfo/',num2str(timestamp-1),'/', num2str(timestamp-1),'-',num2str(id));
             mkdir(dirName);
             
+            [srow, scol] = find(eddie_mask(:,:,1));
+            surface_area = 0;
+            
+            for a = 1:size(srow)
+               surface_area = surface_area + grid_area(srow(a), scol(a)); 
+            end
+            
+            r = sqrt(surface_area/pi)/1e3;
 
             dict = struct();
             dict.x = row(i);
             dict.y = col(i);
-            dict.area = total_area;
+            dict.area = surface_area;
+            dict.r = r;
             dict.circ = circ;
             dict.eke = total_eke;
             dict.vort = vort;
