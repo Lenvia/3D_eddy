@@ -7,7 +7,7 @@
 	top: 0px;
 	width: 50%;
 	height: 100%;
-	background-color: #bfd1e5;
+	/* background-color: #bfd1e5; */
 }
 
 #container2{
@@ -16,7 +16,7 @@
 	top: 0px;
 	width: 50%;
 	height: 60%;
-	background-color: #1b76dd;
+	/* background-color: #1b76dd; */
 }
 
 #topo-container{
@@ -110,6 +110,12 @@
 
 
 #gui1{
+	position: absolute;
+	right: 0px;
+	top: 0px;
+}
+
+#gui_topo{
 	position: absolute;
 	right: 0px;
 	top: 0px;
