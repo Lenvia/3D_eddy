@@ -41,22 +41,28 @@ var willBeAddPartNames = [];  // 需要添加的partName
 var data = [];  // 拓扑结点数据
 var edges = [];  // 拓扑箭头
 var topo_option;  // 拓扑图组件
-var chosenTopoNodeId;  // 被鼠标点击的拓扑节点id
+// var chosenTopoNodeId;  // 被鼠标点击的拓扑节点id
 
-var info_desc = {  // 第5 3分别代表该节点的名字、类别
-    name: 5,
-    circ: 3,
-};
 
+
+// 原始数据schema，并非传递给series的数据下表
 var schema = [
-    {name: 'day', index: 0},
-    {name: 'eke', index: 1},
-    {name: 'surface area', index: 2},
-    {name: 'type', index: 3},
-    {name: 'color', index: 4},
-    {name: 'name', index: 5},
+    {name: 'day', index: 0, text:'day'},
+    {name: 'cx', index: 1, text:'cx'},
+    {name: 'cy', index: 2, text:'cy'},
+    {name: 'radius', index: 3, text:'radius'},
+    {name: 'eke', index: 4, text:'eke'},
+    {name: 'depth', index:5, text:'depth'},
+    {name: 'vort', index: 6, text:'vort'},
+    
+    
+    {name: 'circ', index: 7, text:'circ'},
+    {name: 'color', index: 8, text:'color'},
+    {name: 'name', index: 9, text:'name'},
+    
 ];
 
+// 便于通过name来找index
 var fieldIndices = schema.reduce(function (obj, item) {
     obj[item.name] = item.index;
     return obj;
@@ -77,23 +83,21 @@ var existedNodesMap = new Map();  // 场上显示的节点map
 var topo_gui;
 var topo_gui_opt;
 
+var scaleFactor = 1;
 
-/*
-    场上红色节点name
-    如果是通过上一日下一日按钮切换，不用管
-    这个数组是专门处理点击切换和日期切换
-*/
-var specificNodeNames = [];  
+var indexCtrl;
+var index_arr = [];
+for(let i=0; i<40; i++){
+    index_arr.push(i);
+}
+
 
 // 拓扑组件样式
-var defaultNodeOpacity = 0.2;
-var defaultEdgeOpacity = 1;
-var cycNodeColor = "#faf955";  // 气旋颜色，黄色
-var anticycNodeColor = "#382da1";  // 反气旋颜色，蓝紫色
-var specificNodeColor = "#ff0000";
-var cycFontColor = "#000000";  // 气旋标签文字颜色
-var anticycFontColor = "#ffffff";  // 反气旋标签文字颜色
-var defaultNodeColor = "#00BFFF";
+var cycNodeColor = "#ce5c5c";  // 气旋颜色，红色
+var anticycNodeColor = "#51689b";  // 反气旋颜色，蓝色
+var cycFlag = '气旋';
+var anticycFlag = '反气旋';
+
 
 
 
@@ -101,50 +105,50 @@ init();
 
 
 function init() {
-    container = document.getElementById( 'container2' );
-    container.innerHTML = "";
+    // container = document.getElementById( 'container2' );
+    // container.innerHTML = "";
 
-    setRenderSize();
+    // setRenderSize();
 
-    renderer = new THREE.WebGLRenderer( { antialias: true } );  // 抗锯齿
-    renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
-    renderer.setSize( renderWidth, renderHeight );  // 尺寸
-
-
-    container.appendChild( renderer.domElement );
-
-    scene = new THREE.Scene();
-    // scene.background = new THREE.Color( 0x1b76dd );  // 深蓝色
-    scene.background = new THREE.Color( 0x000000 );
-
-    // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
-    camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
-    camera.position.z = 3000;
-    camera.position.x = edgeLen*0;
-    camera.position.y = edgeWid*0;
+    // renderer = new THREE.WebGLRenderer( { antialias: true } );  // 抗锯齿
+    // renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
+    // renderer.setSize( renderWidth, renderHeight );  // 尺寸
 
 
-    controls = new OrbitControls( camera, renderer.domElement );
-    controls.minDistance = 50;   // 最近距离
-    controls.maxDistance = 10000;  // 最远距离
-    // controls.maxPolarAngle = Math.PI / 2;  // 限制竖直方向上最大旋转角度。（y轴正向为0度）
-    controls.target.z = 0;
-    controls.update();
+    // container.appendChild( renderer.domElement );
+
+    // scene = new THREE.Scene();
+    // // scene.background = new THREE.Color( 0x1b76dd );  // 深蓝色
+    // scene.background = new THREE.Color( 0x000000 );
+
+    // // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
+    // camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
+    // camera.position.z = 3000;
+    // camera.position.x = edgeLen*0;
+    // camera.position.y = edgeWid*0;
 
 
-    // 辅助坐标系
-    var axesHelper = new THREE.AxesHelper(1500);
-    scene.add(axesHelper);
-
-    createSea();
-
-    //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
-    var ambient = new THREE.AmbientLight(0xffffff);
-    scene.add(ambient);
+    // controls = new OrbitControls( camera, renderer.domElement );
+    // controls.minDistance = 50;   // 最近距离
+    // controls.maxDistance = 10000;  // 最远距离
+    // // controls.maxPolarAngle = Math.PI / 2;  // 限制竖直方向上最大旋转角度。（y轴正向为0度）
+    // controls.target.z = 0;
+    // controls.update();
 
 
-    var dayChangeButtonContainer = document.getElementById('day-change-button-container');
-    container.appendChild(dayChangeButtonContainer);
+    // // 辅助坐标系
+    // var axesHelper = new THREE.AxesHelper(1500);
+    // scene.add(axesHelper);
+
+    // // createSea();
+
+    // // 环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
+    // var ambient = new THREE.AmbientLight(0xffffff);
+    // scene.add(ambient);
+
+
+    // var dayChangeButtonContainer = document.getElementById('day-change-button-container');
+    // container.appendChild(dayChangeButtonContainer);
 
     setTopoGUI();
 
@@ -152,9 +156,11 @@ function init() {
     guiTopoContainer.appendChild(topo_gui.domElement);
     topo_container.appendChild(guiTopoContainer);
 
+    topo_window.setOption(topo_option = getOption(data));
+
 
     // 窗口缩放时触发
-    window.addEventListener( 'resize', onWindowResize, false );
+    // window.addEventListener( 'resize', onWindowResize, false );
     animate();
 }
 
@@ -189,15 +195,15 @@ function createSea(){
 
 
 
-function getPartNameFromPxy(tarCpx, tarCpy){  // 根据目标涡旋中心坐标得到对应的partName
-    // var partIndex = choosePart(tarCpx, tarCpy);
-    // console.log(partIndex);
-    // var partName = String(currentMainDay)+"_"+String(partIndex);
-    var partName = "tube"+String(currentMainDay);
-    console.log(partName);
+// function getPartNameFromPxy(tarCpx, tarCpy){  // 根据目标涡旋中心坐标得到对应的partName
+//     // var partIndex = choosePart(tarCpx, tarCpy);
+//     // console.log(partIndex);
+//     // var partName = String(currentMainDay)+"_"+String(partIndex);
+//     var partName = "tube"+String(currentMainDay);
+//     console.log(partName);
 
-    return partName;
-}
+//     return partName;
+// }
 
 
 
@@ -298,113 +304,113 @@ function clearEEI(){
     existedEddyIndices.length = 0;
 }
 
-// 清空场上红色涡旋
-function clearSpecificNodes(){
-    for(let i=0; i<specificNodeNames.length; i++){
-        console.log("清理场上红色涡旋");
-        var curName = specificNodeNames[i];
-        var id = globalNodesMap.get(curName);
-        var d = parseInt(curName.split("-")[0]);
-        var index = parseInt(curName.split("-")[1]);
-        updateNodeColor(id, getCurColor(d, index));  // 更新颜色
-    }
-}
+// // 清空场上红色涡旋
+// function clearSpecificNodes(){
+//     for(let i=0; i<specificNodeNames.length; i++){
+//         console.log("清理场上红色涡旋");
+//         var curName = specificNodeNames[i];
+//         var id = globalNodesMap.get(curName);
+//         var d = parseInt(curName.split("-")[0]);
+//         var index = parseInt(curName.split("-")[1]);
+//         updateNodeColor(id, getCurColor(d, index));  // 更新颜色
+//     }
+// }
 
-// 显示当前场上涡旋的下一日延续
-function showNextEddies(){
-    if(existedEddyIndices.length==0)  // 如果场上根本没有涡旋，直接return
-        return;
-    if(currentMainDay+1>=dayLimit)  // 没有下一天了
-        return; 
-    if(!is3d){
-        // 清理一下拓扑图里的红色节点
-        for(let i=0; i<existedEddyIndices.length; i++){
-            var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
-            var id = globalNodesMap.get(name);
-            var curColor = getCurColor(currentMainDay, existedEddyIndices[i]);
-            updateNodeColor(id, curColor);
-        }
-        specificNodeNames.length = 0;  // 清空
-    }
+// // 显示当前场上涡旋的下一日延续
+// function showNextEddies(){
+//     if(existedEddyIndices.length==0)  // 如果场上根本没有涡旋，直接return
+//         return;
+//     if(currentMainDay+1>=dayLimit)  // 没有下一天了
+//         return; 
+//     if(!is3d){
+//         // 清理一下拓扑图里的红色节点
+//         for(let i=0; i<existedEddyIndices.length; i++){
+//             var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
+//             var id = globalNodesMap.get(name);
+//             var curColor = getCurColor(currentMainDay, existedEddyIndices[i]);
+//             updateNodeColor(id, curColor);
+//         }
+//         specificNodeNames.length = 0;  // 清空
+//     }
 
-    removePointers(); // 清除场上所有标记
+//     removePointers(); // 清除场上所有标记
 
-    existedEddyIndices = trackAll(existedEddyIndices, currentMainDay); // 获得下一天的延续
-    console.log(existedEddyIndices);
+//     existedEddyIndices = trackAll(existedEddyIndices, currentMainDay); // 获得下一天的延续
+//     console.log(existedEddyIndices);
     
 
-    // 更新curMainDay，但不让其影响局部窗口
-    restrainUpdateSign = true;
-    day_ctrl.setValue(currentMainDay+1);  // 设置为下一天
+//     // 更新curMainDay，但不让其影响局部窗口
+//     restrainUpdateSign = true;
+//     day_ctrl.setValue(currentMainDay+1);  // 设置为下一天
 
-    if(!is3d){
-        // 设置场上红色节点
-        for(let i=0; i<existedEddyIndices.length; i++){
-            var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
-            var id = globalNodesMap.get(name);
-            updateNodeColor(id, specificNodeColor);  // 变为红色
-            specificNodeNames.push(name);
-        }
-        // 更新topo图
-        network.redraw();
-    }
+//     if(!is3d){
+//         // 设置场上红色节点
+//         for(let i=0; i<existedEddyIndices.length; i++){
+//             var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
+//             var id = globalNodesMap.get(name);
+//             updateNodeColor(id, specificNodeColor);  // 变为红色
+//             specificNodeNames.push(name);
+//         }
+//         // 更新topo图
+//         network.redraw();
+//     }
 
-    // 这时候currentMainDay已经更新为下一天了（下面showPointer需要用到currentMainDay）
-    for(let i=0; i<existedEddyIndices.length; i++){
-        showPointer(existedEddyIndices[i]);
-    }
-}
-// 回溯上一日涡旋
-function showPreEddies(){
-    if(existedEddyIndices.length==0)
-        return;
-    if(currentMainDay-1<0)
-        return;
+//     // 这时候currentMainDay已经更新为下一天了（下面showPointer需要用到currentMainDay）
+//     for(let i=0; i<existedEddyIndices.length; i++){
+//         showPointer(existedEddyIndices[i]);
+//     }
+// }
+// // 回溯上一日涡旋
+// function showPreEddies(){
+//     if(existedEddyIndices.length==0)
+//         return;
+//     if(currentMainDay-1<0)
+//         return;
 
-    if(!is3d){
-        // 清理一下拓扑图里的红色节点
-        for(let i=0; i<existedEddyIndices.length; i++){
-            var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
-            var id = globalNodesMap.get(name);
+//     if(!is3d){
+//         // 清理一下拓扑图里的红色节点
+//         for(let i=0; i<existedEddyIndices.length; i++){
+//             var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
+//             var id = globalNodesMap.get(name);
 
-            var curColor = getCurColor(currentMainDay, existedEddyIndices[i]);
-            updateNodeColor(id, curColor);
-            specificNodeNames.length = 0;
+//             var curColor = getCurColor(currentMainDay, existedEddyIndices[i]);
+//             updateNodeColor(id, curColor);
+//             specificNodeNames.length = 0;
             
-        }
-    }
+//         }
+//     }
 
-    removePointers();
-    existedEddyIndices = backtrackAll(existedEddyIndices, currentMainDay);  // 获得上一天
+//     removePointers();
+//     existedEddyIndices = backtrackAll(existedEddyIndices, currentMainDay);  // 获得上一天
 
-    restrainUpdateSign = true;
-    day_ctrl.setValue(currentMainDay-1);
+//     restrainUpdateSign = true;
+//     day_ctrl.setValue(currentMainDay-1);
 
-    if(!is3d){
-        // 设置场上红色节点
-        for(let i=0; i<existedEddyIndices.length; i++){
-            var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
-            var id = globalNodesMap.get(name);
-            updateNodeColor(id, specificNodeColor);  // 变为红色
-            specificNodeNames.push(name);
-        }
-        // 更新topo图
-        network.redraw();
-    }
+//     if(!is3d){
+//         // 设置场上红色节点
+//         for(let i=0; i<existedEddyIndices.length; i++){
+//             var name = String(currentMainDay)+'-'+String(existedEddyIndices[i]);
+//             var id = globalNodesMap.get(name);
+//             updateNodeColor(id, specificNodeColor);  // 变为红色
+//             specificNodeNames.push(name);
+//         }
+//         // 更新topo图
+//         network.redraw();
+//     }
 
-    for(let i =0; i<existedEddyIndices.length; i++){
-        showPointer(existedEddyIndices[i]);
-    }
-}
+//     for(let i =0; i<existedEddyIndices.length; i++){
+//         showPointer(existedEddyIndices[i]);
+//     }
+// }
 
-// 计算涡旋属于哪一个part
-function choosePart(px, py){
-    if(py-px>125)  // 左上角
-        return 1;
-    else if(py-px<-125)  // 右下角
-        return 2;
-    else return 3;  // 中央
-}
+// // 计算涡旋属于哪一个part
+// function choosePart(px, py){
+//     if(py-px>125)  // 左上角
+//         return 1;
+//     else if(py-px<-125)  // 右下角
+//         return 2;
+//     else return 3;  // 中央
+// }
 
 // 更新part
 // 在e数组中，保留与w重合的，其他的都删除，并添加w独有的
@@ -435,30 +441,7 @@ function updateParts(){
 
 
 
-function getCurEke(d, index){
-    return eddyInfo[d][index][7];  // 能量
-}
-
-function getCurCirc(d, index){
-    var temp = eddyInfo[d][index][6];  // 气旋方向
-    if(temp==1)
-        return '气旋';
-    else return '反气旋';
-}
-
-function getCurArea(d, index){
-    return eddyInfo[d][index][2]  // 面积
-}
-
-function getCurColor(d, index){
-    var temp = eddyInfo[d][index][6];  // 气旋方向
-    if(temp==1)
-        return cycNodeColor;
-    else return anticycNodeColor;
-}
-
-
-function loadTopo(curDay, curIndex){
+function loadTopo(firstName){
     data = [];
     edges = [];
 
@@ -468,12 +451,10 @@ function loadTopo(curDay, curIndex){
     existedNodesMap.clear();  // 每次新选择的时候清空
 
     // 从json数组中追踪
-    var curId, curName,curColor, curCirc, curEke, curArea, curFontColor;
-
+    var curId, curName, curX, curY, curRadius, curEke, curDepth, curVort,  curCirc, curColor, curFontColor;
     var nextId = 0;
-    var fisrtName = String(curDay)+"-"+String(curIndex);
 
-    queue.push(fisrtName);  // 把当前涡旋的名称放进去
+    queue.push(firstName);  // 把当前涡旋的名称放进去
     idQueue.push(nextId);
     
     nextId++;
@@ -491,16 +472,17 @@ function loadTopo(curDay, curIndex){
         var d = parseInt(curName.split("-")[0]);
         var index = parseInt(curName.split("-")[1]);
 
+        [curX, curY] = getCurPos(d, index);
         
-        curCirc = getCurCirc(d, index);
-        
+        curRadius = getCurRadius(d, index);
         curEke = getCurEke(d, index);
-        curArea = getCurArea(d, index);
-
+        curDepth = getCurDepth(d, index);
+        curVort = getCurVort(d, index);
+        curCirc = getCurCirc(d, index);
         curColor = getCurColor(d, index);
 
         // 把当前节点放到nodes中
-        row = [d,  curEke, curArea, curCirc,curColor, curName];
+        row = [d,  curX, curY, curRadius, curEke, curDepth, curVort, curCirc, curColor, curName];
         data.push(row);
 
 
@@ -508,10 +490,10 @@ function loadTopo(curDay, curIndex){
             continue;
         
 
-        var forwards = eddyForwards[d][index];  // 得到它后继下标
+        var forwards = eddyForwards[d][index];  // 得到它后继列表
         var tempId;
         for(let i=0; i<forwards.length; i++){
-            var tarName = String(d+1)+"-"+String(forwards[i]);
+            var tarName = forwards[i];
 
             if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
                 tempId = nextId;  // 比末尾的节点id再大1
@@ -538,7 +520,7 @@ function loadTopo(curDay, curIndex){
 
     // 当上一个循环结束后，nextId就是接下来要放的id
     // 再把首节点放进去
-    queue.push(fisrtName);  // 把当前涡旋的名称放进去
+    queue.push(firstName);  // 把当前涡旋的名称放进去
     idQueue.push(0);
 
     while(queue.length!=0){  // 当队列不为空
@@ -548,19 +530,23 @@ function loadTopo(curDay, curIndex){
         queue.shift();  // 当前节点出队
         idQueue.shift();
 
-
         var d = parseInt(curName.split("-")[0]);
         var index = parseInt(curName.split("-")[1]);
 
         // 把当前节点放到nodes中，如果是首节点就不用了
         if(curId!=0){
             // 把当前节点放到nodes中
-            curCirc = getCurCirc(d, index);
+            [curX, curY] = getCurPos(d, index);
+        
+            curRadius = getCurRadius(d, index);
             curEke = getCurEke(d, index);
-            curArea = getCurArea(d, index);
+            curDepth = getCurDepth(d, index);
+            curVort = getCurVort(d, index);
+            curCirc = getCurCirc(d, index);
             curColor = getCurColor(d, index);
 
-            row = [d,  curEke, curArea, curCirc,curColor, curName];
+            // 把当前节点放到nodes中
+            row = [d,  curX, curY, curRadius, curEke, curDepth, curVort, curCirc, curColor, curName];
             data.push(row);
         }
 
@@ -573,7 +559,7 @@ function loadTopo(curDay, curIndex){
         var tempId;
 
         for(let i=0; i<backwards.length; i++){
-            var tarName = String(d-1)+"-"+String(backwards[i]);
+            var tarName = backwards[i];
 
             if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
                 tempId = nextId;  // 比末尾的节点id再大1
@@ -597,9 +583,52 @@ function loadTopo(curDay, curIndex){
 
     // console.log(edges);
 
+    // index_arr = [];
+    // // 用于确定gui中index的范围
+    // for(let i=0; i<data.length; i++){
+    //     index_arr.push(i);
+    // }
+    // console.log(index_arr);
+
     // 刷新
-    topo_window.setOption(topo_option = getOption(data));
+    flushData();
 }
+
+
+function getCurPos(d, index){
+    return [eddyInfo[d][index][0], eddyInfo[d][index][1]];
+}
+
+function getCurRadius(d, index){
+    return eddyInfo[d][index][2]  // 半径
+}
+
+function getCurEke(d, index){
+    return eddyInfo[d][index][3];  // 能量
+}
+
+function getCurDepth(d, index){
+    return eddyInfo[d][index][4];  // 能量
+}
+
+function getCurVort(d, index){
+    return eddyInfo[d][index][5];  // 涡度
+}
+
+function getCurCirc(d, index){
+    var temp = eddyInfo[d][index][6];  // 气旋方向
+    if(temp==1)
+        return cycFlag;
+    else return anticycFlag;
+}
+
+function getCurColor(d, index){
+    var temp = eddyInfo[d][index][6];  // 气旋方向
+    if(temp==1)
+        return cycNodeColor;
+    else return anticycNodeColor;
+}
+
 
 function getOption(data) {
     return {
@@ -607,10 +636,7 @@ function getOption(data) {
             offset: 0,
             color: '#f7f8fa'
         }, 
-        // {
-        //     offset: 1,
-        //     color: '#cdd0d5'
-        // }
+
         ]),
         tooltip: {
             padding: 10,
@@ -619,15 +645,20 @@ function getOption(data) {
             borderWidth: 1,
             formatter: function (obj) {
                 var value = obj.value;
+                
                 // console.log(value);
                 var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
-                + '编号：'+ value[5]+ '</div>';
+                + '编号：'+ value[9]+ '</div>';
                 
                 // 加上y轴意义、大小的意义、类型
                 returnStr = returnStr
                     + schema[fieldIndices[topo_gui_opt.yAxis]].name + '：' + value[1] + '<br>'
                     + schema[fieldIndices[topo_gui_opt.symbolSize]].name + '：' + value[2] + '<br>'
-                    + schema[3].name + '：' + value[3] + '<br>';
+                    + schema[1].name + '：' + value[3] + '<br>'
+                    + schema[2].name + '：' + value[4] + '<br>'
+                    + schema[5].name + '：' + value[5] + '<br>'
+                    + schema[6].name + '：' + value[6] + '<br>'
+                    + schema[7].name + '：' + value[7] + '<br>';
                     
                 return returnStr;
             }
@@ -648,35 +679,39 @@ function getOption(data) {
             type: 'value',
             scale: true,
         },
+       
         series: [
             {
                 zlevel: 1,
                 name: 'xxx',
                 type: 'graph',
+                // type:'scatter',
                 coordinateSystem: 'cartesian2d',
                 label: {
                     show: true,
-                    formatter: function (params) {
-                        // 假设此轴的 type 为 'time'。
-                        // console.log(params);
-                        return params.data[5];
+                    formatter: function (params) {  // 显示文字
+                        // console.log(params.data);
+                        return params.data[9];
                     }
                 },
-                data: data.map(function (item, idx) {
-                    // [day, eke, area, circ, color, name, index]
-                    return [item[0], item[1], item[2], item[3], item[4], item[5], idx];
+                data: data.map(function (item) {
+                    // [day, eke, radius, cx, cy, depth, vort,  circ, color, name]
+                    return [item[0], item[4], item[3], item[1], item[2], item[5], item[6], item[7], item[8], item[9]];
                 }),
 
-                symbolSize:(rawValue, params) => {
+                // data: fakeData,
+
+                symbolSize:(rawValue, params) => {  // 默认半径作为size
                     params.symbolSize = params.data[2];
-                    // console.log(params.symbolSize);
+                    console.log(params.symbolSize);
                     return Math.sqrt(params.symbolSize)*3;
                 },
 
                 itemStyle:{
                     normal : {
                         color : function(params) {
-                            params.color = params.data[4];
+                            params.color = params.data[8];
+                            
                             return params.color;
                         }
                     }
@@ -691,10 +726,8 @@ function getOption(data) {
                     color: '#2f4554'
                 },
 
-                
-
-                animationThreshold: 5000,
-                progressiveThreshold: 5000
+                // animationThreshold: 5000,
+                // progressiveThreshold: 5000
             }
         ],
         grid: {
@@ -709,15 +742,27 @@ function getOption(data) {
 }
 
 function setTopoGUI(){
+    
     topo_gui = new dat.GUI({ autoPlace: false });
 
     topo_gui_opt = new function(){
         this.yAxis = 'eke';
-        this.symbolSize = 'surface area';
+        this.symbolSize = 'radius';
+        this.day = 0;
+        this.index = 0;
+        this.scaleFactor = 1;
     };
 
-    // y轴映射
-    topo_gui.add(topo_gui_opt, 'yAxis', ['eke', 'surface area']).onChange(function(){
+    topo_gui.add(topo_gui_opt, 'day', xAxisData).onChange(function(){
+        // 如果改变了日期，index默认回归0
+        loadTopo(String(topo_gui_opt.day)+'-'+'0');
+        indexCtrl.setValue(0);
+        // console.log(indexCtrl);
+        flushData();
+    });
+
+    indexCtrl = topo_gui.add(topo_gui_opt, 'index', index_arr).onChange(function(){
+        loadTopo(String(topo_gui_opt.day)+'-'+String(topo_gui_opt.index));
         if (data) {
             topo_window.setOption({
                 yAxis: {
@@ -729,10 +774,43 @@ function setTopoGUI(){
                             item[0],
                             item[fieldIndices[topo_gui_opt.yAxis]],  // y轴的值
                             item[fieldIndices[topo_gui_opt.symbolSize]],
-                            item[3],
-                            item[4],
+                            item[1],
+                            item[2],
                             item[5],
-                            idx
+                            item[6], 
+                            item[7], 
+                            item[8],
+                            item[9],
+                            // idx
+                        ];
+                    }),
+                    links: edges,
+                }
+            });
+        }
+    }).listen();
+
+    // y轴映射
+    topo_gui.add(topo_gui_opt, 'yAxis', ['eke', 'radius', 'depth', 'vort', 'cx', 'cy']).onChange(function(){
+        if (data) {
+            topo_window.setOption({
+                yAxis: {
+                    name: topo_gui_opt.yAxis,
+                },
+                series: {
+                    data: data.map(function (item, idx) {
+                        return [
+                            item[0],
+                            item[fieldIndices[topo_gui_opt.yAxis]],  // y轴的值
+                            item[fieldIndices[topo_gui_opt.symbolSize]],
+                            item[1],
+                            item[2],
+                            item[5],
+                            item[6], 
+                            item[7], 
+                            item[8],
+                            item[9],
+                            // idx
                         ];
                     })
                 }
@@ -741,21 +819,40 @@ function setTopoGUI(){
     });
 
     // 结点大小映射
-    topo_gui.add(topo_gui_opt, 'symbolSize', ['surface area', 'eke']).onChange(function(){
+    topo_gui.add(topo_gui_opt, 'symbolSize', ['radius','eke', 'cx', 'cy']).onChange(function(){
         if (data) {
             topo_window.setOption({
                 series: {
                     data: data.map(function (item, idx) {
                         return [
                             item[0],
-                            item[fieldIndices[topo_gui_opt.yAxis]],
+                            item[fieldIndices[topo_gui_opt.yAxis]],  // y轴的值
                             item[fieldIndices[topo_gui_opt.symbolSize]],
-                            item[3],
-                            item[4],
+                            item[1],
+                            item[2],
                             item[5],
-                            idx
+                            item[6], 
+                            item[7],
+                            item[8],
+                            item[9],  
+                            // idx
                         ];
-                    })
+                    }),
+                }
+            });
+        }
+    });
+
+    // 结点缩放映射
+    topo_gui.add(topo_gui_opt, 'scaleFactor', [0.01, 0.1, 0.2, 0.33, 0.5, 1, 2, 3, 5, 10, 100]).onChange(function(){
+        if (data) {
+            scaleFactor = topo_gui_opt.scaleFactor;
+            topo_window.setOption({
+                series: {
+                    symbolSize:(rawValue, params) => {
+                        params.symbolSize = scaleFactor*Math.sqrt(params.data[2]);
+                        return (params.symbolSize);
+                    },
                 }
             });
         }
@@ -771,23 +868,23 @@ function animate() {
         pitchUpdateSign = false;  // 立刻消除更新信号
         var eddyIndex = tarArr[0];
 
-        removePointers();  // 清除原有显示
+        // removePointers();  // 清除原有显示
         clearEEI();  // 清空场上涡旋index数组
 
         // showSpecifiedArea(tarArr);
-        var tempName = getPartNameFromPxy(tarArr[1], tarArr[2]);  // 得到临近涡旋所属的partName
-        willBeAddPartNames.push(tempName);  // 放入exsitedPartNames数组等待添加
+        // var tempName = getPartNameFromPxy(tarArr[1], tarArr[2]);  // 得到临近涡旋所属的partName
+        // willBeAddPartNames.push(tempName);  // 放入exsitedPartNames数组等待添加
 
-        updateParts();
+        // updateParts();
 
-        showPointer(eddyIndex);  // 显示该涡旋指示器
+        // showPointer(eddyIndex);  // 显示该涡旋指示器
         existedEddyIndices.push(eddyIndex);  // 放入当前涡旋编号
 
         // chosenTopoNodeId = globalNodesMap.get(String(currentMainDay)+"-"+String(eddyIndex));
         // console.log(chosenTopoNodeId);
 
         if(!is3d)  // 只在2d视图加载拓扑
-            loadTopo(currentMainDay, eddyIndex);
+            loadTopo(String(currentMainDay)+'-'+String(eddyIndex));
 
     }
 
@@ -797,92 +894,92 @@ function animate() {
 
         // 清空场上所有part
         willBeAddPartNames.length = 0;  // 清空待更新数组
-        updateParts();
+        // updateParts();
 
         if(!is3d){
             // 初始化拓扑（不一定需要）
         }
 
-        removePointers();  // 清除原有显示
+        // removePointers();  // 清除原有显示
         clearEEI();  // 清空场上涡旋index数组
         // 不追踪！
     }
 
-    if(showNextEddiesSign){  // 在局部窗口点击了追踪下一天
+    // if(showNextEddiesSign){  // 在局部窗口点击了追踪下一天
 
-        showNextEddiesSign = false; //清除标记
-        showNextEddies();  // 执行完毕后currentMainDay已经增加了
+    //     showNextEddiesSign = false; //清除标记
+    //     showNextEddies();  // 执行完毕后currentMainDay已经增加了
 
-        // console.log(existedEddyIndices);
+    //     // console.log(existedEddyIndices);
 
-        var info = eddyInfo[currentMainDay];
-        // 这时候日期已经切换了
-        for(let i=0; i<existedEddyIndices.length; i++){
-            var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
-            willBeAddPartNames.push(tempName);
-        }
-        console.log(willBeAddPartNames);
+    //     var info = eddyInfo[currentMainDay];
+    //     // 这时候日期已经切换了
+    //     for(let i=0; i<existedEddyIndices.length; i++){
+    //         var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
+    //         willBeAddPartNames.push(tempName);
+    //     }
+    //     console.log(willBeAddPartNames);
 
-        dyeSign = true;  // 提示主窗口去染色
+    //     dyeSign = true;  // 提示主窗口去染色
 
-        updateParts();
-    }
+    //     updateParts();
+    // }
 
-    if(showPreEddiesSign){  // 在局部窗口点击了追踪上一天
-        showPreEddiesSign = false;  // 清除标记
-        showPreEddies();
-        var info = eddyInfo[currentMainDay];
-        // 这时候日期已经切换了
-        for(let i=0; i<existedEddyIndices.length; i++){
-            var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
-            willBeAddPartNames.push(tempName);
-        }
+    // if(showPreEddiesSign){  // 在局部窗口点击了追踪上一天
+    //     showPreEddiesSign = false;  // 清除标记
+    //     showPreEddies();
+    //     var info = eddyInfo[currentMainDay];
+    //     // 这时候日期已经切换了
+    //     for(let i=0; i<existedEddyIndices.length; i++){
+    //         var tempName = getPartNameFromPxy(info[existedEddyIndices[i]][0], info[existedEddyIndices[i]][1]);
+    //         willBeAddPartNames.push(tempName);
+    //     }
 
-        dyeSign = true;  // 提示主窗口去染色
+    //     dyeSign = true;  // 提示主窗口去染色
 
-        updateParts();
-    }
+    //     updateParts();
+    // }
 
-    if(!is3d && topoClickSign){  // 点击了拓扑图上的节点，并且是2d视图
-        topoClickSign = false;
+    // if(!is3d && topoClickSign){  // 点击了拓扑图上的节点，并且是2d视图
+    //     topoClickSign = false;
 
-        var tarName = data.nodes.get(chosenTopoNodeId).label;  // 目标涡旋的名称
-        var tarDay = parseInt(tarName.split('-')[0]);
-        var tarIndex = parseInt(tarName.split('-')[1]);
-        loadTopo(tarDay, tarIndex);
+    //     var tarName = data.nodes.get(chosenTopoNodeId).label;  // 目标涡旋的名称
+    //     var tarDay = parseInt(tarName.split('-')[0]);
+    //     var tarIndex = parseInt(tarName.split('-')[1]);
+    //     loadTopo(tarDay, tarIndex);
         
 
-        // 更新主界面
-        restrainUpdateSign = true;  // 抑制主界面对局部窗口的更改
-        day_ctrl.setValue(tarDay);
+    //     // 更新主界面
+    //     restrainUpdateSign = true;  // 抑制主界面对局部窗口的更改
+    //     day_ctrl.setValue(tarDay);
 
-        // 此时日期已经改变了
-        // 在主界面上显示红色Cones标记  
-        clearEEI();  // 清空场上涡旋index数组
-        existedEddyIndices.push(tarIndex);
-        dyeSign = true;  // 通知主界面去染色
+    //     // 此时日期已经改变了
+    //     // 在主界面上显示红色Cones标记  
+    //     clearEEI();  // 清空场上涡旋index数组
+    //     existedEddyIndices.push(tarIndex);
+    //     dyeSign = true;  // 通知主界面去染色
 
-        // 局部Part更新
-        removePointers();  // 清除所有指示器
-        willBeAddPartNames.length = 0;  // 清空待更新数组
-        // 得到对应的part
-        var info = eddyInfo[currentMainDay];
-        var cpx = info[tarIndex][0];  // cpx指的是在panel上的cx
-        var cpy = info[tarIndex][1];
+    //     // // 局部Part更新
+    //     // // removePointers();  // 清除所有指示器
+    //     // willBeAddPartNames.length = 0;  // 清空待更新数组
+    //     // // 得到对应的part
+    //     // var info = eddyInfo[currentMainDay];
+    //     // var cpx = info[tarIndex][0];  // cpx指的是在panel上的cx
+    //     // var cpy = info[tarIndex][1];
 
-        // console.log(cpx, cpy);
+    //     // // console.log(cpx, cpy);
     
-        var cxy = pxy2xy(cpx, cpy);
+    //     // var cxy = pxy2xy(cpx, cpy);
 
-        // console.log(cxy);
-        var tempName = getPartNameFromPxy(cxy[0], cxy[1]);  // 得到临近涡旋所属的partName
-        willBeAddPartNames.push(tempName);  // 放入exsitedPartNames数组等待添加
-        updateParts();
-        showPointer(tarIndex);  // 显示该涡旋指示器
+    //     // // console.log(cxy);
+    //     // var tempName = getPartNameFromPxy(cxy[0], cxy[1]);  // 得到临近涡旋所属的partName
+    //     // willBeAddPartNames.push(tempName);  // 放入exsitedPartNames数组等待添加
+    //     // updateParts();
+    //     // showPointer(tarIndex);  // 显示该涡旋指示器
 
-    }
+    // }
 
-    render();
+    // render();
 }
 
 function render() {
@@ -900,4 +997,32 @@ function setRenderSize() {
     renderHeight = parseInt(containerHeight);
     // renderWidth = 0.5*window.innerWidth, renderHeight = 0.6*window.innerHeight;
     // console.log(renderWidth, renderHeight);
+}
+
+function flushData(){
+    if (data) {
+        topo_window.setOption({
+            yAxis: {
+                name: topo_gui_opt.yAxis,
+            },
+            series: {
+                data: data.map(function (item, idx) {
+                    return [
+                        item[0],
+                        item[fieldIndices[topo_gui_opt.yAxis]],  // y轴的值
+                        item[fieldIndices[topo_gui_opt.symbolSize]],
+                        item[1],
+                        item[2],
+                        item[5],
+                        item[6], 
+                        item[7], 
+                        item[8],
+                        item[9],
+                        // idx
+                    ];
+                }),
+                links: edges,
+            }
+        });
+    }
 }

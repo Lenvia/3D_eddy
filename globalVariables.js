@@ -10,7 +10,7 @@ var tubeHeightFactor = 500;  // 控制流管高度
 var dayLimit = 60;  // 暂定60为最大天数
 var play_start_day = 0;  // 播放器起点（默认为0）
 var loadDayNum = 1;  // 3d流线加载多少天
-var tex_pps_day = 10;  // 2d和pps加载天数
+var tex_pps_day = 60;  // 2d和pps加载天数
 
 /**
  * 预加载变量
@@ -119,7 +119,7 @@ function loadDepth(){
 }
 
 function loadEddyFeatures(){
-    var eddis_feature_path = ("./resources/features/features.json");
+    var eddis_feature_path = ("./resources/features/features2.json");
     
     $.ajax({
         url: eddis_feature_path,//json文件位置

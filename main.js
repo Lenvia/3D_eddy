@@ -818,7 +818,7 @@ function loadAttrArray(attr){
 function loadEddyModel(day){
     var object_loader = new OBJLoader();
     object_loader.load('./resources/objs/mesh_'+String(day)+'.obj', function(object) {
-
+    // object_loader.load('./resources/temp.obj', function(object) {
         object.traverse( function( child ) {
             if ( child.isMesh ){
                 child.geometry.computeVertexNormals();
@@ -838,8 +838,8 @@ function loadEddyModel(day){
         }
         meshObj.geometry.scale(edgeLen, edgeWid, scaleHeight);
 
-        // meshObj.material.transparent = true;
-        // meshObj.material.opacity = 0.5;
+        meshObj.material.transparent = true;
+        meshObj.material.opacity = 0.7;
 
         curModel = meshObj;
         curModels.push(curModel);

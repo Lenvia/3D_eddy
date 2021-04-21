@@ -39,41 +39,44 @@ function loadEddyFeatures(){
 //     {name: '等级', index: 7, text: '等级'}
 // ];
 
-var bias = 1;
+var bias = 0;
 
 var schema = [
-    {name: 'day', index: 1, text: 'day'},
+    {name: 'day', index: 0, text: 'day'},
     {name: 'cx', index: 1+bias, text: 'cx'},
     {name: 'cy', index: 2+bias, text: 'cy'},
     {name: 'radius', index: 3+bias, text: 'radius'},
     {name: 'eke', index: 4+bias, text: 'eke'},
-    {name: 'vort', index: 5+bias, text: 'vort'},
-    {name: 'circ', index: 6+bias, text: 'circ'},
+    {name: 'depth', index: 5+bias, text: 'depth'},
+    {name: 'vort', index: 6+bias, text: 'vort'},
+    
+    {name: 'circ', index: 7+bias, text: 'circ'},
+    {name: 'name', index: 8+bias, text: 'name'},
 ];
 
 var rawData = [
     // [55,9,56,0.46,18,6,"良", "北京"],
 
-    // [(day), cx, cy, r, vort, eke, circ]
+    // [(day), cx, cy, r, eke, depth, vort, circ, name]
 ];
 
 for(let i=0; i<eddyInfo.length; i++){
     for(let j=0; j<eddyInfo[i].length; j++){
         var row = eddyInfo[i][j];
-
-        // 把类型放在最后
-        var temp = row[3];
-        row[3] = row[5];
-        row[5] = temp;
+        // cx, cy, r, depth, vort, eke, circ
 
         row = [i].concat(row);
+
+        row = row.concat([String(i)+'-'+String(j)]);
+
+        // [(day), cx, cy, r, depth, vort, eke, circ, name]
 
         rawData.push(row);
     }
 }
 
 
-var CATEGORY_DIM_COUNT = 6;
+var CATEGORY_DIM_COUNT = 7;
 var GAP = 2;
 var BASE_LEFT = 5;
 var BASE_TOP = 10;
@@ -81,7 +84,8 @@ var BASE_TOP = 10;
 // var GRID_HEIGHT = 220;
 var GRID_WIDTH = (100 - BASE_LEFT - GAP) / CATEGORY_DIM_COUNT - GAP;
 var GRID_HEIGHT = (100 - BASE_TOP - GAP) / CATEGORY_DIM_COUNT - GAP;
-var CATEGORY_DIM = 6;  // 分类的维度
+var CATEGORY_DIM = 7;  // 分类的维度
+var NAME_DIM = 8;  // 名字所在的维度
 var SYMBOL_SIZE = 4;
 
 function retrieveScatterData(data, dimX, dimY) {
@@ -89,6 +93,8 @@ function retrieveScatterData(data, dimX, dimY) {
     for (var i = 0; i < data.length; i++) {
         var item = [data[i][dimX], data[i][dimY]];
         item[CATEGORY_DIM] = data[i][CATEGORY_DIM];
+
+        item[NAME_DIM] = data[i][NAME_DIM];
 
         // console.log(item[CATEGORY_DIM]);
         result.push(item);
@@ -267,9 +273,30 @@ var option = {
         }
     },
     tooltip: {
-        trigger: 'none',
-        axisPointer:{
-            type: 'cross',
+        // trigger: 'item',
+        // axisPointer:{
+        //     type: 'cross',
+        // }
+        formatter: function (obj) {
+            var value = obj.value;
+            // console.log(value);
+            var result = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' + '</div>';
+
+            // if(value[1]!=undefined)
+            //     result += schema[1].text + '：' + value[1] + '<br>'
+            // if(value[2]!=undefined)
+            //     result += schema[2].text + '：' + value[2] + '<br>'
+            // if(value[3]!=undefined)
+            //     result += schema[3].text + '：' + value[3] + '<br>'
+            // if(value[4]!=undefined)
+            //     result += schema[4].text + '：' + value[4] + '<br>'
+            // if(value[5]!=undefined)
+            //     result += schema[5].text + '：' + value[5] + '<br>'
+            // if(value[6]!=undefined)
+            //     result += schema[6].text + '：' + value[6] + '<br>'
+            if(value[NAME_DIM]!=undefined)
+                result += schema[NAME_DIM].text + '：' + value[NAME_DIM] + '<br>'
+            return result;
         }
     },
     parallelAxis: [
@@ -279,6 +306,7 @@ var option = {
         {dim: 3, name: schema[3].text},
         {dim: 4, name: schema[4].text},
         {dim: 5, name: schema[5].text},
+        {dim: 6, name: schema[6].text},
     ],
     parallel: {
         bottom: '5%',
