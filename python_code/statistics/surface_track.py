@@ -8,6 +8,7 @@ import os
 import json
 import networkx as nx
 import matplotlib.pyplot as plt
+import scipy.io as scio
 
 # 全局常量
 R = 6371 * 1000  # 地球半径
@@ -28,7 +29,7 @@ graph2 = []
 
 root = '../result/eddyInfo'
 
-threshold = 0.5
+threshold = 0.65
 
 bound = 60
 
@@ -40,13 +41,13 @@ def load_common(tar_dir):
     return t, lon_arr, lat_arr
 
 
-sharedDir = 'shared'
+sharedDir = '../shared'
 t, lon_arr, lat_arr = load_common(sharedDir)  # 经纬度只要存储一份就够了，都是共享的
 
 
 # 计算两点间距离
 def geodistance(lon1, lat1, lon2, lat2):
-    print("(%f, %f) (%f, %f)" % (lon1, lat1, lon2, lat2))
+    # print("(%f, %f) (%f, %f)" % (lon1, lat1, lon2, lat2))
     # 这里用m
 
     lon1, lat1, lon2, lat2 = map(radians, [float(lon1), float(lat1), float(lon2), float(lat2)])  # 经纬度转换成弧度
@@ -72,6 +73,7 @@ def wirte_features():
             path = os.path.join(root, str(day), name)
 
             if os.path.exists(path):
+
                 file = os.path.join(path, name+'.json')
                 with open(file, 'r', encoding='utf8')as f:
                     json_data = json.load(f)
@@ -84,13 +86,22 @@ def wirte_features():
                     vort = json_data['vort']
                     eke = json_data['eke']
 
-                    # 位置索引, 直径（半径），极性，涡度， 动能
-                    auxf.append([x, y, r, circ, vort, eke])
+                frameFile = os.path.join(path, name+'.mat')
+                frame = scio.loadmat(frameFile)
+                frame = frame['eddie_mask']  # 三维数组
 
-                    # print(r)
+                k = 0
+                while k < frame.shape[2]:
+                    if np.max(frame[:, :, k]) > 0:
+                        k += 1
+                    else:
+                        break
+                # print(k-1)
 
-                    emptyList.append([])
-                    emptyList2.append([])
+                # 位置索引, 直径（半径），动能，深度, 涡度，极性，
+                auxf.append([x, y, r, eke, k, vort, circ])
+                emptyList.append([])
+                emptyList2.append([])
 
                 index += 1
 
@@ -118,8 +129,8 @@ def track():
                     nxt = np.array(features[i + 1][k])
 
                     # 满足某些条件，可认为k是当前涡旋j的延续
-                    if i == 0 and j == 5:
-                        print("------------")
+                    # if i == 0 and j == 5:
+                    #     print("------------")
                     curD = compute(curr, nxt)
                     if curD < threshold:
                         print(str(i)+'-'+str(j), '->', str(i+1)+'-'+str(k))
@@ -132,8 +143,8 @@ def track():
                     for k in range(len(graph[i + 2])):  # 对于第i+2天的每个涡旋
                         nxt = np.array(features[i + 2][k])
 
-                        if i == 0 and j == 5:
-                            print("------------")
+                        # if i == 0 and j == 5:
+                        #     print("------------")
 
                         # 满足某些条件，可认为k是当前涡旋j的延续
                         curD = compute(curr, nxt)
@@ -150,8 +161,8 @@ def track():
                         for k in range(len(graph[i + 3])):  # 对于第i+3天的每个涡旋
                             nxt = np.array(features[i + 3][k])
 
-                            if i == 0 and j == 5:
-                                print("------------")
+                            # if i == 0 and j == 5:
+                            #     print("------------")
 
                             # 满足某些条件，可认为k是当前涡旋j的延续
                             curD = compute(curr, nxt)
@@ -162,6 +173,24 @@ def track():
                                 graph2[i+3][k].append(str(i) + '-' + str(j))  # 当前涡旋j是下一天涡旋k的前身
 
                                 flag = true
+
+                        # 还没有后继，继续找
+                        if len(graph[i][j]) == 0 and i + 4 < len(graph):  # 没找到后继， 找下一天
+                            for k in range(len(graph[i + 4])):  # 对于第i+4天的每个涡旋
+                                nxt = np.array(features[i + 4][k])
+
+                                # if i == 0 and j == 5:
+                                #     print("------------")
+
+                                # 满足某些条件，可认为k是当前涡旋j的延续
+                                curD = compute(curr, nxt)
+                                # print(curD)
+                                if curD < threshold:
+                                    print(str(i) + '-' + str(j), '->', str(i + 4) + '-' + str(k))
+                                    graph[i][j].append(str(i + 4) + '-' + str(k))
+                                    graph2[i + 4][k].append(str(i) + '-' + str(j))  # 当前涡旋j是下一天涡旋k的前身
+
+                                    flag = true
             if flag:
                 temp += 1
 
@@ -180,26 +209,29 @@ def compute(curr, nxt):
         return 999999
 
     # 涡度差
-    delta_xi = np.abs(curr[4] - nxt[4])
+    delta_xi = np.abs(curr[5] - nxt[5])
 
     # eke差
-    delta_eke = np.abs(curr[5] - nxt[5])
+    delta_eke = np.abs(curr[3] - nxt[3])
 
     # curD = sqrt(w1 * (delta_dis / d0) ** 2 + w2 * (delta_r / r0) ** 2 + w3 * (delta_xi / xi0) ** 2 + w4 * (
     #         delta_eke / eke0) ** 2)
 
     curD = sqrt(w1 * (delta_dis / d0) ** 2 + w2 * (delta_r / r0) ** 2)
 
-
+    if curD > threshold and delta_dis < 30:  # 可能有东西合并过来了导致半径突然增大？
+        curD = 0
 
     # if curD < threshold:
-    if curr[2] > 50:
-        print("距离差: ", delta_dis)
-        print("半径差: ", delta_r)
-        print("涡度差: ", delta_xi)
-        print("eke差: ", delta_eke)
-
-        print(curD)
+    # if curr[2] > 50:
+    # if threshold < curD < 0.7:
+    #     print([(curr[0]), (curr[1]), (nxt[0]), (nxt[1])])
+    #     print("距离差: ", delta_dis)
+    #     print("半径差: ", delta_r)
+    #     print("涡度差: ", delta_xi)
+    #     print("eke差: ", delta_eke)
+    #
+    #     print(curD)
 
     return curD
 
@@ -262,4 +294,6 @@ if __name__ == '__main__':
         print(g)
 
     save()
+
+    # plot()
 

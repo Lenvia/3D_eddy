@@ -23,45 +23,45 @@ all_vars_name = []
 # all_vars_units = []
 all_vars_shape = []
 
-f1 = f
-for key in f1.variables.keys():  # 只有0~6到最后才使用的standard_name，后面没有
-    all_vars_name.append(key)
-    all_vars_shape.append(f1.variables[key].shape)
-
-# 做成表格
-a_vars_info = pd.DataFrame(all_vars_name, columns=['name'])
-# a_vars_info['long_name'] = all_vars_long_name
-# a_vars_info['units'] = all_vars_units
-a_vars_info['shape'] = all_vars_shape
-
-print(a_vars_info)
-print()
+# f1 = f
+# for key in f1.variables.keys():  # 只有0~6到最后才使用的standard_name，后面没有
+#     all_vars_name.append(key)
+#     all_vars_shape.append(f1.variables[key].shape)
+#
+# # 做成表格
+# a_vars_info = pd.DataFrame(all_vars_name, columns=['name'])
+# # a_vars_info['long_name'] = all_vars_long_name
+# # a_vars_info['units'] = all_vars_units
+# a_vars_info['shape'] = all_vars_shape
+#
+# print(a_vars_info)
+# print()
 
 # 提取 U V W的数据
 # 查看var的信息
-varSet = ['XC', 'XG', 'YC', 'YG']
-# 声明空的np数组
-XC = np.array([], dtype=np.float32)
-XG = np.array([], dtype=np.float32)
-YC = np.array([], dtype=np.float32)
-YG = np.array([], dtype=np.float32)
-
-# 赋值
-for i, var in enumerate(varSet):
-    var_info = f.variables[var]  # 获取变量信息
-    var_data = f[var][:]  # 获取变量的数据
-    # print(var_info)
-    # print()
-    var_data = np.array(var_data)  # 转化为np.array数组
-    # print(i, var, '\n')
-    if i == 0:
-        XC = var_data
-    if i == 1:
-        XG = var_data
-    if i == 2:
-        YC = var_data
-    else:
-        YG = var_data
+# varSet = ['XC', 'XG', 'YC', 'YG']
+# # 声明空的np数组
+# XC = np.array([], dtype=np.float32)
+# XG = np.array([], dtype=np.float32)
+# YC = np.array([], dtype=np.float32)
+# YG = np.array([], dtype=np.float32)
+#
+# # 赋值
+# for i, var in enumerate(varSet):
+#     var_info = f.variables[var]  # 获取变量信息
+#     var_data = f[var][:]  # 获取变量的数据
+#     # print(var_info)
+#     # print()
+#     var_data = np.array(var_data)  # 转化为np.array数组
+#     # print(i, var, '\n')
+#     if i == 0:
+#         XC = var_data
+#     if i == 1:
+#         XG = var_data
+#     if i == 2:
+#         YC = var_data
+#     else:
+#         YG = var_data
 
 # print(XC[414:425])
 # print(XG)

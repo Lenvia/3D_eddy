@@ -9,8 +9,8 @@ import os
 # list_path = "/Users/yy/Desktop/pps_whole_vtk_file/temp_force_2_pp_10000"
 # new_path = "/Users/yy/Desktop/pps_whole_vtk_file/force_2_pp_10000"
 
-list_path = "/Users/yy/Desktop/qqq"
-new_path = "/Users/yy/Desktop/qqq1"
+list_path = "/Users/yy/Desktop/temp_local_vtk_folder/temp_force_2_pp_20000"
+new_path = "/Users/yy/Desktop/local_vtk_folder/force_2_pp_20000"
 
 files = os.listdir(list_path)
 
@@ -28,7 +28,6 @@ for file in files:
         os.makedirs(new_path)
     with open(new_path+'/'+name,"w",encoding="utf-8") as f_w:
         for line in lines:
-            # if flag == 0 and "CELL_TYPES" in line:
             if flag == 0 and "CELL_TYPES" in line:
                 flag = 1
             if flag:

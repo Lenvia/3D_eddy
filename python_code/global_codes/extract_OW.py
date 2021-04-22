@@ -159,8 +159,8 @@ def deriv1_central_diff_3D(a,x,y):
     return dadx,dady
 
 
-def extract_OW_VORTICITY(d):
-    (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('../COMBINED_2011013100.nc', d)
+def extract_OW_VORTICITY(day):
+    (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('../COMBINED_2011013100.nc', day)
     # capture
     OW_start = -0.2
 

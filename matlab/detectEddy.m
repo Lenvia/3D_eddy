@@ -4,7 +4,7 @@ close all;
 clc;
 %% Parameters
 dataFile = '/Users/yy/Downloads/resources_EA/COMBINED_2011013100.nc';
-newFileName = 'ensemble1Eddies.nc';
+newFileName = 'test1.nc';
 nbr = 15; % 9;
 nu = 4; %5;  %像是扩展搜索半径
 queueMaxElements = 125000;  % max_eddy_cells_search
@@ -45,15 +45,16 @@ netcdf.putVar(ncid,longitude_ID,longitude);
 netcdf.putVar(ncid,depth_ID,depth);
 
 %% Per Timestamp Processing
-
-for timestamp = 1:60
+for timestamp = 1:1
     % reading data from main file
     startLoc = [1,1,1,timestamp];
     countLoc = [inf,inf,inf,1];
     
-    U = ncread(dataFile, 'U', startLoc, countLoc);
+    U = ncread(dataFile, 'U', startLoc, countLoc); % 这里U的三维就是 经度, 纬度, 深度
     V = ncread(dataFile, 'V', startLoc, countLoc);
     eta = ncread(dataFile, 'ETA', startLoc(2:end), countLoc(2:end));
+    
+%     testU = U(337:500, 1:50, 1);
     
     % processing data
     [gradUx, gradUy, ~] = gradient(U);
@@ -184,6 +185,8 @@ for timestamp = 1:60
     %Inserting Data Into Main Variable
     startLoc = [0,0,0,timestamp-1];
     countLoc = [m,n,p,1];
+    
+    test = newData(:,:,1);
     netcdf.putVar(ncid,isEddy_ID,startLoc,countLoc,newData);
 end
 

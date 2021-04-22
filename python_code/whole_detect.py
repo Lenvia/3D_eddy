@@ -44,8 +44,6 @@ import sys
 from sympy import *
 from math import radians, cos, sin, asin, sqrt
 
-day = sys.argv[1]
-day = int(day)
 
 f = None  # 读取的数据集
 
@@ -62,8 +60,8 @@ def load_netcdf4(filename):  # name of the netCDF data file
     t = f.variables['T_AX'][:]  # 时间数组
 
     # print(lon)
-    return (f,lon,lat,depth,uvel,vvel,t)
-    # return (f, depth, uvel, vvel)
+    # return (f,lon,lat,depth,uvel,vvel,t)
+    return (f, uvel, vvel)
     # f.close()
 
 
@@ -80,6 +78,9 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
     uvel = uvel[day,:,:,:].transpose(2, 1, 0)
     vvel = vvel[day,:,:,:].transpose(2, 1, 0)
 
+    uvel = uvel[300:, :100, :]  # 单位 m
+    vvel = vvel[300:, :100, :]
+
     # Since they are masked arrays (in the mask, True = NaN value), we can fill the masked values with 0.0 to describe land
     uvel.set_fill_value(0.0)
     vvel.set_fill_value(0.0)
@@ -93,7 +94,7 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
     # Compute cartesian distances for derivatives, in m
     R = 6378e3
 
-    x = np.zeros((nx, ny))
+    x = np.zeros((nx, ny))  # 单位：m
     y = np.zeros((nx, ny))
 
     for i in range(0,nx):
@@ -103,6 +104,8 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
 
     # Gridcell area
     dx,dy,grid_area = grid_cell_area(x,y)
+
+    # print(grid_area[300:499, 1:100])
 
     # Calculate the thickness of each depth level, we do a mean between the level above and below => dz[i] = (depth[i+1] - depth[i-1]) / 2.0;
     # except for the first depth which is 2*depth[0].
@@ -135,6 +138,12 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
     shear_strain = du_dy + dv_dx  # 正交变形率
     vorticity = dv_dx - du_dy  # 相对涡度
 
+    for i in range(vorticity.shape[0]):
+        for j in range(vorticity.shape[1]):
+            for k in range(vorticity.shape[2]):
+                if vorticity[i][j][k]!=0:
+                    print(vorticity[i][j][k])
+
     # Compute OW, straight and then normalized with its standard deviation
     OW_raw = normal_strain ** 2 + shear_strain ** 2 - vorticity ** 2
     OW_mean = OW_raw.sum() / n_ocean_cells
@@ -145,10 +154,6 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
     OW_eddies = np.zeros(OW.shape, dtype=int)
     OW_eddies[np.where(OW < OW_start)] = 1
 
-    '''
-    执行到这里直接return，下面的R2算法暂时不运行
-    '''
-    # return (lon, lat, uvel, vvel, vorticity, OW, OW_eddies)
 
     ########################################################################
 
@@ -172,35 +177,52 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
     ########################################################################
     print('Beginning R2 algorithm\n')
     # Set a maximum number of cells to search through, for initializing arrays.
-    max_eddy_cells_search = 100000
+    max_eddy_cells_search = 10000
 
     # Initialize variables for eddy census
     iEddie = 0
     eddie_census = np.zeros((6, num_mins))
-    all_eddies_mask = np.zeros(uvel.shape,dtype=int)
+    all_eddies_mask = np.zeros(uvel.shape,dtype=int)  # 为1的部分表示有涡旋
     circulation_mask = np.zeros(uvel.shape)
 
     print('Evaluating eddy at local OW minimuma.  Number of minimums = %g \n' %num_mins)
 
-    levels = []
+    positions = []
+    vorts = []
+    ekes = []
+    minks = []
+    maxks = []
+
     # loop over local OW minima
     for imin in range(0, num_mins):
+        pos_vort_num = 0
+        neg_vort_num = 0
+
         # initialize variables for this local minimum in OW
         ie = local_mins[0, imin]
         je = local_mins[1, imin]
         ke = local_mins[2, imin]
 
+        eke = 0  # 设置动能为0
+        # 动能增加
+        eke += (uvel[ie][je][ke] ** 2 + vvel[ie][je][ke]**2)*0.5
+
         # Efficiency note: Eddie and neigbor masks are logical arrays the
         # size of the full 3D domain.  A more efficient implementation is
         # to create a list that records the indices of all eddy and
         # neighbor cells.
-        eddie_mask = np.zeros(uvel.shape,dtype=int)
+        eddie_mask = np.zeros(uvel.shape,dtype=int)  # 单个涡旋的mask
         neighbor_mask = np.zeros(uvel.shape,dtype=int)
 
         eddie_mask[ie, je, ke] = 1
         minOW = np.zeros((max_eddy_cells_search, 1))
         volume = np.zeros((max_eddy_cells_search, 1))
         R2 = np.zeros((max_eddy_cells_search, 1))
+
+        if vorticity[ie][je][ke]>0:
+            pos_vort_num += 1
+        elif vorticity[ie][je][ke]<0:
+            neg_vort_num += 1
 
         minOW[0] = OW[ie, je, ke]
         volume[0] = grid_area[ie, je]* dz[ke]
@@ -209,6 +231,8 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
         min_k = nz
         # print('imin=' + repr(imin), 'lon='+repr(lon[ie]), 'lon='+repr(lat[je]), 'lon='+repr(lon[ie]) ,'k='+repr(ke),end=' ')
         print('imin=' + repr(imin), 'lon='+repr(lon[ie]), 'lat='+repr(lat[je]), 'k='+repr(ke), end='\n')
+
+
 
         # Loop to accumulate cells neighboring local min, in order of min OW.
         for ind in range(1, max_eddy_cells_search):
@@ -230,8 +254,18 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
             # at that location.
             eddie_mask[ie, je, ke] = 1
             neighbor_mask[ie, je, ke] = 0
-            min_k = np.min((min_k, ke+1))
-            max_k = np.max((max_k, ke+1))
+            min_k = np.min((min_k, ke+1))  # 涡旋顶层？
+            max_k = np.max((max_k, ke+1))  # 涡旋底层？
+
+            # 动能增加
+            eke += (uvel[ie][je][ke] ** 2 + vvel[ie][je][ke]**2)*0.5
+
+
+            if vorticity[ie][je][ke] > 0:
+                pos_vort_num += 1
+            elif vorticity[ie][je][ke] < 0:
+                neg_vort_num += 1
+
 
             # We are building a data set of minimum OW versus volume
             # accumulated so far in this search.  If the new eddy cell has
@@ -280,8 +314,9 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
                         break
 
                     iEddie += 1
+                    # 这时候已经确定找出一个涡旋了
                     print('Yes, eddie confirmed.  iEddie='+repr(iEddie),'\n')
-                    levels.append(ke)
+
 
                     # find minimum OW value and location with this eddie
                     eddie_indices = np.where(eddie_mask)
@@ -289,21 +324,41 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
                     tempInd = np.where(OW[eddie_indices] == minOW_eddie)[0][0]
                     iE, jE, kE = np.asarray(eddie_indices)[:,tempInd]
 
+                    # 涡旋的其他附加属性：层数、涡度、动能
+                    positions.append([iE, jE, kE])
+                    vorts.append(vorticity[iE][jE][kE])
+                    ekes.append(eke)
+                    minks.append(min_k)
+                    maxks.append(max_k)
+
                     # Find diameter of this eddie, using area at depth of max OW
                     # value, in cm^2.  Diameter is in km.
                     area = np.sum(grid_area[np.where(eddie_mask[:,:, kE])])
-                    diameter = 2*np.sqrt(area/np.pi)/1e3
+                    diameter = 2*np.sqrt(area/np.pi)/1e3  # 直径
+
+                    print("radius: ", diameter/2)
 
                     # Circulation aroung the eddie
                     # Calculated on a square around the center of the eddy, positive in the clockwise direction
 
-                    circ_sides = -vvel[np.min((iE+1,nx-1)), jE, kE]*dy[np.min((iE+1,nx-1)),jE] - uvel[iE, np.max((jE-1,0)), kE]*dx[iE,np.max((0,jE-1))] + vvel[np.max((0,iE-1)), jE, kE]*dy[np.max((iE-1,0)),jE] + uvel[iE, np.min((jE+1,ny-1)), kE]*dx[iE,np.min((jE+1,ny-1))]
-                    circ_corner1 = -vvel[np.min((iE+1,nx-1)), np.max((jE-1,0)), kE]*0.5*dy[np.min((iE+1,nx-1)),np.max((jE-1,0))] - uvel[np.min((iE+1,nx-1)), np.max((jE-1,0)), kE]*0.5*dx[np.min((iE+1,nx-1)),np.max((jE-1,0))]
-                    circ_corner2 = -uvel[np.max((0,iE-1)), np.max((jE-1,0)), kE]*0.5*dx[np.max((0,iE-1)),np.max((jE-1,0))] + vvel[np.max((0,iE-1)), np.max((jE-1,0)), kE]*0.5*dy[np.max((0,iE-1)),np.max((jE-1,0))]
-                    circ_corner3 =  vvel[np.max((0,iE-1)), np.min((jE+1,ny-1)), kE]*0.5*dy[np.max((0,iE-1)),np.min((jE+1,ny-1))] + uvel[np.max((0,iE-1)), np.min((jE+1,ny-1)), kE]*0.5*dx[np.max((0,iE-1)),np.min((jE+1,ny-1))]
-                    circ_corner4 =  uvel[np.min((iE+1,nx-1)), np.min((jE+1,ny-1)), kE]*0.5*dx[np.min((iE+1,nx-1)),np.min((jE+1,ny-1))] - vvel[np.min((iE+1,nx-1)), np.min((jE+1,ny-1)), kE]*0.5*dy[np.min((iE+1,nx-1)),np.min((jE+1,ny-1))]
+                    # dx, dy就是相邻格子的经度距离和纬度距离
+                    # 东西南北
+                    circ_sides = -vvel[np.min((iE+1,nx-1)), jE, kE]*dy[np.min((iE+1,nx-1)),jE]    -     uvel[iE, np.max((jE-1,0)), kE]*dx[iE,np.max((0,jE-1))]    +    vvel[np.max((0,iE-1)), jE, kE]*dy[np.max((iE-1,0)),jE]    +    uvel[iE, np.min((jE+1,ny-1)), kE]*dx[iE,np.min((jE+1,ny-1))]
+                    # 东南
+                    circ_corner1 = -vvel[np.min((iE+1,nx-1)), np.max((jE-1,0)), kE]*0.5*dy[np.min((iE+1,nx-1)),np.max((jE-1,0))]   -    uvel[np.min((iE+1,nx-1)), np.max((jE-1,0)), kE]*0.5*dx[np.min((iE+1,nx-1)),np.max((jE-1,0))]
+                    # 西南
+                    circ_corner2 = -uvel[np.max((0,iE-1)), np.max((jE-1,0)), kE]*0.5*dx[np.max((0,iE-1)),np.max((jE-1,0))]    +    vvel[np.max((0,iE-1)), np.max((jE-1,0)), kE]*0.5*dy[np.max((0,iE-1)),np.max((jE-1,0))]
+                    # 西北
+                    circ_corner3 =  vvel[np.max((0,iE-1)), np.min((jE+1,ny-1)), kE]*0.5*dy[np.max((0,iE-1)),np.min((jE+1,ny-1))]    +    uvel[np.max((0,iE-1)), np.min((jE+1,ny-1)), kE]*0.5*dx[np.max((0,iE-1)),np.min((jE+1,ny-1))]
+                    # 东北
+                    circ_corner4 =  uvel[np.min((iE+1,nx-1)), np.min((jE+1,ny-1)), kE]*0.5*dx[np.min((iE+1,nx-1)),np.min((jE+1,ny-1))]    -    vvel[np.min((iE+1,nx-1)), np.min((jE+1,ny-1)), kE]*0.5*dy[np.min((iE+1,nx-1)),np.min((jE+1,ny-1))]
 
                     circ = circ_sides + circ_corner1 + circ_corner2 + circ_corner3 + circ_corner4
+
+                    if pos_vort_num >= neg_vort_num:
+                        circ = 1
+                    elif pos_vort_num < neg_vort_num:
+                        circ = -1
 
                     # add this eddy to the full eddy mask
                     all_eddies_mask = all_eddies_mask + eddie_mask
@@ -312,14 +367,22 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
                     circulation_mask = circulation_mask + circ*eddie_mask
 
                     # record eddie data
+                    # (minOW, 气旋方向, 经度, 纬度, 单元数, 直径）
                     eddie_census[:, iEddie-1] = (minOW[0], circ, lon[iE], lat[jE], ind, diameter)
+
+                    # 把单个涡旋形状mask保存
+                    shapeDir = os.path.join('whole_result', str(day), 'shapes')
+                    if not os.path.exists(shapeDir):
+                        os.makedirs(shapeDir)
+
+                    joblib.dump(eddie_mask, shapeDir+'/'+str(day)+'-'+str(iEddie-1)+'.pkl')
 
                     break
 
     nEddies = iEddie
 
     # return (lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_census,nEddies,circulation_mask)
-    return (lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_census,nEddies,circulation_mask, levels)
+    return (OW,OW_eddies,eddie_census,nEddies,circulation_mask, positions, vorts, ekes, minks, maxks)
 
 
 ## Creates grid #####################################################
@@ -471,7 +534,7 @@ def plot_eddies(day_julian_hours,lon,lat,uvel,vvel,vorticity,OW,OW_eddies,eddie_
     axes[2,0].set_title('Possible eddies ($OW<OW_{start}$)')
 
     pos6 = axes[2,1].imshow(intensity_mask[:,:,k_plot].T, extent=[lon[0],lon[-1],lat[0],lat[-1]],aspect='auto',origin="lower",cmap='jet')
-    axes[2,1].set_title('Circulation ($m^2/s$), $>0$: cyclonic, $<0$: anticyclonic, $=0$: no eddy')
+    axes[2,1].set_title('Circulation ($m^2/s$), $>0$: cyclonic;  $<0$: anticyclonic;  $=0$: no eddy')
     for i in range(0,nEddies):
         text = axes[2,1].annotate(i+1, eddie_census[2:4,i])
         text.set_fontsize('x-small')
@@ -548,111 +611,45 @@ class Get_new_gps():
 
 
 if __name__ == '__main__':
-    (f, lon, lat, depth, uvel, vvel, t) = load_netcdf4('COMBINED_2011013100.nc')
+    day = 0
+    (f, uvel, vvel) = load_netcdf4('COMBINED_2011013100.nc')
 
     sharedDir = 'shared'
     if not os.path.exists(sharedDir):
         os.makedirs(sharedDir)
 
-    joblib.dump(t, sharedDir+'/t.pkl')
-    joblib.dump(lon, sharedDir + '/lon.pkl')
-    joblib.dump(lat, sharedDir + '/lat.pkl')
+    t = joblib.load(sharedDir+'/t.pkl')
+    lon = joblib.load(sharedDir+'/lon.pkl')
+    lat = joblib.load(sharedDir+'/lat.pkl')
+    depth = joblib.load(sharedDir+'/depth.pkl')
 
     # capture
     R2_criterion = 0.9
     OW_start = -0.2
-    max_evaluation_points = 1000
-    min_eddie_cells = 3
-    k_plot = 0
+    max_evaluation_points = 400
+    min_eddie_cells = 4
+    # k_plot = 0
 
-    print("start")
+    for day in range(0, 1):
 
-    lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, levels = eddy_detection(lon, lat, depth, uvel, vvel, day, R2_criterion, OW_start, max_evaluation_points, min_eddie_cells)
+        print("day:", day)
+        tarDir = os.path.join('whole_result', str(day))
+        if not os.path.exists(tarDir):
+            os.makedirs(tarDir)
 
-    print("successfully detected!")
+        OW, OW_eddies, eddie_census, nEddies, circulation_mask, positions, vorts, ekes, minks, maxks = \
+            eddy_detection(lon, lat, depth, uvel, vvel, day, R2_criterion, OW_start, max_evaluation_points, min_eddie_cells)
 
+        print("successfully detected!")
 
-    tarDir = os.path.join('whole_result', str(day))
+        joblib.dump(OW, tarDir + '/OW.pkl')
+        joblib.dump(OW_eddies, tarDir + '/OW_eddies.pkl')
+        joblib.dump(eddie_census, tarDir + '/eddie_census.pkl')
+        joblib.dump(nEddies, tarDir + '/nEddies.pkl')
+        joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
+        joblib.dump(positions, tarDir + '/positions.pkl')
+        joblib.dump(vorts, tarDir + '/vorts.pkl')
+        joblib.dump(ekes, tarDir + '/ekes.pkl')
+        joblib.dump(minks, tarDir + '/minks.pkl')
+        joblib.dump(maxks, tarDir + '/maxks.pkl')
 
-    if not os.path.exists(tarDir):
-        os.makedirs(tarDir)
-
-    joblib.dump(uvel, tarDir + '/uvel.pkl')
-    joblib.dump(vvel, tarDir + '/vvel.pkl')
-    joblib.dump(vorticity, tarDir + '/vorticity.pkl')
-    joblib.dump(OW, tarDir + '/OW.pkl')
-    joblib.dump(OW_eddies, tarDir + '/OW_eddies.pkl')
-    joblib.dump(eddie_census, tarDir + '/eddie_census.pkl')
-    joblib.dump(nEddies, tarDir + '/nEddies.pkl')
-    joblib.dump(circulation_mask, tarDir + '/circulation_mask.pkl')
-    joblib.dump(levels, tarDir + '/levels.pkl')
-
-
-
-    print("start plot")
-    plt = plot_eddies(t[day], lon, lat, uvel, vvel, vorticity, OW, OW_eddies, eddie_census, nEddies, circulation_mask, k_plot)
-
-    """
-    ----------------------------------------以上识别完毕--------------------------------------------------------
-    --------------------------------------以下是逐个提取涡旋-----------------------------------------------------
-    """
-
-    '''
-    characteristics of the detected eddies -->
-    minOW, circ(m^2/s), lon(º), lat(º), cells, diameter(km)
-    '''
-
-    size = len(levels)  # 识别出来的涡核的个数
-
-    print("lon:")
-    print(eddie_census[2][:size])
-    print("lat:")
-    print(eddie_census[3][:size])
-    print("cells:")
-    print(eddie_census[4][:size])
-    print("diam:")
-    print(eddie_census[-1][:size])
-    print("levels:")
-    print(levels)
-    print("circulation_mask:")  # 气旋 or 反气旋
-    print(circulation_mask)
-
-    # # 查看一下气旋和反气旋点的数量
-    # pos = 0
-    # neg = 0
-    # for i in range(circulation_mask.shape[0]):
-    #     for j in range(circulation_mask.shape[1]):
-    #         for k in range(circulation_mask.shape[2]):
-    #             if circulation_mask[i][j][k] > 0:
-    #                 pos += 1
-    #             elif circulation_mask[i][j][k] < 2e-10:
-    #                 neg += 1
-    # print(pos)
-    # print(neg)
-
-    '''
-        -----------------------------是否要用 待定 ----------------------------------------------
-    '''
-    '''
-        定位单个涡旋的正方形边界
-    '''
-    # functions = Get_new_gps()
-    # index = 0
-    # lonC, latC = [eddie_census[2][index], eddie_census[3][index]]
-    # r = eddie_census[-1][index]/2 * 1e3  # 半径
-    # level = levels[index]  # 层数
-    #
-    # # 计算正南的点
-    # lonSouth, latSouth = functions.get_sou(lonC, latC, r)
-    # # 计算正西的点
-    # lonWest, latWest = functions.get_west(lonC, latC, r)
-    # # 计算正北的点
-    # lonNorth, latNorth = functions.get_nor(lonC, latC, r)
-    # # 计算正东的点
-    # lonEast, latEast = functions.get_east(lonC, latC, r)
-    #
-    # print("原始点的经纬度坐标", lonC, latC)
-    # print("正南%f米坐标点为%f,%f" % (r, lonSouth, latSouth))
-    # print("正西%f米坐标点为%f,%f" % (r, lonWest, latWest))
-    # print("正北%f米坐标点为%f,%f" % (r, lonNorth, latNorth))
-    # print("正东%f米坐标点为%f,%f" % (r, lonEast, latEast))

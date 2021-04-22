@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import json
 import os
+import joblib
 
 filename = '../COMBINED_2011013100.nc'  # .nc文件名
 f = nc.Dataset(filename)   # 读取.nc文件，传入f中。此时f包含了该.nc文件的全部信息
@@ -36,8 +37,8 @@ a_vars_info = pd.DataFrame(all_vars_name, columns=['name'])
 # a_vars_info['units'] = all_vars_units
 a_vars_info['shape'] = all_vars_shape
 
-print(a_vars_info)
-print()
+# print(a_vars_info)
+# print()
 
 # 提取 U V W的数据
 # 查看var的信息
@@ -59,18 +60,19 @@ for i, var in enumerate(varSet):
     if i == 1:
         zb = var_data
 
-z = z.tolist()
+joblib.dump(z, "../shared/depth.pkl")
+# z = z.tolist()
 
-print(z)
-print('---------')
-print(zb)
-
-depth_dict = {"depth": z}
+# print(z)
+# print('---------')
+# print(zb)
+#
+# depth_dict = {"depth": z}
 
 
 # 写入时间和索引json数据
-depth_json = json.dumps(depth_dict, sort_keys=False)
-f = open(os.path.join('../shared/depth.json'), 'w')
-f.write(depth_json)
-
-f.close()  # 关闭文件。如果文件关闭后，再使用f.variabels.items()等操作是行不通的。
+# depth_json = json.dumps(depth_dict, sort_keys=False)
+# f = open(os.path.join('../shared/depth.json'), 'w')
+# f.write(depth_json)
+#
+# f.close()  # 关闭文件。如果文件关闭后，再使用f.variabels.items()等操作是行不通的。

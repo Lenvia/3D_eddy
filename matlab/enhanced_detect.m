@@ -4,9 +4,8 @@ close all;
 clc;
 %% Parameters
 dataFile = '/Users/yy/Downloads/resources_EA/COMBINED_2011013100.nc';
-newFileName = 'ensembleEddies.nc';
-%attrFileName = '3dAttr1.nc';
-attrFileName = '3dAttr.nc';
+newFileName = 'Eddies.nc';
+attrFileName = '3dAttr1.nc';
 
 nbr = 15; % 9;
 nu = 3; %5;  %像是扩展搜索半径
@@ -17,6 +16,7 @@ queueMaxElements = 125000;  % max_eddy_cells_search
 % Open the file
 ncid = netcdf.create(newFileName,'NC_WRITE');
 ncid2 = netcdf.create(attrFileName,'NC_WRITE');
+% ncid3 = netcdf.create(attrFileName2,'NC_WRITE');
 
 % Define the dimensions
 dimidt = netcdf.defDim(ncid,'time',60);
@@ -29,6 +29,11 @@ dimidlat2 = netcdf.defDim(ncid2,'latitude',500);
 dimidlon2 = netcdf.defDim(ncid2,'longitude',500);
 dimiddepth2 = netcdf.defDim(ncid2,'depth',50);
 
+% dimidt3 = netcdf.defDim(ncid3,'time',60);
+% dimidlat3 = netcdf.defDim(ncid3,'latitude',500);
+% dimidlon3 = netcdf.defDim(ncid3,'longitude',500);
+% dimiddepth3 = netcdf.defDim(ncid3,'depth',50);
+
 % Define IDs for the dimension variables (pressure,time,latitude,...)
 date_ID=netcdf.defVar(ncid,'time','double',[dimidt]);
 latitude_ID=netcdf.defVar(ncid,'latitude','NC_FLOAT',[dimidlat]);
@@ -40,15 +45,23 @@ latitude_ID2=netcdf.defVar(ncid2,'latitude','NC_FLOAT',[dimidlat2]);
 longitude_ID2=netcdf.defVar(ncid2,'longitude','NC_FLOAT',[dimidlon2]);
 depth_ID2=netcdf.defVar(ncid2,'depth','NC_FLOAT',[dimiddepth2]);
 
+% date_ID3=netcdf.defVar(ncid3,'time','double',[dimidt3]);
+% latitude_ID3=netcdf.defVar(ncid3,'latitude','NC_FLOAT',[dimidlat3]);
+% longitude_ID3=netcdf.defVar(ncid3,'longitude','NC_FLOAT',[dimidlon3]);
+% depth_ID3=netcdf.defVar(ncid3,'depth','NC_FLOAT',[dimiddepth3]);
+
 
 % Define the main variable ()
 isEddy_ID = netcdf.defVar(ncid,'isEddy','NC_BYTE',[dimidlon dimidlat dimiddepth dimidt]);
 circ_ID = netcdf.defVar(ncid2, 'circ', 'NC_SHORT', [dimidlon2 dimidlat2 dimiddepth2 dimidt2]);
 eke_ID = netcdf.defVar(ncid2, 'eke', 'NC_DOUBLE', [dimidlon2 dimidlat2 dimiddepth2 dimidt2]);
 
+% vort_ID = netcdf.defVar(ncid3, 'vort', 'NC_DOUBLE', [dimidlon3 dimidlat3 dimiddepth3 dimidt3]);
+
 % We are done defining the NetCdf
 netcdf.endDef(ncid);
 netcdf.endDef(ncid2);
+% netcdf.endDef(ncid3);
 
 %% Reading Data
 longitude = ncread(dataFile, 'XC');
@@ -67,11 +80,16 @@ netcdf.putVar(ncid2,latitude_ID2,latitude);
 netcdf.putVar(ncid2,longitude_ID2,longitude);
 netcdf.putVar(ncid2,depth_ID2,depth);
 
+% netcdf.putVar(ncid3,date_ID3,timeS);
+% netcdf.putVar(ncid3,latitude_ID3,latitude);
+% netcdf.putVar(ncid3,longitude_ID3,longitude);
+% netcdf.putVar(ncid3,depth_ID3,depth);
+
 %% Per Timestamp Processing
 
-for timestamp = 1:10
-    folderName = strcat('./result/eddyInfo/', num2str(timestamp-1));
-    mkdir(folderName);
+for timestamp = 1:60
+%     folderName = strcat('./result/eddyInfo/', num2str(timestamp-1));
+%     mkdir(folderName);
     timestamp
     % reading data from main file
     startLoc = [1,1,1,timestamp];
@@ -102,8 +120,7 @@ for timestamp = 1:10
     
 %     aaaa = grid_area(301:500, 1:100);
     
-    circulation_mask = zeros(nx, ny, nz);
-    eke_mask = zeros(nx, ny, nz);
+    
     
     % processing data
 %     [gradUx, gradUy, ~] = gradient(U);
@@ -224,6 +241,10 @@ for timestamp = 1:10
     %BFS
     [m,n,p] = size(U);
     newData = zeros(m,n,p);
+    circulation_mask = zeros(m,n,p);
+    eke_mask = zeros(m,n,p);
+    vort_mask = zeros(m,n,p);
+    
     stack = zeros(queueMaxElements,3);
     stackPtr = 0;
     count = size(row);  % 涡核中心个数
@@ -242,7 +263,7 @@ for timestamp = 1:10
         
         total_eke = 0;
         total_area = 0;
-        vort = vorticity(minPos(1), minPos(2), minPos(3));
+        vort = 0;
         
         while(stackPtr > 0)
             x = stack(stackPtr,1);  % x轴索引
@@ -264,38 +285,42 @@ for timestamp = 1:10
                             total_eke = total_eke+0.5*(U(dx,dy,dz)^2 + V(dx,dy,dz)^2);
                             total_area = total_area+1;
 
+                            vort = vort+vorticity(dx, dy, dz);
                         end
                     end
                 end
             end
         end
         tarX = minPos(1); tarY = minPos(2); tarZ = minPos(3);
-        circ_sides = -V(min(tarX+1,nx), tarY, tarZ)*disy(min(tarX+1,nx),tarY) - U(tarX, max(tarY,1), tarZ)*disx(tarX,max(1,tarY)) + V(max(1,tarX), tarY, tarZ)*disy(max(tarX,1),tarY) + U(tarX, min(tarY+1,ny), tarZ)*disx(tarX,min(tarY+1,ny));
-        circ_corner1 = -V(min(tarX+1,nx), max(tarY,1), tarZ)*0.5*disy(min(tarX+1,nx),max(tarY,1)) - U(min(tarX+1,nx), max(tarY,1), tarZ)*0.5*disx(min(tarX+1,nx),max(tarY,1));
-        circ_corner2 = -U(max(1,tarX), max(tarY,1), tarZ)*0.5*disx(max(1,tarX),max(tarY,1)) + V(max(1,tarX), max(tarY,1), tarZ)*0.5*disy(max(1,tarX),max(tarY,1));
-        circ_corner3 =  V(max(1,tarX), min(tarY+1,ny), tarZ)*0.5*disy(max(1,tarX),min(tarY+1,ny)) + U(max(1,tarX), min(tarY+1,ny), tarZ)*0.5*disx(max(1,tarX),min(tarY+1,ny));
+        circ_sides = -V(min(tarX+1,nx), tarY, tarZ)*disy(min(tarX+1,nx),tarY) - U(tarX, max(tarY-1,1), tarZ)*disx(tarX,max(1,tarY-1)) + V(max(1,tarX-1), tarY, tarZ)*disy(max(tarX-1,1),tarY) + U(tarX, min(tarY+1,ny), tarZ)*disx(tarX,min(tarY+1,ny));
+        circ_corner1 = -V(min(tarX+1,nx), max(tarY-1,1), tarZ)*0.5*disy(min(tarX+1,nx),max(tarY-1,1)) - U(min(tarX+1,nx), max(tarY-1,1), tarZ)*0.5*disx(min(tarX+1,nx),max(tarY-1,1));
+        circ_corner2 = -U(max(1,tarX-1), max(tarY-1,1), tarZ)*0.5*disx(max(1,tarX-1),max(tarY-1,1)) + V(max(1,tarX-1), max(tarY-1,1), tarZ)*0.5*disy(max(1,tarX-1),max(tarY-1,1));
+        circ_corner3 =  V(max(1,tarX-1), min(tarY+1,ny), tarZ)*0.5*disy(max(1,tarX-1),min(tarY+1,ny)) + U(max(1,tarX-1), min(tarY+1,ny), tarZ)*0.5*disx(max(1,tarX-1),min(tarY+1,ny));
         circ_corner4 =  U(min(tarX+1,nx), min(tarY+1,ny), tarZ)*0.5*disx(min(tarX+1,nx),min(tarY+1,ny)) - V(min(tarX+1,nx), min(tarY+1,ny), tarZ)*0.5*disy(min(tarX+1,nx),min(tarY+1,ny));
         
         circ = circ_sides + circ_corner1 + circ_corner2 + circ_corner3 + circ_corner4;
-        if circ>0
-            circ = 1;
-        else circ = -1;
+        if circ<0
+            circ = 1;  % 气旋
+        else
+            circ = -1; % 反气旋
         end
         
         circulation_mask = circulation_mask + circ*eddie_mask(:,:,:);
         eke_mask = eke_mask + total_eke*eddie_mask(:,:,:);
         
-        if total_area>5  % 过滤小的涡旋
-            dirName = strcat('./result1/eddyInfo/',num2str(timestamp-1),'/', num2str(timestamp-1),'-',num2str(id));
+        vort_mask = vort_mask + vorticity .* eddie_mask(:,:,:);
+        
+        if total_area>1
+            dirName = strcat('./result/eddyInfo/',num2str(timestamp-1),'/', num2str(timestamp-1),'-',num2str(id));
             mkdir(dirName);
-            
+
             [srow, scol] = find(eddie_mask(:,:,1));
             surface_area = 0;
-            
+
             for a = 1:size(srow)
                surface_area = surface_area + grid_area(srow(a), scol(a)); 
             end
-            
+
             r = sqrt(surface_area/pi)/1e3;
 
             dict = struct();
@@ -305,7 +330,7 @@ for timestamp = 1:10
             dict.r = r;
             dict.circ = circ;
             dict.eke = total_eke;
-            dict.vort = vort;
+            dict.vort = vort/total_area;
             dict = jsonencode(dict)
 
             % 写入json
@@ -315,19 +340,21 @@ for timestamp = 1:10
             fid=fopen(file_name,'w');
             fprintf(fid, dict);
             sta=fclose(fid);
-            
+
             % 保存形状数组
             mat_name = strcat(num2str(timestamp-1),'-',num2str(id), '.mat');
             mat_file_name = strcat(dirName, '/', mat_name);
             save(mat_file_name, 'eddie_mask');
-            
+
             id= id+1;
-        end
+         end
         
         
         
     end
     newData = uint8(newData);
+    
+    
     
     %Inserting Data Into Main Variable
     startLoc = [0,0,0,timestamp-1];
@@ -339,11 +366,13 @@ for timestamp = 1:10
     netcdf.putVar(ncid,isEddy_ID,startLoc,countLoc,newData);
     netcdf.putVar(ncid2, circ_ID, startLoc,countLoc, circulation_mask);
     netcdf.putVar(ncid2, eke_ID, startLoc,countLoc, eke_mask);
+%     netcdf.putVar(ncid3, vort_ID, startLoc,countLoc, vort_mask);
 end
 
 %% Closing things
 % We're done, close the netcdf
 netcdf.close(ncid);
 netcdf.close(ncid2);
+% netcdf.close(ncid3);
 load handel
 % sound(y,Fs)

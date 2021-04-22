@@ -44,8 +44,7 @@ import sys
 from sympy import *
 from math import radians, cos, sin, asin, sqrt
 
-day = sys.argv[1]
-day = int(day)
+day = 0
 
 
 # Load netCDF4 data
@@ -144,6 +143,7 @@ def eddy_detection(lon,lat,depth,uvel,vvel,day,R2_criterion,OW_start,max_evaluat
     normal_strain = du_dx - dv_dy  # 剪切变形率
     shear_strain = du_dy + dv_dx  # 正交变形率
     vorticity = dv_dx - du_dy  # 相对涡度
+
 
     # Compute OW, straight and then normalized with its standard deviation
     OW_raw = normal_strain ** 2 + shear_strain ** 2 - vorticity ** 2
