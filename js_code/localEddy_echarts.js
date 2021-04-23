@@ -456,6 +456,7 @@ function loadTopo(firstName){
 
     queue.push(firstName);  // 把当前涡旋的名称放进去
     idQueue.push(nextId);
+    existedNodesMap.set(firstName, nextId);
     
     nextId++;
 
@@ -486,10 +487,6 @@ function loadTopo(firstName){
         data.push(row);
 
 
-        if(d+1>=tex_pps_day)  // 不用向后追踪了，这时候不能break，因为可能还有同一天的节点
-            continue;
-        
-
         var forwards = eddyForwards[d][index];  // 得到它后继列表
         var tempId;
         for(let i=0; i<forwards.length; i++){
@@ -512,49 +509,9 @@ function loadTopo(firstName){
                 source: curId,
                 target: tempId,
             });
-
-            // console.log(queue.length);
-            // console.log(curName , "->" , tarName);
-        }
-    }
-
-    // 当上一个循环结束后，nextId就是接下来要放的id
-    // 再把首节点放进去
-    queue.push(firstName);  // 把当前涡旋的名称放进去
-    idQueue.push(0);
-
-    while(queue.length!=0){  // 当队列不为空
-        curId = idQueue[0];
-        curName = queue[0];
-
-        queue.shift();  // 当前节点出队
-        idQueue.shift();
-
-        var d = parseInt(curName.split("-")[0]);
-        var index = parseInt(curName.split("-")[1]);
-
-        // 把当前节点放到nodes中，如果是首节点就不用了
-        if(curId!=0){
-            // 把当前节点放到nodes中
-            [curX, curY] = getCurPos(d, index);
-        
-            curRadius = getCurRadius(d, index);
-            curEke = getCurEke(d, index);
-            curDepth = getCurDepth(d, index);
-            curVort = getCurVort(d, index);
-            curCirc = getCurCirc(d, index);
-            curColor = getCurColor(d, index);
-
-            // 把当前节点放到nodes中
-            row = [d,  curX, curY, curRadius, curEke, curDepth, curVort, curCirc, curColor, curName];
-            data.push(row);
         }
 
-        
-        if(d-1<0)  // 不用向前追踪了
-            continue;
-        
-
+        // 向前追踪时，不用添加边。因为其前驱在向后追踪时会添加。
         var backwards = eddyBackwards[d][index];  // 得到它后继下标
         var tempId;
 
@@ -571,28 +528,12 @@ function loadTopo(firstName){
             else{  // 不用入队
                 tempId = existedNodesMap.get(tarName);
             }
-
-            edges.push({
-                source: tempId,
-                target: curId,
-            });
-
-            // console.log(tarName , "->" , curName);
         }
     }
-
-    // console.log(edges);
-
-    // index_arr = [];
-    // // 用于确定gui中index的范围
-    // for(let i=0; i<data.length; i++){
-    //     index_arr.push(i);
-    // }
-    // console.log(index_arr);
-
     // 刷新
     flushData();
 }
+
 
 
 function getCurPos(d, index){
