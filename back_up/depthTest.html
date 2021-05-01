@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>示例 04.02 - MeshDepthMaterial</title>
+	<script src="./node_modules/three/build/three.js"></script>
+	<script src="./node_modules/three/examples/js/controls/OrbitControls.js"></script>
+	<script src="./node_modules/three/examples/js/libs/stats.min.js"></script>
+	<script src="./node_modules/three/examples/js/libs/dat.gui.min.js"></script>
+	<script src="https://cdn.bootcss.com/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        body {
+            /* 设置 margin 为 0，并且 overflow 为 hidden，来完成页面样式 */
+            margin: 0;
+            overflow: hidden;
+        }
+		/* 统计对象的样式 */
+		#Stats-output {
+			position: absolute;
+			left: 0px;
+			top: 0px;
+		}
+    </style>
+</head>
+<body>
+ 
+<!-- 用于 WebGL 输出的 Div -->
+<div id="webgl-output"></div>
+<!-- 用于统计 FPS 输出的 Div -->
+<div id="stats-output"></div>
+ 
+<!-- 运行 Three.js 示例的 Javascript 代码 -->
+<script type="text/javascript">
+ 
+	var scene;
+	var camera;
+	var render;
+	var webglRender;
+	var canvasRender;
+	var controls;
+	var stats;
+	var guiParams;
+	
+	var ground;
+	var cube;
+	var plane;
+	var sphere;
+	
+	var meshMaterial;
+	
+	var ambientLight;
+	var spotLight;
+ 
+    $(function() {
+		stats = initStats();
+		scene = new THREE.Scene();
+		scene.overrideMaterial = new THREE.MeshDepthMaterial({
+			//morphTargets: true,
+			//depthPacking: THREE.BasicDepthPacking // BasicDepthPacking / RGBADepthPacking
+		}); 
+		
+		webglRender = new THREE.WebGLRenderer( {antialias: true, alpha: true, logarithmicDepthBuffer: true} ); // antialias 抗锯齿
+		webglRender.setSize(window.innerWidth, window.innerHeight);
+		webglRender.setClearColor(0x000000, 1.0);
+		webglRender.shadowMap.enabled = true; // 允许阴影投射
+		render = webglRender;
+		
+		camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 30, 200); // 2147483647
+		camera.position.set(-50, 40, 50);
+		
+		var target = new THREE.Vector3(0, 0 , 0);
+		controls = new THREE.OrbitControls(camera, render.domElement);
+		controls.target = target;
+		camera.lookAt(target);
+		
+		$('#webgl-output')[0].appendChild(render.domElement);
+		window.addEventListener('resize', onWindowResize, false);
+		
+		ambientLight = new THREE.AmbientLight(0x000000);
+		scene.add(ambientLight);
+		
+		/** 用来保存那些需要修改的变量 */
+		guiParams = new function() {
+			this.rotationSpeed = 0.02;
+			this.near = 30;
+			this.far = 200;
+			
+			this.addCube = function() {
+				for (var i=0; i<100; i++) {
+					// 定义 cube 几何
+					var cubeGeometry = new THREE.BoxGeometry(5, 5, 5);
+					// 定义网格材质
+					meshMaterial = new THREE.MeshLambertMaterial({color: Math.random() * 0xffffff});
+					// 定义 cube 网格
+					cube = new THREE.Mesh(cubeGeometry, meshMaterial);
+					cube.castShadow = true;
+					cube.position.x = -60 + Math.round((Math.random() * 100));
+					cube.position.y = Math.round((Math.random() * 10));
+					cube.position.z = -100 + Math.round((Math.random() * 150));
+					// 默认加入 cube
+					scene.add(cube);
+				}
+			};
+		}
+		/** 定义 dat.GUI 对象，并绑定 guiParams 的几个属性 */
+		var gui = new dat.GUI();
+		gui.add(guiParams, 'addCube');
+		gui.add(guiParams, 'near', 0.1, 500).onChange(function(e) {
+			camera.near = e;
+			camera.updateProjectionMatrix();
+		});
+		gui.add(guiParams, 'far', 50, 1000).onChange(function(e) {
+			camera.far = e;
+			camera.updateProjectionMatrix();
+		});
+		
+		guiParams.addCube();
+		
+		renderScene();
+    });
+	
+	/** 渲染场景 */
+	function renderScene() {
+		stats.update();
+		rotateMesh(); // 旋转物体
+		
+		requestAnimationFrame(renderScene);
+		render.render(scene, camera);
+	}
+	
+	/** 初始化 stats 统计对象 */
+	function initStats() {
+		stats = new Stats();
+		stats.setMode(0); // 0 为监测 FPS；1 为监测渲染时间
+		$('#stats-output').append(stats.domElement);
+		return stats;
+	}
+	
+	/** 当浏览器窗口大小变化时触发 */
+	function onWindowResize() {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		render.setSize(window.innerWidth, window.innerHeight);
+	}
+	
+	/** 旋转物体 */
+	function rotateMesh() {
+		scene.traverse(function(mesh) {
+			if (mesh instanceof THREE.Mesh) {
+				mesh.rotation.x += guiParams.rotationSpeed;
+				mesh.rotation.y += guiParams.rotationSpeed;
+				mesh.rotation.z += guiParams.rotationSpeed;
+			}
+		});
+	}
+ 
+</script>
+</body>
+</html>
