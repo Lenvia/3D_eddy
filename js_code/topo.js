@@ -249,7 +249,7 @@ function getOption(data) {
 
                 symbolSize:(rawValue, params) => {  // 默认半径作为size
                     params.symbolSize = params.data[2];
-                    console.log(params.symbolSize);
+                    // console.log(params.symbolSize);
                     return Math.sqrt(params.symbolSize)*scaleFactor;
                 },
 

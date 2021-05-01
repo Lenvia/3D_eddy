@@ -30,6 +30,7 @@ var parallel_field_indices = parallel_schema.reduce(function (obj, item) {
 
 
 var CATEGORY_DIM = 11;  // 不是生数据的，是series中map后的数据
+var NAME_DIM = 12; // 同
 
 
 
@@ -132,12 +133,13 @@ function getOption(data){
             //     type: 'cross',
             // }
             formatter: function (obj) {
+                // console.log(obj);
                 var value = obj.value;
-                // console.log(value);
+                
                 var result = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' + '</div>';
     
-                if(value[parallel_field_indices['name']]!=undefined)
-                    result += parallel_schema[parallel_field_indices['name']].text + '：' + value[parallel_field_indices['name']] + '<br>'
+                if(value[NAME_DIM]!=undefined)
+                    result += parallel_schema[parallel_field_indices['name']].text + '：' + value[NAME_DIM] + '<br>'
                 return result;
             }
         },
@@ -159,10 +161,11 @@ function getOption(data){
     
         ],
         parallel: {
-            bottom: '5%',
-            left: '2%',
-            height: '30%',
-            width: '55%',
+            // top: '25%',
+            bottom: '15%',
+            left: '8%',
+            height: '60%',
+            width: '80%',
             parallelAxisDefault: {
                 type: 'value',
                 name: 'live',
@@ -203,7 +206,10 @@ function getOption(data){
                     opacity: 0.5
                 },
                 data: data.map(function (item) {
-                    // [start_day, end_day, live, radius, eke, ave_eke, vort, max_radius, max_eke, max_ave_eke, cx, cy, circ, name]
+                    // [start_day, end_day, live, 
+                    // radius, eke, ave_eke, 
+                    // max_radius, max_eke, max_ave_eke, 
+                    // cx, cy, circ, name]
                     return [item[8], item[9], item[7]/2,  
                         item[2], item[3], item[4],
                         item[10], item[11], item[12],

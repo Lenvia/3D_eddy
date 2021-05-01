@@ -1,20 +1,20 @@
 /* id 选择器以 "#" 来定义。 */
 /* 类选择器以一个点号显示 */
 
-/* #gui{
+#gui{
     position: absolute;
 	left: 0px;
 	top: 0px;
-	height: 100%;
-	width: 15vw;
+	height: 10%;
+	width: 100%;
     background-color: #654321;
-} */
+}
 
 #view{
     position: absolute;
 	right: 0px;
-	top: 0px;
-	height: 100%;
+	top: 10%;
+	height: 90%;
 	/* width: 85vw; */
     width: 100vw;
     /* background-color: blue; */
@@ -24,9 +24,9 @@
     position: absolute;
 	left: 0px;
 	top: 0px;
-	height: 100%;
-	width: 100vh;
-    /* background-color: blue; */
+	height: 90vh;
+	width: 90vh;
+    background-color: blue;
 }
 
 #right-container{
@@ -35,8 +35,8 @@
 	top: 0px;
 	height: 100%;
 	/* width: calc(85vw - 100vh); */
-    width: calc(100vw - 100vh);
-    /* background-color: #E95F74; */
+    width: calc(100vw - 90vh);
+    background-color: #E95F74;
 }
 
 #streamline-container{
@@ -45,7 +45,7 @@
 	top: 0px;
 	height: 50%;
 	width: 50%;
-	/* background-color: #bfd1e5; */
+	background-color: #bfd1e5;
 }
 
 #detection-container{
@@ -54,7 +54,7 @@
 	top: 0px;
 	width: 50%;
 	height: 50%;
-	/* background-color: #1b76dd; */
+	background-color: #1b76dd;
 }
 
 #frequency-container{
@@ -63,7 +63,7 @@
 	bottom: 0px;
 	height: 50%;
 	width: 50%;
-	/* background-color:chartreuse; */
+	background-color:chartreuse;
 }
 
 #path-container{
@@ -72,7 +72,7 @@
 	bottom: 0px;
 	width: 50%;
 	height: 50%;
-	/* background-color: #123456; */
+	background-color: #123456;
 }
 
 
@@ -82,7 +82,7 @@
 
 	width: 100%;
 	height: 50%;
-	/* background-color: #fae6fa; */
+	background-color: #fae6fa;
 	/* background-color: #ADD8E6; */
 }
 
@@ -92,7 +92,7 @@
 	bottom: 0px;
 	width: 100%;
 	height: 50%;
-	/* background-color: #ffff00; */
+	background-color: #ffff00;
 }
 
 #streamline-gui{

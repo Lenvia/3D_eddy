@@ -251,7 +251,7 @@ function getCurColor(d, index){
 
 function getCurColorByLive(live){
     var color = '#ff' + live2Hex(live) + '00';
-    console.log(color);
+    // console.log(color);
     return color;
 }
 

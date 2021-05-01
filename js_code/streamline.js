@@ -168,7 +168,7 @@ function init() {
     container.addEventListener( 'click', onMouseClick, false);
 
     stats = new Stats();
-    container.appendChild( stats.dom );
+    // container.appendChild( stats.dom );
 
     var guiContainer1 = document.getElementById('streamline-gui');
     guiContainer1.appendChild(gui.domElement);
