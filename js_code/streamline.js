@@ -20,12 +20,12 @@ var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 var renderWidth, renderHeight;
 var containerWidth, containerHeight;
 
-// 天数
-const days = [];  // 一共60天
-const exDays = [-1]; // 扩展天数，第一个是-1
+// 步数
+const steps = [];  // 一共60步
+const exSteps = [-1]; // 扩展步数，第一个是-1
 for (var i =0; i<=59; i++){
-    days.push(i);
-    exDays.push(i);
+    steps.push(i);
+    exSteps.push(i);
 }
 
 /**
@@ -86,11 +86,11 @@ var div_start_time;
 
 // 播放逻辑
 var Timer;
-var ppsArray = new Array(tex_pps_day);
+var ppsArray = new Array(tex_pps_step);
 var readySign = false;  // 准备好了，可以播放
 var frameNum = 0;  // 当前帧数
 var intervalNum;  // 每隔intervalNum帧刷新一下动画
-var stayNum;  // 每刷新stayNum次跳到下一天
+var stayNum;  // 每刷新stayNum次跳到下一步
 
 /**
  * 辅助
@@ -155,7 +155,7 @@ function init() {
     createHelper();
     // showProgressModal("loadingFrames");  // 显示等待条
     
-    loadEddiesForDays();  // 加载涡旋模型
+    loadEddiesForSteps();  // 加载涡旋模型
     
     
     setGUI();  // 设置交互面板
@@ -196,7 +196,7 @@ function onWindowResize() {
 
 // 【废弃】载入2d图片
 function loadTexture2d(){
-    for(let i=0; i<tex_pps_day; i++){
+    for(let i=0; i<tex_pps_step; i++){
         var str;
         if(i<9)
             str = '0'+String(i+1);  // 图片下标是从1开始的
@@ -574,13 +574,13 @@ function loadChannel(){
 
 
 /*
-    加载涡旋n天的形状
+    加载涡旋n步的形状
 */
-function loadEddiesForDays(){
+function loadEddiesForSteps(){
     let arr = []; //promise返回值的数组
-    for (let i = 0; i<loadDayNum; i++){
+    for (let i = 0; i<loadStepNum; i++){
         arr[i] = new Promise((resolve, reject)=>{
-            // 加载一天的形状
+            // 加载一步的形状
             var d = i;
             var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, ".vtk"));
             var loader = new VTKLoader();
@@ -648,7 +648,7 @@ function loadEddiesForDays(){
                 linesG.geometry.groupsNeedUpdate = true;
                 linesG.material.needsUpdate = true;
                 
-                linesG.name = "day"+String(d);  // day0, day1, ...
+                linesG.name = "step"+String(d);  // step0, step1, ...
                 whole_models.push(linesG);
                 resolve(i);
             });
@@ -716,7 +716,7 @@ function loadOneAttrArray(attr, path, d){
 
     promise1.then(()=>{
         // 将Attr值放到geometry中
-        site = "day"+String(d)
+        site = "step"+String(d)
         linesG = findModel(site);
         var attrArray = [];
         var x,y,z;  // 点的当前坐标（缩放后）
@@ -748,7 +748,7 @@ function loadOneAttrArray(attr, path, d){
         Promise.all(flag1).then((res)=>{
             linesG.geometry.setAttribute( attr, new THREE.Float32BufferAttribute( attrArray, 1 ));
             // console.log(attrArray);
-            if(d==loadDayNum-1){
+            if(d==loadStepNum-1){
                 console.log(attr+"值设置完毕");
                 // animate();
 
@@ -761,7 +761,7 @@ function loadOneAttrArray(attr, path, d){
 
 function loadAttrArray(attr){
     let flag0 = []; //promise数组
-    for(var i =0; i<loadDayNum; i++){
+    for(var i =0; i<loadStepNum; i++){
         flag0[i] = new Promise((resolve, reject)=>{
             var d = i;
             var path = ("./resources/whole_attributes_txt_file/".concat(attr,"/",attr,"_", String(d), ".txt"));
@@ -774,10 +774,10 @@ function loadAttrArray(attr){
     })
 }
 
-// 加载指定day的涡旋立体形状
-function loadEddyModel(day){
+// 加载指定step的涡旋立体形状
+function loadEddyModel(step){
     var object_loader = new OBJLoader();
-    object_loader.load('./resources/objs/mesh_'+String(day)+'.obj', function(object) {
+    object_loader.load('./resources/objs/mesh_'+String(step)+'.obj', function(object) {
     // object_loader.load('./resources/temp.obj', function(object) {
         object.traverse( function( child ) {
             if ( child.isMesh ){
@@ -814,7 +814,7 @@ function setGUI(){
     gui = new dat.GUI({ autoPlace: false });
 
     default_opt = new function(){
-        this.currentMainDay = -1;  // 初始时间为第0天
+        this.currentMainStep = -1;  // 初始时间为第0步
         this.currentAttr = 'OW'; // 初始展示属性为OW
         this.upValue = 1; // 属性的下界
         this.downValue = -1;  // 属性的上界
@@ -840,8 +840,8 @@ function setGUI(){
     */
 
     // 日期相关
-    currentMainDay = -1;
-    lastDay = -1;
+    currentMainStep = -1;
+    lastStep = -1;
     var lastLine;  // 当前显示的线，上次显示的线
     var site, last_site;
     // 默认属性值
@@ -854,10 +854,10 @@ function setGUI(){
 
 
     // 切换日期
-    day_ctrl = gui.add(default_opt, 'currentMainDay', exDays).onChange(function(){
-        currentMainDay = default_opt.currentMainDay;
-        currentMainDay = parseInt(currentMainDay);
-        console.log("currentMainDay:", currentMainDay);
+    step_ctrl = gui.add(default_opt, 'currentMainStep', exSteps).onChange(function(){
+        currentMainStep = default_opt.currentMainStep;
+        currentMainStep = parseInt(currentMainStep);
+        console.log("currentMainStep:", currentMainStep);
         // console.log(is3d);
 
         // console.log(curModels);
@@ -868,19 +868,19 @@ function setGUI(){
         curModels.length = 0;
 
         if(is3d){ // 3d视图
-            if(lastDay!=-1){  // 清除上次的显示
-                last_site = "day"+String(lastDay);
+            if(lastStep!=-1){  // 清除上次的显示
+                last_site = "step"+String(lastStep);
                 lastLine = scene.getObjectByName(last_site);
                 if(lastLine!=undefined)  // 这个判断不加也行
                     scene.remove(lastLine);
             }
-            site = "day"+String(currentMainDay);
+            site = "step"+String(currentMainStep);
             
             curLine = findModel(site);
             scene.add(curLine);
 
-            // 更新当天当前属性的echarts
-            updateEcharts(currentAttr, currentMainDay);
+            // 更新当步当前属性的echarts
+            updateEcharts(currentAttr, currentMainStep);
 
             if(curLine!=undefined){
                 if(keepValue){  // 更换日期，但属性设置不变
@@ -892,19 +892,19 @@ function setGUI(){
                 }
                 console.log(curLine.name);
             }
-            lastDay = currentMainDay;
+            lastStep = currentMainStep;
 
         }
         else{  // 2d视图
             if(curLine!=undefined)  // 去除3d视图显示的流线
                 scene.remove(curLine);
-            // land_2d.material.map = textures_2d[currentMainDay];
+            // land_2d.material.map = textures_2d[currentMainStep];
 
-            loadEddyModel(currentMainDay);
+            loadEddyModel(currentMainStep);
         }
 
         removePointers();
-        if(currentMainDay!=-1){
+        if(currentMainStep!=-1){
             showPointers();  // 显示当日涡核指示器
         }
         
@@ -957,8 +957,8 @@ function setGUI(){
         resetCtrl();
         resetMaterial(curLine);
 
-        // 更新当天当前属性的echarts
-        updateEcharts(currentAttr, currentMainDay);
+        // 更新当步当前属性的echarts
+        updateEcharts(currentAttr, currentMainStep);
     });
 
     // 设置下界
@@ -1194,10 +1194,10 @@ function updateMid(){
 
 // 在图中显示涡核
 function showPointers(){
-    if(currentMainDay<0)
+    if(currentMainStep<0)
         return;
-    var info = eddyFeature['info'][currentMainDay];
-    for(let i=0; i<info.length; i++){  // currentMainDay当天
+    var info = eddyFeature['info'][currentMainStep];
+    for(let i=0; i<info.length; i++){  // currentMainStep当步
         var cpx = info[i][0];  // cpx指的是在panel上的cx
         var cpy = info[i][1];
 

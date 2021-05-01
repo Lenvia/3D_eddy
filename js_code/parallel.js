@@ -12,8 +12,8 @@ var parallel_schema = [
     {name: 'circ', index: 6, text: 'circ'},
 
     {name: 'live', index: 7, text:'live'},
-    {name: 'start_day', index: 8, text:'start_day'},
-    {name: 'end_day', index: 9, text:'end_day'},
+    {name: 'start_step', index: 8, text:'start_step'},
+    {name: 'end_step', index: 9, text:'end_step'},
 
     {name: 'max_radius', index: 10, text: 'max_radius'},
     {name: 'max_eke', index: 11, text: 'max_eke'},
@@ -53,7 +53,7 @@ function loadParallelData(){
     var curId, curName, curX, curY, curRadius, curEke, curAveEke, curVort,  curCirc, curColor, curFontColor;
 
     var live = 1;
-    var start_day, end_day;
+    var start_step, end_step;
     var max_radius, max_eke, max_ave_eke;
 
     for(var num=0; num<liveInfo.length; num++){
@@ -62,8 +62,8 @@ function loadParallelData(){
 
         curName = liveInfo[num]['name'];
         live = liveInfo[num]['live'];
-        start_day = liveInfo[num]['start_day'];
-        end_day = liveInfo[num]['end_day'];
+        start_step = liveInfo[num]['start_day'];
+        end_step = liveInfo[num]['end_day'];
         max_radius = liveInfo[num]['max_radius'];
         max_eke = liveInfo[num]['max_eke'];
         max_ave_eke = liveInfo[num]['max_ave_eke'];
@@ -87,7 +87,7 @@ function loadParallelData(){
 
         // 把当前节点放到nodes中
         row = [curX, curY, curRadius, curEke, curAveEke, curVort, curCirc, 
-            live, start_day, end_day, max_radius, max_eke, max_ave_eke, curName];
+            live, start_step, end_step, max_radius, max_eke, max_ave_eke, curName];
 
         parallel_data.push(row);
     }
@@ -144,8 +144,8 @@ function getOption(data){
             }
         },
         parallelAxis: [
-            {dim: 0, name: parallel_schema[parallel_field_indices['start_day']].text},
-            {dim: 1, name: parallel_schema[parallel_field_indices['end_day']].text},
+            {dim: 0, name: parallel_schema[parallel_field_indices['start_step']].text},
+            {dim: 1, name: parallel_schema[parallel_field_indices['end_step']].text},
             {dim: 2, name: parallel_schema[parallel_field_indices['live']].text},
     
             {dim: 3, name: parallel_schema[parallel_field_indices['radius']].text},
@@ -206,7 +206,7 @@ function getOption(data){
                     opacity: 0.5
                 },
                 data: data.map(function (item) {
-                    // [start_day, end_day, live, 
+                    // [start_step, end_step, live, 
                     // radius, eke, ave_eke, 
                     // max_radius, max_eke, max_ave_eke, 
                     // cx, cy, circ, name]

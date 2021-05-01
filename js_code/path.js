@@ -36,12 +36,6 @@ function init(){
     loadPathData();
 
     path_window.setOption(path_option = getOption(path_data));
-
-    
-
-    // var guiTopoContainer = document.getElementById('gui_path');
-    // guiTopoContainer.appendChild(path_gui.domElement);
-    // path_container.appendChild(guiTopoContainer);
 }
 
 
@@ -145,7 +139,7 @@ function loadPathData(){
     }    
 }
 
-function loadTopo(firstName){
+function loadSinglePath(firstName){
     path_data = [];
     path_edges = [];
 
@@ -274,10 +268,12 @@ function getOption(data) {
 
         ]),
         tooltip: {
-            padding: 10,
-            backgroundColor: '#5fb7fd',
-            borderColor: '#777',
-            borderWidth: 1,
+            // padding: 10,
+            // backgroundColor: '#5fb7fd',
+            // borderColor: '#777',
+            // borderWidth: 1,
+            backgroundColor: ['rgba(255,255,255,0.7)'],
+            
             formatter: function (obj) {
 
                 var value = obj.value;
@@ -299,28 +295,30 @@ function getOption(data) {
             }
         },
         xAxis: {
+            show: false,
             type: 'value',
             min: 0,
             max: 500,
             name: 'lon',
-            splitLine: {
-                show: true,
-                lineStyle: {
-                    type:'dashed',
-                }
-            },
+            // splitLine: {
+            //     show: true,
+            //     lineStyle: {
+            //         type:'dashed',
+            //     }
+            // },
             // scale: true,
         },
         yAxis: {
+            show: false,
             name: 'lat',
             min: 0,
             max: 500,
-            splitLine: {
-                show: true,
-                lineStyle: {
-                    type:'dashed',
-                }
-            },
+            // splitLine: {
+            //     show: true,
+            //     lineStyle: {
+            //         type:'dashed',
+            //     }
+            // },
             type: 'value',
             // scale: true,
         },
@@ -330,15 +328,7 @@ function getOption(data) {
                 zlevel: 1,
                 name: 'xxx',
                 type: 'graph',
-                // type:'scatter',
                 coordinateSystem: 'cartesian2d',
-                // label: {
-                //     show: true,
-                //     formatter: function (params) {  // 显示文字
-                //         // console.log(params.data);
-                //         return params.data[path_field_indices['name']];
-                //     }
-                // },
                 data: data,
 
                 symbolSize:(rawValue, params) => {  // 默认半径作为size
@@ -374,8 +364,13 @@ function getOption(data) {
         grid: {
             // left: '8%',
             // right: '0',
-           bottom: '8%',
-           containLabel: true
+            // bottom: '8%',
+            // containLabel: true
+            left: '0',
+            right: '0',
+            bottom: '0',
+            top:'0',
+            containLabel: false,
         },
         animationEasingUpdate: 'cubicInOut',
         animationDurationUpdate: 2000

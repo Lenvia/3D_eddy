@@ -6,7 +6,7 @@ var topo_option;
 
 // 原始数据topo_schema，并非传递给series的数据下表
 var topo_schema = [
-    {name: 'day', index: 0, text:'day'},
+    {name: 'step', index: 0, text:'step'},
     {name: 'cx', index: 1, text:'cx'},
     {name: 'cy', index: 2, text:'cy'},
     {name: 'radius', index: 3, text:'radius'},
@@ -39,7 +39,7 @@ for(let i=0; i<40; i++){
 }
 
 var xAxisData = [];
-for(let i=0; i<tex_pps_day; i++){
+for(let i=0; i<tex_pps_step; i++){
     xAxisData.push(i);
 }
 
@@ -185,10 +185,7 @@ function getOption(data) {
 
         ]),
         tooltip: {
-            padding: 10,
-            backgroundColor: '#5fb7fd',
-            borderColor: '#777',
-            borderWidth: 1,
+            backgroundColor: ['rgba(255,255,255,0.7)'],
             formatter: function (obj) {
                 var value = obj.value;
                 
@@ -241,7 +238,7 @@ function getOption(data) {
                     }
                 },
                 data: data.map(function (item) {
-                    // [day, eke, radius, cx, cy, depth, vort,  circ, color, name]
+                    // [step, eke, radius, cx, cy, depth, vort,  circ, color, name]
                     return [item[0], item[4], item[3], item[1], item[2], item[5], item[6], item[7], item[8], item[9]];
                 }),
 
@@ -294,14 +291,14 @@ function setTopoGUI(){
     topo_gui_opt = new function(){
         this.yAxis = 'eke';
         this.symbolSize = 'radius';
-        this.day = 0;
+        this.step = 0;
         this.index = 0;
         this.scaleFactor = 1;
     };
 
-    topo_gui.add(topo_gui_opt, 'day', xAxisData).onChange(function(){
+    topo_gui.add(topo_gui_opt, 'step', xAxisData).onChange(function(){
         // 如果改变了日期，index默认回归0
-        loadTopoData(String(topo_gui_opt.day)+'-'+'0');
+        loadTopoData(String(topo_gui_opt.step)+'-'+'0');
         indexCtrl.setValue(0);
         // console.log(indexCtrl);
         if (topo_data) {
@@ -332,7 +329,7 @@ function setTopoGUI(){
     });
 
     indexCtrl = topo_gui.add(topo_gui_opt, 'index', index_arr).onChange(function(){
-        loadTopoData(String(topo_gui_opt.day)+'-'+String(topo_gui_opt.index));
+        loadTopoData(String(topo_gui_opt.step)+'-'+String(topo_gui_opt.index));
         if (topo_data) {
             topo_window.setOption({
                 yAxis: {

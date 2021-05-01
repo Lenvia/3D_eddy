@@ -9,8 +9,8 @@ var tubeHeightFactor = 500;  // 控制流管高度
 
 var dayLimit = 60;  // 暂定60为最大天数
 var play_start_day = 0;  // 播放器起点（默认为0）
-var loadDayNum = 1;  // 3d流线加载多少天
-var tex_pps_day = 60;  // 2d和pps加载天数
+var loadStepNum = 1;  // 3d流线加载多少天
+var tex_pps_step = 60;  // 2d和pps加载天数
 
 /**
  * 预加载变量
@@ -32,8 +32,8 @@ var echarts_window = echarts.init(echarts_container);
  */
 // 主界面参数
 var dynamic = false;  // 默认不准动
-var currentMainDay;  // （主面板）当前日期
-var lastDay;  // （主面板）上一日
+var currentMainStep;  // （主面板）当前日期
+var lastStep;  // （主面板）上一日
 
 // 主界面模型
 var sea;  // 海
@@ -47,7 +47,7 @@ var whole_models = [];
 var local_models = [];
 
 // 主界面gui
-var day_ctrl;
+var step_ctrl;
 var appearFolder;
 var attrFolder;
 var colorFolder;
@@ -140,14 +140,14 @@ function loadEddyFeatures(){
 function changeView(){
     // 这个顺序不能倒
     switchView(); 
-    flashDay();
+    flashStep();
 }
 
-function flashDay(){
+function flashStep(){
     // 直接setValue也会改变currentMainDay的值
-    var temp = currentMainDay;
-    day_ctrl.setValue(-1);
-    day_ctrl.setValue(temp);
+    var temp = currentMainStep;
+    step_ctrl.setValue(-1);
+    step_ctrl.setValue(temp);
 }
 
 function switchView(){
@@ -273,9 +273,9 @@ function getNearestEddy(px, py){
     var minIndex = undefined;
     var tarCpx, tarCpy;
 
-    if(currentMainDay<0)
+    if(currentMainStep<0)
         return;
-    var info = eddyFeature['info'][currentMainDay];
+    var info = eddyFeature['info'][currentMainStep];
     for(let i=0; i<info.length; i++){
 
         var px2 = info[i][0];

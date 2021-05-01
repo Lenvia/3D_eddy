@@ -7,10 +7,10 @@ const scaleHeight = 20*edgeLen/200000; //高度缩放倍数
 var boxHeight = 4000*scaleHeight;  // 海底深度（默认为4000m）
 var tubeHeightFactor = 500;  // 控制流管高度
 
-var dayLimit = 60;  // 暂定60为最大天数
+var stepLimit = 60;  // 暂定60为最大天数
 
-var loadDayNum = 0;  // 3d流线加载多少天
-var tex_pps_day = 60;  // 2d和pps加载天数
+var loadStepNum = 0;  // 3d流线加载多少天
+var tex_pps_step = 60;  // 2d和pps加载天数
 
 /**
  * 预加载变量
@@ -49,8 +49,8 @@ var parallel_window = echarts.init(parallel_container);
  */
 // 主界面参数
 var dynamic = false;  // 默认不准动
-var currentMainDay;  // （主面板）当前日期
-var lastDay;  // （主面板）上一日
+var currentMainStep;  // （主面板）当前日期
+var lastStep;  // （主面板）上一日
 
 // 主界面模型
 var sea;  // 海
@@ -64,7 +64,7 @@ var whole_models = [];
 var local_models = [];
 
 // 流线界面gui
-var day_ctrl;
+var step_ctrl;
 var appearFolder;
 var attrFolder;
 var colorFolder;
@@ -164,14 +164,14 @@ function loadEddyFeatures(){
 function changeView(){
     // 这个顺序不能倒
     switchView(); 
-    flashDay();
+    flashStep();
 }
 
-function flashDay(){
-    // 直接setValue也会改变currentMainDay的值
-    var temp = currentMainDay;
-    day_ctrl.setValue(-1);
-    day_ctrl.setValue(temp);
+function flashStep(){
+    // 直接setValue也会改变currentMainStep的值
+    var temp = currentMainStep;
+    step_ctrl.setValue(-1);
+    step_ctrl.setValue(temp);
 }
 
 function switchView(){
@@ -297,9 +297,9 @@ function getNearestEddy(px, py){
     var minIndex = undefined;
     var tarCpx, tarCpy;
 
-    if(currentMainDay<0)
+    if(currentMainStep<0)
         return;
-    var info = eddyFeature['info'][currentMainDay];
+    var info = eddyFeature['info'][currentMainStep];
     for(let i=0; i<info.length; i++){
 
         var px2 = info[i][0];
@@ -319,18 +319,18 @@ function getNearestEddy(px, py){
 
 // 对于第d天的index下标涡旋进行追踪，返回一个数组，表示下一天该涡旋的延续
 function track(d, index){
-    var dayForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
-    return dayForwardsList[index];  // 返回index下标的延续下标集合
+    var stepForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
+    return stepForwardsList[index];  // 返回index下标的延续下标集合
 }
 
 // 追踪d天时 curList所有涡旋的延续，并将所有结果放在一个数组中，并去重
 // curList存储的都是第d天的下标
 function trackAll(curList, d){
     var result = [];
-    var dayForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
+    var stepForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
     for(let i=0; i<curList.length; i++){
-        // console.log(dayForwardsList[curList[i]]);
-        result = result.concat(dayForwardsList[curList[i]]);
+        // console.log(stepForwardsList[curList[i]]);
+        result = result.concat(stepForwardsList[curList[i]]);
     }
     // console.log(result);
     return dedupe(result);
@@ -338,9 +338,9 @@ function trackAll(curList, d){
 
 function backtrackAll(curList, d){
     var result = [];
-    var dayBackwardsList = eddyFeature['backward'][d];
+    var stepBackwardsList = eddyFeature['backward'][d];
     for(let i =0; i<curList.length; i++){
-        result = result.concat(dayBackwardsList[curList[i]]);
+        result = result.concat(stepBackwardsList[curList[i]]);
     }
     return dedupe(result);
 }

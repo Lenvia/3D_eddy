@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<title>test</title>
-		<link rel="stylesheet" type="text/css" href="./test.css">
+		<link rel="stylesheet" type="text/css" href="./eddy.css">
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		
@@ -15,13 +15,29 @@
 		<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 		<!-- <script type="text/javascript" src="./node_modules/three/examples/js/loaders/OBJLoader.js"></script> -->
 
+		<div id="view">
+            <div id="left-container">
+                <!-- 流线板块容器 -->
+                <div id="streamline-container"></div>
+                <!-- echarts容器 -->
+                <div id="detection-container"></div>
+                <div id="frequency-container"></div>
+                <div id="path-container"></div>
+            </div>
+    
+            <div id="right-container">
+                <div id="topo-container"></div>
+                <div id="parallel-container"></div>
+            </div>
+        </div>
+
+		<!-- 全局变量 -->
+		<script type="text/javascript" src="./global_setting.js"></script>
+
 	</head>
 	<body>
-		<div id="topo-container"></div>
-		<div id="gui_topo"></div>
-		<!-- <script type="text/javascript" src="./test_scatter_matrix.js"></script> -->
-		<script type="text/javascript" src="./test_cartesian.js"></script>
-
+		
+		<script type="text/javascript" src="./test_window.js"></script>
 
 	</body>
 </html>

@@ -26,7 +26,7 @@
 	top: 0px;
 	height: 90vh;
 	width: 90vh;
-    background-color: blue;
+    /* background-color: blue; */
 }
 
 #right-container{
@@ -36,7 +36,7 @@
 	height: 100%;
 	/* width: calc(85vw - 100vh); */
     width: calc(100vw - 90vh);
-    background-color: #E95F74;
+    /* background-color: #E95F74; */
 }
 
 #streamline-container{
@@ -54,7 +54,13 @@
 	top: 0px;
 	width: 50%;
 	height: 50%;
-	background-color: #1b76dd;
+	/* background-color: #1b76dd; */
+
+	background-image:url(/resources/detect_pic/step0.png);
+	background-repeat:no-repeat;
+	background-size:100% 100%;
+	-moz-background-size:100% 100%;
+
 }
 
 #frequency-container{
