@@ -25,6 +25,8 @@ var eddyBackwards;
 var liveInfo;
 
 // 组件绑定（容器内部各自的gui自己管理）
+var gui_container = document.getElementById('gui');
+
 var detection_container = document.getElementById('detection-container');
 var detection_window = echarts.init(detection_container);
 
@@ -388,8 +390,8 @@ function mxy2pxy(mx, my){
     var px = (mx/edgeLen+0.5)*500;
     var py = (my/edgeWid+0.5)*500;
 
-    // console.log("mx, my:",mx, my)
-    // console.log("px, py:",px, py)
+    console.log("mx, my:",mx, my)
+    console.log("px, py:",px, py)
     return new Array(px, py);
 }
 

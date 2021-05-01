@@ -149,7 +149,8 @@ function init() {
     createSeaFrame();
 
     createLand();
-    createChannel();
+    // createChannel();
+    loadChannel();
     
     createHelper();
     // showProgressModal("loadingFrames");  // 显示等待条
@@ -532,6 +533,41 @@ function createChannel(){
             channel.visible = false;
         }
     })
+}
+
+// 加载峡谷obj
+function loadChannel(){
+    var object_loader = new OBJLoader();
+    object_loader.load('./resources/channel.obj', function(object) {
+        // object_loader.load('./resources/objs/mesh_0.obj', function(object) {
+
+        object.traverse( function( child ) {
+            if ( child.isMesh ){
+                child.geometry.computeVertexNormals();
+                child.geometry.computeFaceNormals();
+            }
+        } );
+
+        var meshObj = object.children[0];        
+
+        var positions = meshObj.geometry.attributes.position.array;
+        // 原本是500*500*50，进行变换
+        meshObj.geometry.scale(1/500, 1/500, 1/50);
+        meshObj.geometry.translate(-0.5, -0.5, 0);
+        for ( let j = 0;  j < positions.length; j += 3 ) {
+            positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
+        }
+
+        meshObj.geometry.scale(edgeLen, edgeWid, scaleHeight);
+        meshObj.material.transparent = true;
+        meshObj.material.opacity = 0.5;
+        meshObj.material.depthWrite = false;
+        
+        scene.add(meshObj);
+
+        // console.log(meshObj)
+        
+    });
 }
 
 
@@ -1610,29 +1646,6 @@ function DyChange(k){
 
 
 function onMouseMove( event ) {
-    if(pitchMode == true){
-        getMouseXY(event);  // 得到鼠标的位置
-        // 通过摄像机和鼠标位置更新射线
-        raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
-
-
-        var intersects;
-        if(is3d){
-            if(curLine != undefined){
-                intersects = raycaster.intersectObject( curLine );
-                
-            }
-        }
-        else{
-            if(curModel!=undefined){
-                intersects = raycaster.intersectObject( curModel );
-            }
-        }
-        if(intersects.length>0){
-            var curObj = intersects[0];
-            helper.position.copy( curObj.point );
-        }
-    }
 }
 
 function onMouseClick(event){
@@ -1643,11 +1656,11 @@ function onMouseClick(event){
         renderer.domElement的clientWidth和clientHeight就是renderer的宽度和高度
         由于event.clientX, Y表示屏幕上鼠标的绝对位置，所以要减去窗口的偏移，再比上窗口的宽和高
     */
-    getMouseXY(event);
+    getMouseXY(event);  // 将鼠标位置进行转化，需要传给raycaster一个位置坐标（相对于窗口）
 
     // 现在的mouse的二维坐标就是当前鼠标在当前窗口的位置（-1~1)
     // console.log(mouse)
-
+    
 
     // 通过摄像机和鼠标位置更新射线
     raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
@@ -1656,20 +1669,14 @@ function onMouseClick(event){
     // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
 
     var intersects;
-    // 获取当前指向的第一个的坐标
-    if(is3d){
-        if(curLine != undefined){
-            intersects = raycaster.intersectObject( curLine );
-        }
-    }
-    else{
-        if(curModel!=undefined){
-            intersects = raycaster.intersectObject( curModel );
-        }
+
+    intersects = raycaster.intersectObject( sea);
+    if(intersects == undefined){
+        intersects = raycaster.intersectObject( surface);  // 点到陆地上了
     }
 
     if(intersects!=undefined && intersects.length>0){
-        var curObj = intersects[0];
+        var curObj = intersects[0];  // 目标物体（海水/陆地）
         if(pitchMode == true){
             selected_pos = curObj.point;
 
@@ -1694,8 +1701,16 @@ function onMouseClick(event){
 }
 
 function getMouseXY(event){
+    // console.log(gui_container.clientHeight);  
+    // console.log("event: ", event.clientX, event.clientY);
+    // console.log("render: ", renderer.domElement.clientWidth, renderer.domElement.clientHeight);
+
+    // 需要算上gui的高度导致偏移
     mouse.x = ( (event.clientX) / renderer.domElement.clientWidth ) * 2 - 1;
-    mouse.y = - ( (event.clientY ) / renderer.domElement.clientHeight ) * 2 + 1;
+    mouse.y = - ( (event.clientY - gui_container.clientHeight ) / renderer.domElement.clientHeight ) * 2 + 1;
+
+    // 这时候得到的是真实的三维坐标
+    // console.log("mouse: ", mouse.x, mouse.y);
 }
 
 function recoverPointer(index){
