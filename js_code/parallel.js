@@ -1,13 +1,8 @@
-var cycFlag = 1;
-var anticycFlag = -1;
+// 配置
+var parallel_data = [];
+var parallel_option;
 
-
-var option;
-
-
-
-
-var schema = [
+var parallel_schema = [
     {name: 'cx', index: 0, text: 'cx'},
     {name: 'cy', index: 1, text: 'cy'},
     {name: 'radius', index: 2, text: 'radius'},
@@ -28,43 +23,33 @@ var schema = [
 ];
 
 // 便于通过name来找index
-var fieldIndices = schema.reduce(function (obj, item) {
+var parallel_field_indices = parallel_schema.reduce(function (obj, item) {
     obj[item.name] = item.index;
     return obj;
 }, {});
 
-var CATEGORY_DIM = 12;
-var NAME_DIM = 13;  // 名字所在的维度
+
+var CATEGORY_DIM = 11;  // 不是生数据的，是series中map后的数据
 
 
-var data = [
-    // [cx, cy, r, eke, depth, vort, circ, ,live, start_day, end_day, name]
-];
 
 
 init();
 
 
 function init(){
-
-
-    loadAll();
-
-    
-    // option && parallel_window.setOption(option);
-    
-    parallel_window.setOption(option = getOption(data));
-
+    loadParallelData();
+    parallel_window.setOption(parallel_option = getOption(parallel_data));
 }
 
 
 
 
-function loadAll(){
-    data = [];
+function loadParallelData(){
+    parallel_data = [];
 
     // 从json数组中追踪
-    var curId, curName, curX, curY, curRadius, curEke, curDepth, curVort,  curCirc, curColor, curFontColor;
+    var curId, curName, curX, curY, curRadius, curEke, curAveEke, curVort,  curCirc, curColor, curFontColor;
 
     var live = 1;
     var start_day, end_day;
@@ -91,7 +76,7 @@ function loadAll(){
         
         curRadius = getCurRadius(d, index);
         curEke = getCurEke(d, index);
-        curDepth = getCurDepth(d, index);
+        curAveEke = getCurAveEke(d, index);
         curVort = getCurVort(d, index);
         curCirc = getCurCirc(d, index);
 
@@ -100,197 +85,16 @@ function loadAll(){
 
 
         // 把当前节点放到nodes中
-        row = [curX, curY, curRadius, curEke, curDepth, curVort, curCirc, 
+        row = [curX, curY, curRadius, curEke, curAveEke, curVort, curCirc, 
             live, start_day, end_day, max_radius, max_eke, max_ave_eke, curName];
 
-        data.push(row);
+        parallel_data.push(row);
     }
 }
 
-function getCurPos(d, index){
-    return [eddyInfo[d][index][0], eddyInfo[d][index][1]];
-}
-
-function getCurRadius(d, index){
-    return eddyInfo[d][index][2]  // 半径
-}
-
-function getCurEke(d, index){
-    return eddyInfo[d][index][3];  // 能量
-}
-
-function getCurDepth(d, index){
-    return eddyInfo[d][index][4];  // 深度
-}
-
-function getCurVort(d, index){
-    return eddyInfo[d][index][5];  // 涡度
-}
-
-function getCurCirc(d, index){
-    var temp = eddyInfo[d][index][6];  // 气旋方向
-    if(temp==1)
-        return cycFlag;
-    else return anticycFlag;
-}
 
 
 
-
-
-// var GAP = 2;
-// var BASE_LEFT = 5;
-// var BASE_TOP = 10;
-
-// var GRID_WIDTH = (100 - BASE_LEFT - GAP) / CATEGORY_DIM_COUNT - GAP;
-// var GRID_HEIGHT = (100 - BASE_TOP - GAP) / CATEGORY_DIM_COUNT - GAP;
-
-// var SYMBOL_SIZE = 4;
-
-function retrieveScatterData(data, dimX, dimY) {
-    var result = [];
-    for (var i = 0; i < data.length; i++) {
-        var item = [data[i][dimX], data[i][dimY]];
-
-        item[CATEGORY_DIM] = data[i][CATEGORY_DIM];
-        item[NAME_DIM] = data[i][NAME_DIM];
-        result.push(item);
-    }
-    return result;
-}
-
-
-// function generateGrids(option) {
-//     var index = 0;
-
-//     for (var i = 0; i < CATEGORY_DIM_COUNT; i++) {
-//         for (var j = 0; j < CATEGORY_DIM_COUNT; j++) {
-//             if (CATEGORY_DIM_COUNT - i + j >= CATEGORY_DIM_COUNT) {
-//                 continue;
-//             }
-
-//             option.grid.push({
-//                 left: BASE_LEFT + i * (GRID_WIDTH + GAP) + '%',
-//                 top: BASE_TOP + j * (GRID_HEIGHT + GAP) + '%',
-//                 width: GRID_WIDTH + '%',
-//                 height: GRID_HEIGHT + '%'
-//             });
-
-//             option.brush.xAxisIndex && option.brush.xAxisIndex.push(index);
-//             option.brush.yAxisIndex && option.brush.yAxisIndex.push(index);
-
-//             // 只在第0行才显示x轴的name，line， tick， label
-//             // 由于name显示不能用表达式判断，只好提出来了
-//             if(j===0){  
-//                 option.xAxis.push({  
-//                     splitNumber: 3,
-//                     position: 'top',
-//                     name: schema[i].text,
-//                     nameLocation:'middle',
-                    
-//                     nameGap:20,
-                    
-//                     axisLine: {
-//                         show: j === 0,
-//                         onZero: false
-//                     },
-//                     axisTick: {
-//                         show: j === 0,
-//                         inside: true
-//                     },
-//                     axisLabel: {
-//                         show: j === 0
-//                     },
-//                     type: 'value',
-//                     gridIndex: index,
-//                     scale: true
-//                 });
-                
-//             }
-//             else{
-//                 option.xAxis.push({  // 只在第0行才显示x轴
-//                     splitNumber: 3,
-//                     position: 'top',
-    
-//                     axisLine: {
-//                         show: j === 0,
-//                         onZero: false
-//                     },
-//                     axisTick: {
-//                         show: j === 0,
-//                         inside: true
-//                     },
-//                     axisLabel: {
-//                         show: j === 0
-//                     },
-//                     type: 'value',
-//                     gridIndex: index,
-//                     scale: true
-//                 });
-//             }
-            
-
-//             if(i === CATEGORY_DIM_COUNT - 1){
-//                 option.yAxis.push({
-//                     splitNumber: 3,
-//                     position: 'right',
-//                     name: schema[j].text,
-//                     nameLocation:'middle',
-
-//                     nameGap:30,
-
-//                     axisLine: {
-//                         show: i === CATEGORY_DIM_COUNT - 1,
-//                         onZero: false
-//                     },
-//                     axisTick: {
-//                         show: i === CATEGORY_DIM_COUNT - 1,
-//                         inside: true
-//                     },
-//                     axisLabel: {
-//                         show: i === CATEGORY_DIM_COUNT - 1
-//                     },
-//                     type: 'value',
-//                     gridIndex: index,
-//                     scale: true
-//                 });
-//             }
-//             else{
-//                 option.yAxis.push({
-//                     splitNumber: 3,
-//                     position: 'right',
-//                     axisLine: {
-//                         show: i === CATEGORY_DIM_COUNT - 1,
-//                         onZero: false
-//                     },
-//                     axisTick: {
-//                         show: i === CATEGORY_DIM_COUNT - 1,
-//                         inside: true
-//                     },
-//                     axisLabel: {
-//                         show: i === CATEGORY_DIM_COUNT - 1
-//                     },
-//                     type: 'value',
-//                     gridIndex: index,
-//                     scale: true
-//                 });
-//             }
-            
-
-//             option.series.push({
-//                 type: 'scatter',
-//                 symbolSize: SYMBOL_SIZE,
-//                 xAxisIndex: index,
-//                 yAxisIndex: index,
-//                 data: retrieveScatterData(rawData, i, j)
-//             });
-
-//             option.visualMap.seriesIndex.push(option.series.length - 1);
-
-//             index++;
-//         }
-//     }
-// }
 
 function getOption(data){
     var option = {
@@ -305,7 +109,7 @@ function getOption(data){
         },
         visualMap: {
             type: 'piecewise',
-            categories: [-1, 1],
+            categories: [anticycFlag, cycFlag],
             dimension: CATEGORY_DIM,
             orient: 'horizontal',
             top: 0,
@@ -319,10 +123,7 @@ function getOption(data){
             seriesIndex: [0],
     
             formatter: function (value) { //标签的格式化工具。
-                if(value===cycFlag){
-                    return '气旋';
-                }
-                else return '反气旋';
+                return value;
             }
         },
         tooltip: {
@@ -335,27 +136,26 @@ function getOption(data){
                 // console.log(value);
                 var result = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' + '</div>';
     
-                if(value[NAME_DIM]!=undefined)
-                    result += schema[NAME_DIM].text + '：' + value[NAME_DIM] + '<br>'
+                if(value[parallel_field_indices['name']]!=undefined)
+                    result += parallel_schema[parallel_field_indices['name']].text + '：' + value[parallel_field_indices['name']] + '<br>'
                 return result;
             }
         },
         parallelAxis: [
-            {dim: 0, name: schema[fieldIndices['start_day']].text},
-            {dim: 1, name: schema[fieldIndices['end_day']].text},
-            {dim: 2, name: schema[fieldIndices['live']].text},
+            {dim: 0, name: parallel_schema[parallel_field_indices['start_day']].text},
+            {dim: 1, name: parallel_schema[parallel_field_indices['end_day']].text},
+            {dim: 2, name: parallel_schema[parallel_field_indices['live']].text},
     
-            {dim: 3, name: schema[fieldIndices['radius']].text},
-            {dim: 4, name: schema[fieldIndices['eke']].text},
-            {dim: 5, name: schema[fieldIndices['ave_eke']].text},
-            {dim: 6, name: schema[fieldIndices['live']].text},
+            {dim: 3, name: parallel_schema[parallel_field_indices['radius']].text},
+            {dim: 4, name: parallel_schema[parallel_field_indices['eke']].text},
+            {dim: 5, name: parallel_schema[parallel_field_indices['ave_eke']].text},
 
-            {dim: 7, name: schema[fieldIndices['max_radius']].text},
-            {dim: 8, name: schema[fieldIndices['max_eke']].text},
-            {dim: 9, name: schema[fieldIndices['max_ave_eke']].text},
+            {dim: 6, name: parallel_schema[parallel_field_indices['max_radius']].text},
+            {dim: 7, name: parallel_schema[parallel_field_indices['max_eke']].text},
+            {dim: 8, name: parallel_schema[parallel_field_indices['max_ave_eke']].text},
     
-            // {dim: 7, name: schema[fieldIndices['cx']].text},
-            // {dim: 8, name: schema[fieldIndices['cy']].text},
+            // {dim: 7, name: parallel_schema[parallel_field_indices['cx']].text},
+            // {dim: 8, name: parallel_schema[parallel_field_indices['cy']].text},
     
         ],
         parallel: {
@@ -405,7 +205,7 @@ function getOption(data){
                 data: data.map(function (item) {
                     // [start_day, end_day, live, radius, eke, ave_eke, vort, max_radius, max_eke, max_ave_eke, cx, cy, circ, name]
                     return [item[8], item[9], item[7]/2,  
-                        item[2], item[3], item[4], item[7]/2, 
+                        item[2], item[3], item[4],
                         item[10], item[11], item[12],
                         item[0], item[1],  item[6], item[13]];
                 }),
@@ -417,6 +217,6 @@ function getOption(data){
 }
 
 
-// generateGrids(option);
+
 
 

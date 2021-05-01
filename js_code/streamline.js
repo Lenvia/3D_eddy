@@ -17,7 +17,6 @@ var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
  * 预设变量
  */
 // 窗口大小
-const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 var renderWidth, renderHeight;
 var containerWidth, containerHeight;
 
@@ -33,7 +32,6 @@ for (var i =0; i<=59; i++){
  * 涡旋模型
  */
 var curLine;  // 当前流线
-var tempCurLine;  // 在点击播放时，如果有curLine 先隐藏
 var curModel;  // 当前涡旋立体形状
 var textures_2d = [];
 var curModels = [];

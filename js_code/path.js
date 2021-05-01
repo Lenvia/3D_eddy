@@ -1,33 +1,10 @@
-// var container = document.getElementById('container');
-var cycNodeColor = "#ce5c5c";  // 气旋颜色，红色
-var anticycNodeColor = "#51689b";  // 反气旋颜色，蓝色
-var cycFlag = '气旋';
-var anticycFlag = '反气旋';
-
-
-
-var path_gui;
-var path_gui_opt;
-var scaleFactor = 1;
-
-
+// 配置
+var path_node_map = new Map();
+var path_data = [];
+var path_edges = [];
 var path_option;
 
-
-
-
-var tex_pps_day = 60;
-
-var data = [];
-var edges = [];
-var index_arr = [];
-for(let i=0; i<40; i++){
-    index_arr.push(i);
-}
-
-var existedNodesMap = new Map();
-
-var schema = [
+var path_schema = [
     {name: 'cx', index: 0, text:'cx'},
     {name: 'cy', index: 1, text:'cy'},
     {name: 'radius', index: 2, text:'radius'},
@@ -38,11 +15,16 @@ var schema = [
 ];
 
 // 便于通过name来找index
-var fieldIndices = schema.reduce(function (obj, item) {
+var path_field_indices = path_schema.reduce(function (obj, item) {
     obj[item.name] = item.index;
     return obj;
 }, {});
 
+
+// gui
+var path_gui;
+var path_gui_opt;
+var scaleFactor = 1;
 
 
 
@@ -51,30 +33,29 @@ init();
 function init(){
 
 
-    loadAll();
+    loadPathData();
+
+    path_window.setOption(path_option = getOption(path_data));
 
     
-    path_window.setOption(path_option = getOption(data));
 
-    
-
-    var guiTopoContainer = document.getElementById('gui_path');
-    guiTopoContainer.appendChild(path_gui.domElement);
-    path_container.appendChild(guiTopoContainer);
+    // var guiTopoContainer = document.getElementById('gui_path');
+    // guiTopoContainer.appendChild(path_gui.domElement);
+    // path_container.appendChild(guiTopoContainer);
 }
 
 
 
 
 
-function loadAll(){
-    data = [];
-    edges = [];
+function loadPathData(){
+    path_data = [];
+    path_edges = [];
 
     var queue = new Array();  // 创建一个队列，使用push和shift入队和出队
     var idQueue = new Array();
 
-    existedNodesMap.clear();  // 每次新选择的时候清空
+    path_node_map.clear();  // 每次新选择的时候清空
 
     // 从json数组中追踪
     var curId, curName, curX, curY, curRadius, curEke, curDepth, curVort,  curCirc, curColor, curFontColor;
@@ -89,7 +70,7 @@ function loadAll(){
 
         queue.push(firstName);  // 把当前涡旋的名称放进去
         idQueue.push(nextId);
-        existedNodesMap.set(firstName, nextId);
+        path_node_map.set(firstName, nextId);
         
         nextId++;
 
@@ -115,7 +96,7 @@ function loadAll(){
 
             // 把当前节点放到nodes中
             row = [curX, curY, curRadius, curCirc, curColor, curName, live];
-            data.push(row);
+            path_data.push(row);
 
 
             var forwards = eddyForwards[d][index];  // 得到它后继列表
@@ -123,20 +104,20 @@ function loadAll(){
             for(let i=0; i<forwards.length; i++){
                 var tarName = forwards[i];
 
-                if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
+                if(path_node_map.get(tarName)==undefined){  // 如果是个新的节点
                     tempId = nextId;  // 比末尾的节点id再大1
                     queue.push(tarName);  // 涡旋入队
                     idQueue.push(tempId);
-                    existedNodesMap.set(tarName, tempId);
+                    path_node_map.set(tarName, tempId);
                     nextId++;
                 }
                 else{  // 不用入队
-                    tempId = existedNodesMap.get(tarName);
+                    tempId = path_node_map.get(tarName);
                 }
                 
 
                 // 添加边，现在不用添加点！
-                edges.push({
+                path_edges.push({
                     source: curId,
                     target: tempId,
                 });
@@ -149,15 +130,15 @@ function loadAll(){
             for(let i=0; i<backwards.length; i++){
                 var tarName = backwards[i];
 
-                if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
+                if(path_node_map.get(tarName)==undefined){  // 如果是个新的节点
                     tempId = nextId;  // 比末尾的节点id再大1
                     queue.push(tarName);  // 涡旋入队
                     idQueue.push(tempId);
-                    existedNodesMap.set(tarName, tempId);
+                    path_node_map.set(tarName, tempId);
                     nextId++;
                 }
                 else{  // 不用入队
-                    tempId = existedNodesMap.get(tarName);
+                    tempId = path_node_map.get(tarName);
                 }
             }
         }
@@ -165,13 +146,13 @@ function loadAll(){
 }
 
 function loadTopo(firstName){
-    data = [];
-    edges = [];
+    path_data = [];
+    path_edges = [];
 
     var queue = new Array();  // 创建一个队列，使用push和shift入队和出队
     var idQueue = new Array();
 
-    existedNodesMap.clear();  // 每次新选择的时候清空
+    path_node_map.clear();  // 每次新选择的时候清空
 
     // 从json数组中追踪
     var curId, curName, curX, curY, curRadius, curEke, curDepth, curVort,  curCirc, curColor, curFontColor;
@@ -179,7 +160,7 @@ function loadTopo(firstName){
 
     queue.push(firstName);  // 把当前涡旋的名称放进去
     idQueue.push(nextId);
-    existedNodesMap.set(firstName, nextId);
+    path_node_map.set(firstName, nextId);
     
     nextId++;
 
@@ -204,7 +185,7 @@ function loadTopo(firstName){
 
         // 把当前节点放到nodes中
         row = [curX, curY, curRadius, curCirc, curColor, curName];
-        data.push(row);
+        path_data.push(row);
 
 
         var forwards = eddyForwards[d][index];  // 得到它后继列表
@@ -212,20 +193,20 @@ function loadTopo(firstName){
         for(let i=0; i<forwards.length; i++){
             var tarName = forwards[i];
 
-            if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
+            if(path_node_map.get(tarName)==undefined){  // 如果是个新的节点
                 tempId = nextId;  // 比末尾的节点id再大1
                 queue.push(tarName);  // 涡旋入队
                 idQueue.push(tempId);
-                existedNodesMap.set(tarName, tempId);
+                path_node_map.set(tarName, tempId);
                 nextId++;
             }
             else{  // 不用入队
-                tempId = existedNodesMap.get(tarName);
+                tempId = path_node_map.get(tarName);
             }
             
 
             // 添加边，现在不用添加点！
-            edges.push({
+            path_edges.push({
                 source: curId,
                 target: tempId,
             });
@@ -238,40 +219,21 @@ function loadTopo(firstName){
         for(let i=0; i<backwards.length; i++){
             var tarName = backwards[i];
 
-            if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
+            if(path_node_map.get(tarName)==undefined){  // 如果是个新的节点
                 tempId = nextId;  // 比末尾的节点id再大1
                 queue.push(tarName);  // 涡旋入队
                 idQueue.push(tempId);
-                existedNodesMap.set(tarName, tempId);
+                path_node_map.set(tarName, tempId);
                 nextId++;
             }
             else{  // 不用入队
-                tempId = existedNodesMap.get(tarName);
+                tempId = path_node_map.get(tarName);
             }
         }
     }
 }
 
 
-function getCurPos(d, index){
-    return [eddyInfo[d][index][0], eddyInfo[d][index][1]];
-}
-
-function getCurRadius(d, index){
-    return eddyInfo[d][index][2]  // 半径
-}
-
-function getCurEke(d, index){
-    return eddyInfo[d][index][3];  // 能量
-}
-
-function getCurDepth(d, index){
-    return eddyInfo[d][index][4];  // 能量
-}
-
-function getCurVort(d, index){
-    return eddyInfo[d][index][5];  // 涡度
-}
 
 function getCurCirc(d, index){
     var temp = eddyInfo[d][index][6];  // 气旋方向
@@ -317,22 +279,21 @@ function getOption(data) {
             borderColor: '#777',
             borderWidth: 1,
             formatter: function (obj) {
+
                 var value = obj.value;
-                
-                console.log(value);
-                console.log(fieldIndices);
+
                 var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
-                + '编号：'+ value[fieldIndices['name']]+ '</div>';
+                + '编号：'+ value[path_field_indices['name']]+ '</div>';
                 
                 // // 加上y轴意义、大小的意义、类型
                 // returnStr = returnStr
-                //     + schema[fieldIndices[path_gui_opt.yAxis]].name + '：' + value[1] + '<br>'
-                //     + schema[fieldIndices[path_gui_opt.symbolSize]].name + '：' + value[2] + '<br>'
-                //     + schema[1].name + '：' + value[3] + '<br>'
-                //     + schema[2].name + '：' + value[4] + '<br>'
-                //     + schema[5].name + '：' + value[5] + '<br>'
-                //     + schema[6].name + '：' + value[6] + '<br>'
-                //     + schema[7].name + '：' + value[7] + '<br>';
+                //     + path_schema[path_field_indices[path_gui_opt.yAxis]].name + '：' + value[1] + '<br>'
+                //     + path_schema[path_field_indices[path_gui_opt.symbolSize]].name + '：' + value[2] + '<br>'
+                //     + path_schema[1].name + '：' + value[3] + '<br>'
+                //     + path_schema[2].name + '：' + value[4] + '<br>'
+                //     + path_schema[5].name + '：' + value[5] + '<br>'
+                //     + path_schema[6].name + '：' + value[6] + '<br>'
+                //     + path_schema[7].name + '：' + value[7] + '<br>';
                     
                 return returnStr;
             }
@@ -375,13 +336,13 @@ function getOption(data) {
                 //     show: true,
                 //     formatter: function (params) {  // 显示文字
                 //         // console.log(params.data);
-                //         return params.data[fieldIndices['name']];
+                //         return params.data[path_field_indices['name']];
                 //     }
                 // },
                 data: data,
 
                 symbolSize:(rawValue, params) => {  // 默认半径作为size
-                    params.symbolSize = params.data[fieldIndices['radius']];
+                    params.symbolSize = params.data[path_field_indices['radius']];
                     // console.log(params.symbolSize);
                     return Math.sqrt(params.symbolSize)*0.5;
                 },
@@ -389,7 +350,7 @@ function getOption(data) {
                 itemStyle:{
                     normal : {
                         color : function(params) {
-                            params.color = params.data[fieldIndices['color']];
+                            params.color = params.data[path_field_indices['color']];
                             
                             return params.color;
                         }
@@ -400,7 +361,7 @@ function getOption(data) {
                 // edgeSymbolSize: [4, 10],
                 edgeSymbolSize: [2, 2],
 
-                links: edges,
+                links: path_edges,
 
                 lineStyle: {
                     color: '#2f4554'

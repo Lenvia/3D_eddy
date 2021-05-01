@@ -1,29 +1,11 @@
-// var container = document.getElementById('container');
-var cycNodeColor = "#ce5c5c";  // 气旋颜色，红色
-var anticycNodeColor = "#51689b";  // 反气旋颜色，蓝色
-var cycFlag = '气旋';
-var anticycFlag = '反气旋';
-
-var eddyFeature;  // 涡核信息数组
-
-var topo_gui;
-var topo_gui_opt;
-var scaleFactor = 1;
-
+// 配置
+var topo_node_map = new Map();
+var topo_data = [];
+var topo_edges = [];
 var topo_option;
 
-
-var data = [];
-var edges = [];
-var index_arr = [];
-for(let i=0; i<40; i++){
-    index_arr.push(i);
-}
-
-var existedNodesMap = new Map();
-
-// 原始数据schema，并非传递给series的数据下表
-var schema = [
+// 原始数据topo_schema，并非传递给series的数据下表
+var topo_schema = [
     {name: 'day', index: 0, text:'day'},
     {name: 'cx', index: 1, text:'cx'},
     {name: 'cy', index: 2, text:'cy'},
@@ -32,7 +14,6 @@ var schema = [
     {name: 'depth', index:5, text:'depth'},
     {name: 'vort', index: 6, text:'vort'},
     
-    
     {name: 'circ', index: 7, text:'circ'},
     {name: 'color', index: 8, text:'color'},
     {name: 'name', index: 9, text:'name'},
@@ -40,11 +21,22 @@ var schema = [
 ];
 
 // 便于通过name来找index
-var fieldIndices = schema.reduce(function (obj, item) {
+var topo_field_indices = topo_schema.reduce(function (obj, item) {
     obj[item.name] = item.index;
     return obj;
 }, {});
 
+
+// gui
+var topo_gui;
+var topo_gui_opt;
+
+var scaleFactor = 1;
+
+var index_arr = [];
+for(let i=0; i<40; i++){
+    index_arr.push(i);
+}
 
 var xAxisData = [];
 for(let i=0; i<tex_pps_day; i++){
@@ -59,11 +51,11 @@ init();
 
 function init(){
 
-    loadTopo('0-0');
+    loadTopoData('0-0');
     setTopoGUI();
 
     
-    topo_window.setOption(topo_option = getOption(data));
+    topo_window.setOption(topo_option = getOption(topo_data));
 
     
 
@@ -76,22 +68,22 @@ function init(){
 
 
 
-function loadTopo(firstName){
-    data = [];
-    edges = [];
+function loadTopoData(firstName){
+    topo_data = [];
+    topo_edges = [];
 
     var queue = new Array();  // 创建一个队列，使用push和shift入队和出队
     var idQueue = new Array();
 
-    existedNodesMap.clear();  // 每次新选择的时候清空
+    topo_node_map.clear();  // 每次新选择的时候清空
 
     // 从json数组中追踪
-    var curId, curName, curX, curY, curRadius, curEke, curDepth, curVort,  curCirc, curColor, curFontColor;
+    var curId, curName, curX, curY, curRadius, curEke, curAveEke, curVort,  curCirc, curColor, curFontColor;
     var nextId = 0;
 
     queue.push(firstName);  // 把当前涡旋的名称放进去
     idQueue.push(nextId);
-    existedNodesMap.set(firstName, nextId);
+    topo_node_map.set(firstName, nextId);
     
     nextId++;
 
@@ -112,14 +104,14 @@ function loadTopo(firstName){
         
         curRadius = getCurRadius(d, index);
         curEke = getCurEke(d, index);
-        curDepth = getCurDepth(d, index);
+        curAveEke = getCurAveEke(d, index);
         curVort = getCurVort(d, index);
         curCirc = getCurCirc(d, index);
         curColor = getCurColor(d, index);
 
         // 把当前节点放到nodes中
-        row = [d,  curX, curY, curRadius, curEke, curDepth, curVort, curCirc, curColor, curName];
-        data.push(row);
+        row = [d,  curX, curY, curRadius, curEke, curAveEke, curVort, curCirc, curColor, curName];
+        topo_data.push(row);
 
 
         var forwards = eddyForwards[d][index];  // 得到它后继列表
@@ -127,20 +119,20 @@ function loadTopo(firstName){
         for(let i=0; i<forwards.length; i++){
             var tarName = forwards[i];
 
-            if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
+            if(topo_node_map.get(tarName)==undefined){  // 如果是个新的节点
                 tempId = nextId;  // 比末尾的节点id再大1
                 queue.push(tarName);  // 涡旋入队
                 idQueue.push(tempId);
-                existedNodesMap.set(tarName, tempId);
+                topo_node_map.set(tarName, tempId);
                 nextId++;
             }
             else{  // 不用入队
-                tempId = existedNodesMap.get(tarName);
+                tempId = topo_node_map.get(tarName);
             }
             
 
             // 添加边，现在不用添加点！
-            edges.push({
+            topo_edges.push({
                 source: curId,
                 target: tempId,
             });
@@ -153,40 +145,21 @@ function loadTopo(firstName){
         for(let i=0; i<backwards.length; i++){
             var tarName = backwards[i];
 
-            if(existedNodesMap.get(tarName)==undefined){  // 如果是个新的节点
+            if(topo_node_map.get(tarName)==undefined){  // 如果是个新的节点
                 tempId = nextId;  // 比末尾的节点id再大1
                 queue.push(tarName);  // 涡旋入队
                 idQueue.push(tempId);
-                existedNodesMap.set(tarName, tempId);
+                topo_node_map.set(tarName, tempId);
                 nextId++;
             }
             else{  // 不用入队
-                tempId = existedNodesMap.get(tarName);
+                tempId = topo_node_map.get(tarName);
             }
         }
     }
 }
 
 
-function getCurPos(d, index){
-    return [eddyInfo[d][index][0], eddyInfo[d][index][1]];
-}
-
-function getCurRadius(d, index){
-    return eddyInfo[d][index][2]  // 半径
-}
-
-function getCurEke(d, index){
-    return eddyInfo[d][index][3];  // 能量
-}
-
-function getCurDepth(d, index){
-    return eddyInfo[d][index][4];  // 能量
-}
-
-function getCurVort(d, index){
-    return eddyInfo[d][index][5];  // 涡度
-}
 
 function getCurCirc(d, index){
     var temp = eddyInfo[d][index][6];  // 气旋方向
@@ -225,13 +198,13 @@ function getOption(data) {
                 
                 // 加上y轴意义、大小的意义、类型
                 returnStr = returnStr
-                    + schema[fieldIndices[topo_gui_opt.yAxis]].name + '：' + value[1] + '<br>'
-                    + schema[fieldIndices[topo_gui_opt.symbolSize]].name + '：' + value[2] + '<br>'
-                    + schema[1].name + '：' + value[3] + '<br>'
-                    + schema[2].name + '：' + value[4] + '<br>'
-                    + schema[5].name + '：' + value[5] + '<br>'
-                    + schema[6].name + '：' + value[6] + '<br>'
-                    + schema[7].name + '：' + value[7] + '<br>';
+                    + topo_schema[topo_field_indices[topo_gui_opt.yAxis]].name + '：' + value[1] + '<br>'
+                    + topo_schema[topo_field_indices[topo_gui_opt.symbolSize]].name + '：' + value[2] + '<br>'
+                    + topo_schema[1].name + '：' + value[3] + '<br>'
+                    + topo_schema[2].name + '：' + value[4] + '<br>'
+                    + topo_schema[5].name + '：' + value[5] + '<br>'
+                    + topo_schema[6].name + '：' + value[6] + '<br>'
+                    + topo_schema[7].name + '：' + value[7] + '<br>';
                     
                 return returnStr;
             }
@@ -293,7 +266,7 @@ function getOption(data) {
                 edgeSymbol: ['circle', 'arrow'],
                 edgeSymbolSize: [4, 10],
 
-                links: edges,
+                links: topo_edges,
 
                 lineStyle: {
                     color: '#2f4554'
@@ -328,20 +301,20 @@ function setTopoGUI(){
 
     topo_gui.add(topo_gui_opt, 'day', xAxisData).onChange(function(){
         // 如果改变了日期，index默认回归0
-        loadTopo(String(topo_gui_opt.day)+'-'+'0');
+        loadTopoData(String(topo_gui_opt.day)+'-'+'0');
         indexCtrl.setValue(0);
         // console.log(indexCtrl);
-        if (data) {
+        if (topo_data) {
             topo_window.setOption({
                 yAxis: {
                     name: topo_gui_opt.yAxis,
                 },
                 series: {
-                    data: data.map(function (item, idx) {
+                    data: topo_data.map(function (item, idx) {
                         return [
                             item[0],
-                            item[fieldIndices[topo_gui_opt.yAxis]],  // y轴的值
-                            item[fieldIndices[topo_gui_opt.symbolSize]],
+                            item[topo_field_indices[topo_gui_opt.yAxis]],  // y轴的值
+                            item[topo_field_indices[topo_gui_opt.symbolSize]],
                             item[1],
                             item[2],
                             item[5],
@@ -352,25 +325,25 @@ function setTopoGUI(){
                             // idx
                         ];
                     }),
-                    links: edges,
+                    links: topo_edges,
                 }
             });
         }
     });
 
     indexCtrl = topo_gui.add(topo_gui_opt, 'index', index_arr).onChange(function(){
-        loadTopo(String(topo_gui_opt.day)+'-'+String(topo_gui_opt.index));
-        if (data) {
+        loadTopoData(String(topo_gui_opt.day)+'-'+String(topo_gui_opt.index));
+        if (topo_data) {
             topo_window.setOption({
                 yAxis: {
                     name: topo_gui_opt.yAxis,
                 },
                 series: {
-                    data: data.map(function (item, idx) {
+                    data: topo_data.map(function (item, idx) {
                         return [
                             item[0],
-                            item[fieldIndices[topo_gui_opt.yAxis]],  // y轴的值
-                            item[fieldIndices[topo_gui_opt.symbolSize]],
+                            item[topo_field_indices[topo_gui_opt.yAxis]],  // y轴的值
+                            item[topo_field_indices[topo_gui_opt.symbolSize]],
                             item[1],
                             item[2],
                             item[5],
@@ -381,7 +354,7 @@ function setTopoGUI(){
                             // idx
                         ];
                     }),
-                    links: edges,
+                    links: topo_edges,
                 }
             });
         }
@@ -389,17 +362,17 @@ function setTopoGUI(){
 
     // y轴映射
     topo_gui.add(topo_gui_opt, 'yAxis', ['eke', 'radius', 'depth', 'vort', 'cx', 'cy']).onChange(function(){
-        if (data) {
+        if (topo_data) {
             topo_window.setOption({
                 yAxis: {
                     name: topo_gui_opt.yAxis,
                 },
                 series: {
-                    data: data.map(function (item, idx) {
+                    data: topo_data.map(function (item, idx) {
                         return [
                             item[0],
-                            item[fieldIndices[topo_gui_opt.yAxis]],  // y轴的值
-                            item[fieldIndices[topo_gui_opt.symbolSize]],
+                            item[topo_field_indices[topo_gui_opt.yAxis]],  // y轴的值
+                            item[topo_field_indices[topo_gui_opt.symbolSize]],
                             item[1],
                             item[2],
                             item[5],
@@ -417,14 +390,14 @@ function setTopoGUI(){
 
     // 结点大小映射
     topo_gui.add(topo_gui_opt, 'symbolSize', ['radius','eke', 'cx', 'cy']).onChange(function(){
-        if (data) {
+        if (topo_data) {
             topo_window.setOption({
                 series: {
-                    data: data.map(function (item, idx) {
+                    data: topo_data.map(function (item, idx) {
                         return [
                             item[0],
-                            item[fieldIndices[topo_gui_opt.yAxis]],  // y轴的值
-                            item[fieldIndices[topo_gui_opt.symbolSize]],
+                            item[topo_field_indices[topo_gui_opt.yAxis]],  // y轴的值
+                            item[topo_field_indices[topo_gui_opt.symbolSize]],
                             item[1],
                             item[2],
                             item[5],
@@ -442,7 +415,7 @@ function setTopoGUI(){
 
     // 结点缩放映射
     topo_gui.add(topo_gui_opt, 'scaleFactor', [0.01, 0.1, 0.2, 0.33, 0.5, 1, 2, 3, 5, 10, 100]).onChange(function(){
-        if (data) {
+        if (topo_data) {
             scaleFactor = topo_gui_opt.scaleFactor;
             topo_window.setOption({
                 series: {
