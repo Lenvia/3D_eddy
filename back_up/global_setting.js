@@ -7,9 +7,9 @@ const scaleHeight = 20*edgeLen/200000; //高度缩放倍数
 var boxHeight = 4000*scaleHeight;  // 海底深度（默认为4000m）
 var tubeHeightFactor = 500;  // 控制流管高度
 
-var dayLimit = 60;  // 暂定60为最大天数
-var play_start_day = 0;  // 播放器起点（默认为0）
-var loadStepNum = 1;  // 3d流线加载多少天
+var stepLimit = 60;  // 暂定60为最大天数
+
+var loadStepNum = 0;  // 3d流线加载多少天
 var tex_pps_step = 60;  // 2d和pps加载天数
 
 /**
@@ -19,12 +19,29 @@ var tex_pps_step = 60;  // 2d和pps加载天数
 var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
 var eddyFeature;  // 涡核信息数组
+var eddyInfo;
+var eddyForwards;
+var eddyBackwards;
+var liveInfo;
 
-// 组件绑定
+// 组件绑定（容器内部各自的gui自己管理）
+var gui_container = document.getElementById('gui');
+
+var detection_container = document.getElementById('detection-container');
+var detection_window = echarts.init(detection_container);
+
+var frequency_container = document.getElementById('frequency-container');
+var frequency_window = echarts.init(frequency_container);
+
+var path_container = document.getElementById('path-container');
+var path_window = echarts.init(path_container);
+
 var topo_container = document.getElementById('topo-container');
 var topo_window = echarts.init(topo_container);
-var echarts_container = document.getElementById('echarts-container');
-var echarts_window = echarts.init(echarts_container);
+
+var parallel_container = document.getElementById('parallel-container');
+var parallel_window = echarts.init(parallel_container);
+
 
 
 /**
@@ -46,7 +63,7 @@ var land_2d;  // 2d
 var whole_models = [];
 var local_models = [];
 
-// 主界面gui
+// 流线界面gui
 var step_ctrl;
 var appearFolder;
 var attrFolder;
@@ -54,16 +71,6 @@ var colorFolder;
 var opaFolder;
 var funcFolder;
 
-// 主界面pps
-var audio_progress_bar;
-var draggable_point;
-
-
-/**
- * 局部窗口变量
- */
-
-var network;  // 拓扑图
 
 /**
  * 主副窗口共享变量
@@ -71,6 +78,14 @@ var network;  // 拓扑图
 var is3d = true;
 var existedEddyIndices = [];  // 场上存在的涡旋的index
 var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标【从主窗口触发】
+
+/**
+ * echarts 共享变量
+ */
+var cycNodeColor = "#ce5c5c";  // 气旋颜色，红色
+var anticycNodeColor = "#51689b";  // 反气旋颜色，蓝色
+var cycFlag = '气旋';
+var anticycFlag = '反气旋';
 
 /**
  * 更新信号
@@ -82,10 +97,6 @@ var switchUpdateSign = false;  // 如果为true，表示主界面切换日期而
 var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的日期，这里不能再反过来清除局部窗口的元素
 var dyeSign = false;  // 提醒主窗口去染色
 // DOM组件绑定函数信号
-var showNextEddiesSign = false;  // DOM点击响应标记，用来控制localEddy.js中showNextEddies()函数
-var showPreEddiesSign = false;  // showPreEddiesSign()响应
-var playActionSign = false;  // DOM点击响应标记，表示播放迹线
-var pauseActionSign = false;  // 暂停播放
 var topoClickSign = false;  // 鼠标点击了拓扑图节点
 
 
@@ -93,7 +104,7 @@ var topoClickSign = false;  // 鼠标点击了拓扑图节点
 
 loadDepth();  // 加载深度数组
 loadEddyFeatures();  // 加载涡核信息数组
-
+ 
 /*
     预加载
 */
@@ -117,22 +128,35 @@ function loadDepth(){
         }
     })
 }
-
+ 
 function loadEddyFeatures(){
     var eddies_feature_path = ("./resources/features/features.json");
-    
+     
     $.ajax({
         url: eddies_feature_path,//json文件位置
         type: "GET",//请求方式为get
         dataType: "json", //返回数据格式为json
         async: false,  // 异步设置为否
         success: function(res) { //请求成功完成后要执行的方法 
-            eddyFeature = res;  // 包含三个字段：info, forward, backward。其中info[天数][下标] = [cx, cy, area, bx, by, br]
-            // console.log(eddyFeature);
+        eddyFeature = res;  // 包含三个字段：info, forward, backward。其中info[天数][下标] = [cx, cy, ......]
+        eddyInfo = eddyFeature['info'];
+        eddyForwards = eddyFeature['forward'];  // 向未来追踪
+        eddyBackwards = eddyFeature['backward'];  // 向以前回溯
+        }
+    })
+
+    var live_path = ("./resources/features/live.json");
+    $.ajax({
+        url: live_path,//json文件位置
+        type: "GET",//请求方式为get
+        dataType: "json", //返回数据格式为json
+        async: false,  // 异步设置为否
+        success: function(res) { //请求成功完成后要执行的方法 
+            liveInfo = res;
         }
     })
 }
-
+ 
 /*
     触发函数
 */
@@ -144,7 +168,7 @@ function changeView(){
 }
 
 function flashStep(){
-    // 直接setValue也会改变currentMainDay的值
+    // 直接setValue也会改变currentMainStep的值
     var temp = currentMainStep;
     step_ctrl.setValue(-1);
     step_ctrl.setValue(temp);
@@ -154,8 +178,8 @@ function switchView(){
     if(is3d){
         is3d = false;  // 切换成2d
 
-        echarts_window.clear();
-        echarts_container.style.zIndex = 1;
+    //  echarts_window.clear();
+    //  echarts_container.style.zIndex = 1;
         topo_container.style.zIndex = 2;
 
         if(sea!=undefined)
@@ -179,9 +203,9 @@ function switchView(){
     else{
         is3d = true;
 
-        topo_window.clear();
-        echarts_container.style.zIndex = 2;
-        topo_container.style.zIndex = 1;
+    //  topo_window.clear();
+    //  echarts_container.style.zIndex = 2;
+    //  topo_container.style.zIndex = 1;
 
         if(sea!=undefined)
             sea.visible = true;
@@ -295,18 +319,18 @@ function getNearestEddy(px, py){
 
 // 对于第d天的index下标涡旋进行追踪，返回一个数组，表示下一天该涡旋的延续
 function track(d, index){
-    var dayForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
-    return dayForwardsList[index];  // 返回index下标的延续下标集合
+    var stepForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
+    return stepForwardsList[index];  // 返回index下标的延续下标集合
 }
 
 // 追踪d天时 curList所有涡旋的延续，并将所有结果放在一个数组中，并去重
 // curList存储的都是第d天的下标
 function trackAll(curList, d){
     var result = [];
-    var dayForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
+    var stepForwardsList = eddyFeature['forward'][d];  // 第d天所有涡旋的延续列表
     for(let i=0; i<curList.length; i++){
-        // console.log(dayForwardsList[curList[i]]);
-        result = result.concat(dayForwardsList[curList[i]]);
+        // console.log(stepForwardsList[curList[i]]);
+        result = result.concat(stepForwardsList[curList[i]]);
     }
     // console.log(result);
     return dedupe(result);
@@ -314,9 +338,9 @@ function trackAll(curList, d){
 
 function backtrackAll(curList, d){
     var result = [];
-    var dayBackwardsList = eddyFeature['backward'][d];
+    var stepBackwardsList = eddyFeature['backward'][d];
     for(let i =0; i<curList.length; i++){
-        result = result.concat(dayBackwardsList[curList[i]]);
+        result = result.concat(stepBackwardsList[curList[i]]);
     }
     return dedupe(result);
 }
@@ -366,8 +390,8 @@ function mxy2pxy(mx, my){
     var px = (mx/edgeLen+0.5)*500;
     var py = (my/edgeWid+0.5)*500;
 
-    // console.log("mx, my:",mx, my)
-    // console.log("px, py:",px, py)
+    console.log("mx, my:",mx, my)
+    console.log("px, py:",px, py)
     return new Array(px, py);
 }
 
@@ -378,25 +402,7 @@ function pxy2xy(px, py){
     return new Array(x,y);
 }
 
-/**
- * 来自DOM触发的信号
- */
-// 标记开放函数
-function openShowNextEddiesSign(){
-    showNextEddiesSign = true;
-}
-function openShowPreEddiesSign(){
-    showPreEddiesSign = true;
-}
 
-
-function openPlayActionSign(){
-    playActionSign = true;
-}
-
-function openPauseAction(){
-    pauseActionSign = true;
-}
 
 // 获得DOM的style
 function getStyle(obj,attr){
@@ -405,4 +411,37 @@ function getStyle(obj,attr){
     }else{
             return getComputedStyle(obj,false)[attr];
     }
+}
+
+
+/**
+ * json 数组属性get
+ */
+
+
+function getCurPos(d, index){
+    return [eddyInfo[d][index][0], eddyInfo[d][index][1]];
+}
+
+function getCurRadius(d, index){
+    return eddyInfo[d][index][2]  // 半径
+}
+
+function getCurEke(d, index){
+    return eddyInfo[d][index][3];  // 动能
+}
+
+function getCurAveEke(d, index){
+    return eddyInfo[d][index][4];  // 平均动能
+}
+
+function getCurVort(d, index){
+    return eddyInfo[d][index][5];  // 涡度
+}
+
+function getCurCirc(d, index){
+    var temp = eddyInfo[d][index][6];  // 气旋方向
+    if(temp==1)
+        return cycFlag;
+    else return anticycFlag;
 }

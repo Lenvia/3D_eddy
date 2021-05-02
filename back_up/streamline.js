@@ -17,15 +17,14 @@ var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
  * 预设变量
  */
 // 窗口大小
-const worldWidth = 256, worldDepth = 256; // 控制地形点的数目
 var renderWidth, renderHeight;
 var containerWidth, containerHeight;
 
-// 天数
-const days = [];  // 一共60天
-const exSteps = [-1]; // 扩展天数，第一个是-1
+// 步数
+const steps = [];  // 一共60步
+const exSteps = [-1]; // 扩展步数，第一个是-1
 for (var i =0; i<=59; i++){
-    days.push(i);
+    steps.push(i);
     exSteps.push(i);
 }
 
@@ -33,7 +32,6 @@ for (var i =0; i<=59; i++){
  * 涡旋模型
  */
 var curLine;  // 当前流线
-var tempCurLine;  // 在点击播放时，如果有curLine 先隐藏
 var curModel;  // 当前涡旋立体形状
 var textures_2d = [];
 var curModels = [];
@@ -92,7 +90,7 @@ var ppsArray = new Array(tex_pps_step);
 var readySign = false;  // 准备好了，可以播放
 var frameNum = 0;  // 当前帧数
 var intervalNum;  // 每隔intervalNum帧刷新一下动画
-var stayNum;  // 每刷新stayNum次跳到下一天
+var stayNum;  // 每刷新stayNum次跳到下一步
 
 /**
  * 辅助
@@ -101,18 +99,13 @@ var helper;  // 鼠标helper
 const raycaster = new THREE.Raycaster();  // 射线
 const mouse = new THREE.Vector2();  // 鼠标二维坐标
 
-/**
- * 进度条板块
- */
-var progressModal, progressBar, progressLabel, progressBackground;
-var frameLabel;
 
 
 init();
 
 
 function init() {
-    container = document.getElementById( 'container' );
+    container = document.getElementById( 'streamline-container' );
     container.innerHTML = "";
 
     setRenderSize();
@@ -121,14 +114,6 @@ function init() {
     renderer.setPixelRatio( window.devicePixelRatio );  // 像素比
     renderer.setSize( renderWidth, renderHeight );  // 尺寸
 
-    audio_player = document.getElementById('audio-player-container');
-    audio_progress_bar = document.getElementById("audio-progress-bar");
-    draggable_point = document.getElementById("draggable-point");
-    // console.log(audio_progress_bar);
-
-    div_start_time = document.getElementById('start-time');
-    div_start_time.innerHTML = "0";
-    container.appendChild(audio_player);
 
     container.appendChild( renderer.domElement );
 
@@ -164,13 +149,14 @@ function init() {
     createSeaFrame();
 
     createLand();
-    createChannel();
+    // createChannel();
+    loadChannel();
     
     createHelper();
     // showProgressModal("loadingFrames");  // 显示等待条
     
     loadEddiesForSteps();  // 加载涡旋模型
-    loadPPS();  // 加载需要播放的迹线引导的流线
+    
     
     setGUI();  // 设置交互面板
 
@@ -183,14 +169,14 @@ function init() {
     container.addEventListener( 'click', onMouseClick, false);
 
     stats = new Stats();
-    container.appendChild( stats.dom );
+    // container.appendChild( stats.dom );
 
-    var guiContainer1 = document.getElementById('gui1');
+    var guiContainer1 = document.getElementById('streamline-gui');
     guiContainer1.appendChild(gui.domElement);
     container.appendChild(guiContainer1);
 
-    var exContainer = document.getElementById('ex23d');
-    container.appendChild(exContainer);
+    // var exContainer = document.getElementById('ex23d');
+    // container.appendChild(exContainer);
 
     // 窗口缩放时触发
     window.addEventListener( 'resize', onWindowResize, false );
@@ -549,78 +535,52 @@ function createChannel(){
     })
 }
 
-// 【废弃】2D地图形式
-function create2d(){
-    var texture = THREE.ImageUtils.loadTexture('./resources/Ensemble1/Ensemble1TimeStep01.png', {}, function() {
-        render();
+// 加载峡谷obj
+function loadChannel(){
+    var object_loader = new OBJLoader();
+    object_loader.load('./resources/channel.obj', function(object) {
+        // object_loader.load('./resources/objs/mesh_0.obj', function(object) {
+
+        object.traverse( function( child ) {
+            if ( child.isMesh ){
+                child.geometry.computeVertexNormals();
+                child.geometry.computeFaceNormals();
+            }
+        } );
+
+        var meshObj = object.children[0];        
+
+        var positions = meshObj.geometry.attributes.position.array;
+        // 原本是500*500*50，进行变换
+        meshObj.geometry.scale(1/500, 1/500, 1/50);
+        meshObj.geometry.translate(-0.5, -0.5, 0);
+        for ( let j = 0;  j < positions.length; j += 3 ) {
+            positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
+        }
+
+        meshObj.geometry.scale(edgeLen, edgeWid, scaleHeight);
+        meshObj.material.transparent = true;
+        meshObj.material.opacity = 0.5;
+        meshObj.material.depthWrite = false;
+        
+        scene.add(meshObj);
+
+        // console.log(meshObj)
+        
     });
-
-    var geometry = new THREE.PlaneBufferGeometry( edgeLen, edgeWid, worldWidth - 1, worldDepth - 1 );
-    var material = new THREE.MeshLambertMaterial({
-        map: texture,
-        side:THREE.DoubleSide,
-    });
-
-    geometry.translate(0, 0, 2);
-    land_2d = new THREE.Mesh( geometry, material);
-    land_2d.name = "land_2d";
-    scene.add( land_2d );
-
-    if(is3d){  // 如果是3d模式，隐藏这个
-        land_2d.visible = false;
-    }
 }
 
 
 
-/*
-    显示等待条
-*/
-function showProgressModal(frameType){  // 假设frameType为"loadingFrames"
-    progressModal = document.getElementById("progressModal");
-    frameLabel = document.getElementById("frameLabel");
-    
-	frameLabel.innerHTML = frameType.slice(0,-6);  // frameLabel = "loading"
-	progressBar = document.createElement('div');
-	progressBar.id = frameType;
-	progressBar.className = 'progressBar';
-
-	progressLabel = document.createElement('span');
-	progressLabel.id = 'label';
-	progressLabel.setAttribute("data-perc", "Preparing models...");
-
-	progressBackground = document.createElement('span');
-	progressBackground.id = 'bar';
-
-	progressBar.appendChild(progressLabel);
-	progressBar.appendChild(progressBackground);
-    progressModal.appendChild(progressBar);
-    
-    container.appendChild(progressModal)
-}
 
 /*
-    隐藏等待条
-*/
-function hideProgressModal(){
-    // 进度条图形填满
-    progressBackground.style.width = "100%";
-    // 标题填满
-    progressLabel.setAttribute("data-perc", "100%");
-    // Remove the modal
-    progressModal.removeChild(progressBar);
-    frameLabel.style.display = 'none';
-    progressModal.style.display = 'none';
-}
-
-/*
-    加载涡旋n天的形状
+    加载涡旋n步的形状
 */
 function loadEddiesForSteps(){
     let arr = []; //promise返回值的数组
     for (let i = 0; i<loadStepNum; i++){
         arr[i] = new Promise((resolve, reject)=>{
-            // 加载一天的形状
+            // 加载一步的形状
             var d = i;
             var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, ".vtk"));
             var loader = new VTKLoader();
@@ -688,7 +648,7 @@ function loadEddiesForSteps(){
                 linesG.geometry.groupsNeedUpdate = true;
                 linesG.material.needsUpdate = true;
                 
-                linesG.name = "day"+String(d);  // day0, day1, ...
+                linesG.name = "step"+String(d);  // step0, step1, ...
                 whole_models.push(linesG);
                 resolve(i);
             });
@@ -756,7 +716,7 @@ function loadOneAttrArray(attr, path, d){
 
     promise1.then(()=>{
         // 将Attr值放到geometry中
-        site = "day"+String(d)
+        site = "step"+String(d)
         linesG = findModel(site);
         var attrArray = [];
         var x,y,z;  // 点的当前坐标（缩放后）
@@ -814,10 +774,10 @@ function loadAttrArray(attr){
     })
 }
 
-// 加载指定day的涡旋立体形状
-function loadEddyModel(day){
+// 加载指定step的涡旋立体形状
+function loadEddyModel(step){
     var object_loader = new OBJLoader();
-    object_loader.load('./resources/objs/mesh_'+String(day)+'.obj', function(object) {
+    object_loader.load('./resources/objs/mesh_'+String(step)+'.obj', function(object) {
     // object_loader.load('./resources/temp.obj', function(object) {
         object.traverse( function( child ) {
             if ( child.isMesh ){
@@ -854,7 +814,7 @@ function setGUI(){
     gui = new dat.GUI({ autoPlace: false });
 
     default_opt = new function(){
-        this.currentMainStep = -1;  // 初始时间为第0天
+        this.currentMainStep = -1;  // 初始时间为第0步
         this.currentAttr = 'OW'; // 初始展示属性为OW
         this.upValue = 1; // 属性的下界
         this.downValue = -1;  // 属性的上界
@@ -909,17 +869,17 @@ function setGUI(){
 
         if(is3d){ // 3d视图
             if(lastStep!=-1){  // 清除上次的显示
-                last_site = "day"+String(lastStep);
+                last_site = "step"+String(lastStep);
                 lastLine = scene.getObjectByName(last_site);
                 if(lastLine!=undefined)  // 这个判断不加也行
                     scene.remove(lastLine);
             }
-            site = "day"+String(currentMainStep);
+            site = "step"+String(currentMainStep);
             
             curLine = findModel(site);
             scene.add(curLine);
 
-            // 更新当天当前属性的echarts
+            // 更新当步当前属性的echarts
             updateEcharts(currentAttr, currentMainStep);
 
             if(curLine!=undefined){
@@ -997,7 +957,7 @@ function setGUI(){
         resetCtrl();
         resetMaterial(curLine);
 
-        // 更新当天当前属性的echarts
+        // 更新当步当前属性的echarts
         updateEcharts(currentAttr, currentMainStep);
     });
 
@@ -1194,7 +1154,7 @@ function setGUI(){
     funcFolder.add(func_opt, 'reset');
 
 
-    switchView();  // 先使用一遍视图
+    // switchView();  // 先使用一遍视图
     
 }
 
@@ -1237,7 +1197,7 @@ function showPointers(){
     if(currentMainStep<0)
         return;
     var info = eddyFeature['info'][currentMainStep];
-    for(let i=0; i<info.length; i++){  // currentMainDay当天
+    for(let i=0; i<info.length; i++){  // currentMainStep当步
         var cpx = info[i][0];  // cpx指的是在panel上的cx
         var cpy = info[i][1];
 
@@ -1686,29 +1646,6 @@ function DyChange(k){
 
 
 function onMouseMove( event ) {
-    if(pitchMode == true){
-        getMouseXY(event);  // 得到鼠标的位置
-        // 通过摄像机和鼠标位置更新射线
-        raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
-
-
-        var intersects;
-        if(is3d){
-            if(curLine != undefined){
-                intersects = raycaster.intersectObject( curLine );
-                
-            }
-        }
-        else{
-            if(curModel!=undefined){
-                intersects = raycaster.intersectObject( curModel );
-            }
-        }
-        if(intersects.length>0){
-            var curObj = intersects[0];
-            helper.position.copy( curObj.point );
-        }
-    }
 }
 
 function onMouseClick(event){
@@ -1719,11 +1656,11 @@ function onMouseClick(event){
         renderer.domElement的clientWidth和clientHeight就是renderer的宽度和高度
         由于event.clientX, Y表示屏幕上鼠标的绝对位置，所以要减去窗口的偏移，再比上窗口的宽和高
     */
-    getMouseXY(event);
+    getMouseXY(event);  // 将鼠标位置进行转化，需要传给raycaster一个位置坐标（相对于窗口）
 
     // 现在的mouse的二维坐标就是当前鼠标在当前窗口的位置（-1~1)
     // console.log(mouse)
-
+    
 
     // 通过摄像机和鼠标位置更新射线
     raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
@@ -1732,20 +1669,14 @@ function onMouseClick(event){
     // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
 
     var intersects;
-    // 获取当前指向的第一个的坐标
-    if(is3d){
-        if(curLine != undefined){
-            intersects = raycaster.intersectObject( curLine );
-        }
-    }
-    else{
-        if(curModel!=undefined){
-            intersects = raycaster.intersectObject( curModel );
-        }
+
+    intersects = raycaster.intersectObject( sea);
+    if(intersects == undefined){
+        intersects = raycaster.intersectObject( surface);  // 点到陆地上了
     }
 
     if(intersects!=undefined && intersects.length>0){
-        var curObj = intersects[0];
+        var curObj = intersects[0];  // 目标物体（海水/陆地）
         if(pitchMode == true){
             selected_pos = curObj.point;
 
@@ -1770,8 +1701,16 @@ function onMouseClick(event){
 }
 
 function getMouseXY(event){
+    // console.log(gui_container.clientHeight);  
+    // console.log("event: ", event.clientX, event.clientY);
+    // console.log("render: ", renderer.domElement.clientWidth, renderer.domElement.clientHeight);
+
+    // 需要算上gui的高度导致偏移
     mouse.x = ( (event.clientX) / renderer.domElement.clientWidth ) * 2 - 1;
-    mouse.y = - ( (event.clientY ) / renderer.domElement.clientHeight ) * 2 + 1;
+    mouse.y = - ( (event.clientY - gui_container.clientHeight ) / renderer.domElement.clientHeight ) * 2 + 1;
+
+    // 这时候得到的是真实的三维坐标
+    // console.log("mouse: ", mouse.x, mouse.y);
 }
 
 function recoverPointer(index){
@@ -1799,244 +1738,8 @@ function setRenderSize() {
 }
 
 
-// 进度条
-$('#draggable-point').draggable({
-    axis: 'x',
-    containment: "#audio-progress"
-});
-
-$('#draggable-point').draggable({
-    drag: function() {
-        var offset = $(this).offset();
-        var percent = (100 * parseFloat($(this).css("left"))) / (parseFloat($(this).parent().css("width")));
-        var xPos = percent + "%";
-        play_start_day = Math.round(percent/100*(loadStepNum+1));  // 实际上拉不到头，所以多加个1
-
-        // 更新文字和进度条
-        div_start_time.innerHTML = play_start_day;  
-        $('#audio-progress-bar').css({
-        'width': xPos
-        });
-    }
-});
-
-function loadPPS(){
-    let arr = []; //promise返回值的数组
-    for (let i = 0; i<tex_pps_step; i++){
-        arr[i] = new Promise((resolve, reject)=>{
-            // 加载一天的形状
-            var d = i;
-            var vtk_path = ("./resources/pps_whole_vtk_folder/force_2_pp_10000/".concat(d, ".vtk"));
-            var loader = new VTKLoader();
-            console.log("loading", vtk_path);
-            loader.load( vtk_path, function ( geometry ) {  // 异步加载
-                geometry.translate(-0.5, -0.5, 0);
-                var positions = geometry.attributes.position.array;
-                // 改变顶点高度值
-                for ( let j = 0;  j < positions.length; j += 3 ) {
-                    // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
-                    positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
-                }
-
-                geometry.scale(edgeLen, edgeWid, scaleHeight);
-
-                var sectionNums = geometry.attributes.sectionNum.array;
-                var startNums = geometry.attributes.startNum.array;
-
-                // 转化为无索引格式，用来分组
-                geometry = geometry.toNonIndexed();
-
-                geometry.attributes.sectionNum.array = sectionNums;
-                geometry.attributes.startNum.array = startNums;
-                // 这个count具体我不知道是啥，对于position.count可以理解为点的个数，且position.length正好是count的三倍
-                geometry.attributes.sectionNum.count = geometry.attributes.sectionNum.array.length;
-                geometry.attributes.startNum.count = geometry.attributes.startNum.array.length;
-                
-                    // 默认初始透明度最大的下标在开头
-                geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( startNums, 1 ));
-
-                var vertexNum = geometry.attributes.position.count;
-                
-                var opa = []; // 顶点透明度，用来改变线条透明度
-                for (var j = 0; j<vertexNum; j++){
-                    opa.push(1);  // 默认1；但是初始是以下面的material为准
-                }
-                geometry.setAttribute( 'opacity', new THREE.Float32BufferAttribute( opa, 1 ));
-
-                
-                var groupId;  // 组号
-
-                var mats = [];
-
-                for (var j =0; j<vertexNum; j+=2){
-                    groupId = j/2;
-                    geometry.addGroup(j, 2, groupId);  // 无索引形式(startIndex, count, groupId)
-
-                    let material = new THREE.LineBasicMaterial({
-                        // vertexColors: false,  // 千万不能设置为true！！！！血的教训
-                        transparent: true, // 可定义透明度
-                        opacity: 0.8,
-                        depthWrite: false, 
-                    });
-                    mats.push(material);
-                }
-                var linesG = new THREE.LineSegments(geometry, mats);
-
-                //need update 我不知道有没有用，感觉没用
-                linesG.geometry.colorsNeedUpdate = true;
-                linesG.geometry.groupsNeedUpdate = true;
-                linesG.material.needsUpdate = true;
-                
-                linesG.name = "pps"+String(d);  // pps0, pps1, ...
-                ppsArray[i] = linesG;
-                // console.log(i);
-
-                resolve(i);
-            });
-        });
-    }
-    Promise.all(arr).then(()=>{
-        console.log("pps加载完毕");
-        // console.log(ppsArray);
-    })
-}
-
-// 根据模型名从数组中找到模型
-// function findPPS(name){
-//     for(let i =0; i<ppsArray.length; i++){
-//         if(ppsArray[i].name==name){
-//             return ppsArray[i];
-//         }
-//     }
-//     return undefined;   // 没有找到
-// }
-
-// 初始化透明度（非循环）
-function initLineOpacity2(cur){
-    // k为轨迹段数和长线总段数之比（可以理解成滑动窗口）
-    var attributes = cur.geometry.attributes;
-    var mats = cur.material;
-    
-    for(var i=0; i<attributes.sectionNum.count; i++){  // 对于每一组长线i
-        
-        var L = attributes.sectionNum.array[i];  // 长线包含的线段数
-        
-        var startIndex = attributes.startNum.array[i];
-
-        mats[startIndex].opacity = 1;  // 只给开头设置为1
-        for(let j=1; j<L; j++){  // 把其他的都变成0
-            mats[startIndex+j].opacity = 0;
-        }
-        
-    }
-}
-
-// 动态变化透明度（非循环）
-function DyChange2(cur, k){  // k=1
-    if(cur != undefined){
-        var attributes = cur.geometry.attributes;
-        var mats = cur.material;
-
-        for(var i=0; i<attributes.sectionNum.count; i++){  // 对于每一组长线i
-            var L = attributes.sectionNum.array[i];  // 长线包含的线段数
-            var l = parseInt(k*L);  // 轨迹段数
-            var diff = 1/l;  // 透明度变化单位
-
-            var startIndex = attributes.startNum.array[i];
-            // var temp = [];
-            for(var j=startIndex; j<startIndex+L; j++){  // 对于每个小线段
-                mats[j].opacity = Math.max(0, mats[j].opacity-diff);  // 透明度降低
-                // temp.push(mats[j].opacity);
-            }
-            // if(cur.name=="pps5" && i==0)
-            //     console.log(temp);
-
-            if(attributes.mOpaIndex.array[i]<startIndex+L-1){  // 如果到头了就不设置为1的了
-                // 赋值为1的
-                var next_mOpaIndex = (attributes.mOpaIndex.array[i]-startIndex+1)%L+startIndex;
-                mats[next_mOpaIndex].opacity = 1;
-                attributes.mOpaIndex.array[i] = next_mOpaIndex; // 更新数组
-            }
-        }
-        cur.geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( cur.geometry.attributes.startNum.array, 1 ));
-
-        
-    }
-}
-
-function prepareAction() {
-    // 移除当前curLine
-    if(curLine!=undefined){
-        tempCurLine = curLine;
-        scene.remove(curLine);
-    }
-    // console.log(ppsArray);
-    for(let i=0; i<play_start_day; i++){  // 清除场景中以前的
-        if(scene.getObjectByName(ppsArray[i].name)!=undefined){
-            scene.remove(ppsArray[i]);
-        }
-    }
-
-    for(let i=play_start_day; i<tex_pps_step; i++){
-        // if(scene.getObjectByName(ppsArray[i].name)==undefined){
-        //     scene.add(ppsArray[i]);
-        // }
-        // 初始化颜色和透明度
-        
-        resetMaterial0(ppsArray[i]);
-    }
-
-    frameNum = play_start_day*intervalNum*stayNum;  // 清空帧计数
-    readySign = true;  // 准备播放
-}
-function pauseAction(){
-    clearInterval(Timer);
-}
-
-function back_up_playAction(){
-    // console.log(Timer);
-    
-    var startDay = play_start_day;
-    console.log(play_start_day);
-    var oriDy;
-    if(is3d){
-        oriDy = dynamic;  // 原始dynamic
-        dynamic = true;  // 不管是不是dy，先设置成动态
-    }
-
-    let i=startDay;
-    step_ctrl.setValue(i);  // 先执行一次
-
-    Timer = setInterval(function(){
-        // console.log(i+1);
-        i++;
-        if(i<loadStepNum){
-            // 进度条
-            audio_progress_bar.style.width = i/(loadStepNum-1)*100 + "%";
-            // 原点
-            draggable_point.style.left = i/(loadStepNum-1)*100 + "%";
-            step_ctrl.setValue(i);
-        }
-        else{
-            if(is3d)
-                dynamic = oriDy;
-            clearInterval(Timer);
-        }
-    },1000);
-}
-
-
-intervalNum = 5;  // 每隔intervalNum帧刷新一下动画
-stayNum = 8;  // 每刷新stayNum次跳到下一天
 
 function animate() {
-    if(is3d){  
-        // console.log("is3d: ", is3d);
-        document.getElementById("audio-player-container").style.display="block";
-    }
-    else{   // 2d形式就不显示进度条了
-        document.getElementById("audio-player-container").style.display="none";
-    }
 
     if(dynamic)  // 只有dynamic为true时才渲染
         DyChange(0.5);
@@ -2046,62 +1749,6 @@ function animate() {
         for(let i=0; i<existedEddyIndices.length; i++){
             changePointer(existedEddyIndices[i], specific_color);
         }
-    }
-
-    if(playActionSign){  // 播放信号
-        playActionSign = false;
-        prepareAction();  // 加载需要播放的模型
-        console.log(ppsArray);
-    }
-
-    if(pauseActionSign){  // 收到暂停播放信号
-        pauseActionSign = false;
-        pauseAction();
-    }
-
-    if(readySign){  // 开始播放
-        if(frameNum>=tex_pps_step*intervalNum*stayNum){ // 比如若有30天，那么当frameNum == 30*3*5 = 450的时候就已经播放完了
-            readySign = false;
-            
-            if(tempCurLine!=undefined){
-                curLine = tempCurLine;
-                tempCurLine = undefined;
-                scene.add(curLine);
-            }
-            console.log("结束播放");
-        }
-
-        if(frameNum%intervalNum==0){ // 更新帧
-            // 判断是否需要换天
-            // 比如每5帧切换一天，那么可以用frameNum/（intervalNum*5) 来表示每一天的下标
-            var I = intervalNum*stayNum;  // 两天之间间隔的帧数
-            var curI = frameNum/I;
-            if(frameNum%I == 0){  // 该切换
-                console.log("切换为: ", curI);
-                // 删除上一天的？
-                if(curI-1>=0){
-                    if(scene.getObjectByName(ppsArray[curI-1].name)!=undefined){
-                        scene.remove(ppsArray[curI-1]);
-                        console.log("删除上一天：", curI-1);
-                    }
-                }
-
-                if(readySign){
-                    // 这时候再添加？
-                    if(scene.getObjectByName(ppsArray[curI].name)==undefined){
-                        scene.add(ppsArray[curI]);
-                    }
-                    initLineOpacity2(ppsArray[curI]);
-                }
-            }
-            if(readySign){
-                console.log("当前为: ", Math.floor(curI));
-                DyChange2(ppsArray[Math.floor(curI)], 1);
-            }
-        }
-
-        frameNum++;  // 要放到后面
-        console.log(frameNum);
     }
     
     stats.update();
