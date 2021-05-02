@@ -2,8 +2,11 @@
 <html lang="en">
 	<head>
 		<title>eddy</title>
-		<link rel="stylesheet" type="text/css" href="./eddy2.css">
+		<link rel="stylesheet" type="text/css" href="./eddy3.css">
+		<link href="./libs/rgbaColorPicker.css" rel="stylesheet" />
+
 		<link rel="stylesheet" type="text/css" href="./node_modules/jquery-ui-dist/jquery-ui.min.css"/>
+
 
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
@@ -18,73 +21,12 @@
 		<!-- <script type="text/javascript" src="./node_modules/echarts/dist/echarts.js"></script> -->
 		<script src="https://cdn.staticfile.org/echarts/5.0.2/echarts.min.js"></script>
 
-        <div id="gui">
-			<div id="streamline-toolbar-container">
-				<div id="appearance-container">
+		<script src="./libs/rgbaColorPicker.js"></script>
+    
 
-					<div id="attribute-selector-content">
-						<label style="position:absolute; left:0;">Attribute</label>
-						<select id="attribute-selector">
-							<option value="OW">OW</option>
-							<option value="vorticity">vorticity</option>
-						</select>
-					</div>
-
-					<div id="color-content">
-						<label style="position:absolute; left:0;">Color</label>
-						<div id="color-section">
-
-						</div>
-					</div>
-
-					<div id="range-content">
-						<label style="position:absolute; left:0;">Range</label>
-						<div id="range-section">
-							<input id="lower-bound">
-							<label id="tilde">~</label>
-							<input id="upper-bound">
-						</div>
-					</div>
-
-					<button id="confirm-button">Confirm</button>
-					<button id="reset-button">Reset</button>
-
-
-
-				</div>
-				<div id="action-container">
-
-				</div>
-			</div>
-			<div id="topo-toolbar-container">
-
-			</div>
-			<div id="global-toolbar-container">
-
-				<div id="step-selector-container">
-					<div id="step-selector-content">
-						<label style="position:absolute; left:0;">TimeStep</label>
-						<select id="step-selector">
-						</select>
-					</div>
-				</div>
-
-				<div id="index-selector-container">
-					<div id="index-selector-content">
-						<label style="position:absolute; left:0;">EddyIndex</label>
-						<select id="index-selector">
-						</select>
-					</div>
-				</div>
-				
-			</div>
-        </div>
-
-        <div id="view">
+		<div id="view">
             <div id="left-container">
-                <!-- 流线板块容器 -->
                 <div id="streamline-container"></div>
-                <!-- echarts容器 -->
                 <div id="detection-container"></div>
                 <div id="frequency-container"></div>
                 <div id="path-container"></div>
@@ -95,6 +37,94 @@
                 <div id="parallel-container"></div>
             </div>
         </div>
+
+        <div id="gui">
+			<div id="streamline-toolbar-container">
+				<div id="appearance-container">
+
+					<div class="content" id="attribute-selector-content">
+						<label class="text-label">Attribute</label>
+						<select id="attribute-selector">
+							<option value="OW">OW</option>
+							<option value="vorticity">vorticity</option>
+						</select>
+					</div>
+
+					<div class="content" id="range-content">
+						<label class="text-label">Range</label>
+						<div id="range-section">
+							<input id="lower-bound">
+							<label id="tilde">~</label>
+							<input id="upper-bound">
+						</div>
+					</div>
+
+					<div class="content" id="color-content">
+						<label class="text-label">Color</label>
+
+						<div id="color-sections">
+							<input id="color-sec1" type="text" class="color-section" value="" />
+							<input id="color-sec2" type="text" class="color-section" value="" />
+							<input id="color-sec3" type="text" class="color-section" value="" />
+							<input id="color-sec4" type="text" class="color-section" value="" />
+							<input id="color-sec5" type="text" class="color-section" value="" />
+						</div>
+						
+					</div>
+
+
+					<button id="confirm-button">Confirm</button>
+					<button id="reset-button">Reset</button>
+				</div>
+				<div id="action-container">
+					<div class="content" id="dynamic-content">
+						<label class="text-label">Dynamic</label>
+						<input id="dynamic" type="checkbox" value="" />
+					</div>
+
+					<div class="content" id="pick-content">
+						<label class="text-label">Pick</label>
+						<input id="pick" type="checkbox" value="" />
+					</div>
+				</div>
+			</div>
+
+			<div id="topo-toolbar-container">
+				<div class="content" id="yAxis-selector-content">
+					<label class="text-label">yAxis</label>
+					<select id="yAxis-selector">
+					</select>
+				</div>
+
+				<div class="content" id="sizeMap-selector-content">
+					<label class="text-label">SizeMap</label>
+					<select id="sizeMap-selector">
+					</select>
+				</div>
+			</div>
+
+			<div id="global-toolbar-container">
+
+				<!-- <div id="step-selector-container"> -->
+					<div class="content" id="step-selector-content">
+						<label class="text-label">TimeStep</label>
+						<select id="step-selector">
+						</select>
+					</div>
+				<!-- </div> -->
+
+				<!-- <div id="index-selector-container"> -->
+					<div class="content" id="index-selector-content">
+						<label class="text-label">EddyIndex</label>
+						<select id="index-selector">
+						</select>
+					</div>
+				<!-- </div> -->
+				
+			</div>
+        </div>
+
+        
         
         
 		

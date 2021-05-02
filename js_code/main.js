@@ -60,7 +60,7 @@ var mid1, mid2, mid3, mid4;  // 中间点
 var keepValue = true;  // 保持设置
 var hideChannel = false; // 隐藏海峡
 var hideSurface = false;  // 隐藏陆地
-var pitchMode = false;  // 选中模式（选择涡旋）
+var pickMode = false;  // 选中模式（选择涡旋）
 
 // 当前gui颜色面板值
 var currentColor0 = [];
@@ -861,7 +861,7 @@ function setGUI(){
         this.keepValue = true; // 保持设置
         this.hideChannel = false;  // 是否隐藏海峡地形
         this.hideSurface = false; // 是否隐藏陆地
-        this.pitchMode = false;  // 选中模式
+        this.pickMode = false;  // 选中模式
         this.dynamic = false;  // 是否让全局涡旋运动
         this.color0 = [255, 255, 255]; // RGB array
         this.color1 = [255, 255, 255]; // RGB array
@@ -958,10 +958,10 @@ function setGUI(){
         
     });
 
-    gui.add(default_opt, 'pitchMode').onChange(function(){
-        pitchMode = default_opt.pitchMode;
+    gui.add(default_opt, 'pickMode').onChange(function(){
+        pickMode = default_opt.pickMode;
 
-        if(pitchMode==false){
+        if(pickMode==false){
             helper.visible = false;
         }
         else{
@@ -1686,7 +1686,7 @@ function DyChange(k){
 
 
 function onMouseMove( event ) {
-    if(pitchMode == true){
+    if(pickMode == true){
         getMouseXY(event);  // 得到鼠标的位置
         // 通过摄像机和鼠标位置更新射线
         raycaster.setFromCamera( mouse, camera );  // (鼠标的二维坐标, 射线起点处的相机)
@@ -1746,7 +1746,7 @@ function onMouseClick(event){
 
     if(intersects!=undefined && intersects.length>0){
         var curObj = intersects[0];
-        if(pitchMode == true){
+        if(pickMode == true){
             selected_pos = curObj.point;
 
             // 恢复所有指示器的material
@@ -1762,7 +1762,7 @@ function onMouseClick(event){
                 // 因为原来的材质是MeshNormalMaterial，是不能改变颜色的
                 // 这里换成普通的MeshLambertMaterial
                 changePointer(tarArr[0], specific_color)
-                pitchUpdateSign = true;  // 向局部板块释放涡旋更新信号
+                pickUpdateSign = true;  // 向局部板块释放涡旋更新信号
             }
             
         }

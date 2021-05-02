@@ -76,7 +76,7 @@ var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标【从主窗�
  * 更新信号
  */
 // 主窗口触发
-var pitchUpdateSign = false;  // 主窗口选择涡旋了
+var pickUpdateSign = false;  // 主窗口选择涡旋了
 var switchUpdateSign = false;  // 如果为true，表示主界面切换日期而引起局部涡旋的更新
 // 局部窗口触发
 var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的日期，这里不能再反过来清除局部窗口的元素
