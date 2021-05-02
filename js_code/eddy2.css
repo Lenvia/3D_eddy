@@ -1,13 +1,232 @@
 /* id 选择器以 "#" 来定义。 */
 /* 类选择器以一个点号显示 */
 
+/* 全局变量 */
+:root{
+	/* --borderColor: #ccc; */
+}
+
 #gui{
     position: absolute;
 	left: 0px;
 	top: 0px;
 	height: 10%;
 	width: 100%;
-    background-color: #654321;
+    /* background-color: #654321; */
+}
+
+#streamline-toolbar-container{
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	height: 100%;
+	width: 50%;
+    background-color: #1dbd17;
+}
+
+#appearance-container{
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	height: 100%;
+	width: 70%;
+    background-color: #1099d8;
+}
+
+#attribute-selector-content{
+	position: absolute;
+	left: 5%;
+	top: 25%;
+
+	width: 30%;
+	height: 25%;
+	
+	transform:translate(0, -50%);
+	background-color: cornflowerblue;
+}
+
+#attribute-selector{
+	position: absolute;
+	right: 0;
+	width: 50%;
+}
+
+#range-content{
+	position: absolute;
+	left: 40%;
+	top: 25%;
+
+	width: 35%;
+	height: 25%;
+	
+	transform:translate(0, -50%);
+	background-color: cornflowerblue;
+}
+
+#range-section{
+	position: absolute;
+	right: 0;
+	width: 70%;
+	height: 100%;
+	background-color: rgb(233, 236, 8);
+}
+
+#lower-bound{
+	position: absolute;
+	left: 0;
+	width: 40%;
+	height: 80%;
+}
+
+#upper-bound{
+	position: absolute;
+	right: 0;
+	width: 40%;
+	height: 80%;
+}
+
+#tilde{
+	position: absolute;
+	text-align: center;
+	left: 40%;
+	width: 20%;
+}
+
+#color-content{
+	position: absolute;
+	left: 5%;
+	bottom: 25%;
+
+	width: 70%;
+	height: 25%;
+	
+	transform:translate(0, 50%);
+	background-color: cornflowerblue;
+}
+
+#color-section{
+	position: absolute;
+	right: 0;
+	width: 80%;
+	height: 100%;
+	background-color: rgb(233, 236, 8);
+}
+
+#confirm-button{
+	position: absolute;
+	right: 5%;
+	top: 25%;
+
+	width: 15%;
+	height: 30%;
+	
+	transform:translate(0, -50%);
+
+	text-align: center;
+	/* background-color: cornflowerblue; */
+}
+
+#reset-button{
+	position: absolute;
+	right: 5%;
+	bottom: 25%;
+
+	width: 15%;
+	height: 30%;
+	
+	transform:translate(0, 50%);
+
+	text-align: center;
+}
+
+
+#action-container{
+	position: absolute;
+	right: 0px;
+	top: 0px;
+	height: 100%;
+	width: 30%;
+    background-color: #652146;
+}
+
+#topo-toolbar-container{
+	position: absolute;
+	left: 50%;
+	top: 0px;
+	height: 100%;
+	width: 20%;
+    background-color: #b823bd;
+}
+
+#global-toolbar-container{
+	position: absolute;
+	right: 0px;
+	top: 0px;
+	height: 100%;
+	width: 30%;
+    background-color: #e97705;
+}
+
+#step-selector-container{
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	width: 50%;
+	height: 50%;
+	/* text-align:center; */
+
+	background-color: #0fc9b0;
+}
+
+
+
+#step-selector-content{
+	position: absolute;
+	left: 50%;
+	top: 50%;
+
+	width: 80%;
+	height: 50%;
+	
+	transform:translate(-50%, -50%);
+	background-color: cornflowerblue;
+}
+
+#step-selector{
+	position: absolute;
+	right: 10%;
+	width: 40%;
+}
+
+
+#index-selector-container{
+	position: absolute;
+	left: 0px;
+	top: 50%;
+	width: 50%;
+	height: 50%;
+	text-align:center;
+
+	background-color: #f5d418;
+}
+
+#index-selector-content{
+	position: absolute;
+	left: 50%;
+	top: 50%;
+
+	width: 80%;
+	height: 50%;
+	
+	transform:translate(-50%, -50%);
+
+	background-color: cornflowerblue;
+}
+
+#index-selector{
+	position: absolute;
+	right: 10%;
+	width: 40%;
 }
 
 #view{
@@ -56,11 +275,6 @@
 	height: 50%;
 	/* background-color: #1b76dd; */
 
-	background-image:url(/resources/detect_pic/step0.png);
-	background-repeat:no-repeat;
-	background-size:100% 100%;
-	-moz-background-size:100% 100%;
-
 }
 
 #frequency-container{
@@ -69,7 +283,7 @@
 	bottom: 0px;
 	height: 50%;
 	width: 50%;
-	background-color:chartreuse;
+	/* background-color:chartreuse; */
 }
 
 #path-container{
@@ -78,7 +292,7 @@
 	bottom: 0px;
 	width: 50%;
 	height: 50%;
-	background-color: #123456;
+	/* background-color: #123456; */
 }
 
 
@@ -98,7 +312,7 @@
 	bottom: 0px;
 	width: 100%;
 	height: 50%;
-	background-color: #ffff00;
+	/* background-color: #ffff00; */
 }
 
 #streamline-gui{

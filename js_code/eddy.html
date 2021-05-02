@@ -19,7 +19,65 @@
 		<script src="https://cdn.staticfile.org/echarts/5.0.2/echarts.min.js"></script>
 
         <div id="gui">
+			<div id="streamline-toolbar-container">
+				<div id="appearance-container">
 
+					<div id="attribute-selector-content">
+						<label style="position:absolute; left:0;">Attribute</label>
+						<select id="attribute-selector">
+							<option value="OW">OW</option>
+							<option value="vorticity">vorticity</option>
+						</select>
+					</div>
+
+					<div id="color-content">
+						<label style="position:absolute; left:0;">Color</label>
+						<div id="color-section">
+
+						</div>
+					</div>
+
+					<div id="range-content">
+						<label style="position:absolute; left:0;">Range</label>
+						<div id="range-section">
+							<input id="lower-bound">
+							<label id="tilde">~</label>
+							<input id="upper-bound">
+						</div>
+					</div>
+
+					<button id="confirm-button">Confirm</button>
+					<button id="reset-button">Reset</button>
+
+
+
+				</div>
+				<div id="action-container">
+
+				</div>
+			</div>
+			<div id="topo-toolbar-container">
+
+			</div>
+			<div id="global-toolbar-container">
+
+				<div id="step-selector-container">
+					<div id="step-selector-content">
+						<label style="position:absolute; left:0;">TimeStep</label>
+						<select id="step-selector">
+						</select>
+					</div>
+				</div>
+
+				<div id="index-selector-container">
+					<div id="index-selector-content">
+						<label style="position:absolute; left:0;">EddyIndex</label>
+						<select id="index-selector">
+						</select>
+					</div>
+				</div>
+				
+			</div>
         </div>
 
         <div id="view">
@@ -41,7 +99,7 @@
         
 		
 		<!-- 全局变量 -->
-		<script type="text/javascript" src="./global_setting.js"></script>
+		<script type="text/javascript" src="./global.js"></script>
 
 		
 	</head>
@@ -54,7 +112,7 @@
 		<div id="topo-gui"></div>
 
 		<!-- 流线js -->
-		<!-- <script type="module" src="./streamline.js"></script> -->
+		<script type="module" src="./streamline.js"></script>
 		<!-- 检测js -->
 		<script type="text/javascript" src="./detection.js"></script>
         <!-- 频率js -->

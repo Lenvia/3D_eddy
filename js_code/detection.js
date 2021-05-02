@@ -1,3 +1,6 @@
+// 预设变量
+var root_path = './resources/detect_pic/';
+
 // 配置
 var detection_node_map = new Map();
 var detection_data = [];
@@ -24,20 +27,11 @@ init();
 
 function init(){
 
-    var root_path = './resources/detect_pic/';
-    var pic_path = root_path+'step'+String(0)+'.png';
-
-    $("body").css({
-        // "background-image":"url(" + pic_path + ")",
-        // "background-repeat": "no-repeat",
-        // "background-size": "contain",
-	    // "-webkit-background-size": "100% 100%",
-        // "background-position": "0 center",
-    });
+    
 
     loadDectData(0);
-
     detection_window.setOption(detection_option = getOption(detection_data));
+    changeBackground(0);
 }
 
 
@@ -116,7 +110,8 @@ function getOption(data) {
             top: 0,
             left: 'center',
             inRange: {
-                color: ['#51689b', '#ce5c5c']
+                // color: ['#51689b', '#ce5c5c']
+                color: '#ffff00',
             },
             outOfRange: {
                 color: '#ddd'
@@ -154,7 +149,7 @@ function getOption(data) {
                 symbolSize:(rawValue, params) => {  // 默认半径作为size
                     // console.log(params)
                     params.symbolSize = params.data[detection_field_indices['radius']];
-                    return Math.sqrt(params.symbolSize)*0.5;
+                    return Math.sqrt(params.symbolSize)*0.8;
                 },
 
 
@@ -173,4 +168,16 @@ function getOption(data) {
         animationEasingUpdate: 'cubicInOut',
         animationDurationUpdate: 2000
     };
+}
+
+
+function changeBackground(step){
+    var pic_path = root_path+'step'+String(step)+'.png';
+
+    $("#detection-container").css({
+        "background-image":"url(" + pic_path + ")",
+        "background-repeat": "no-repeat",
+        "background-size" :"100% 100%",
+	    "-moz-background-size": "100% 100%",
+    });
 }
