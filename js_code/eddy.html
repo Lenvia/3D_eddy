@@ -53,9 +53,9 @@
 					<div class="content" id="range-content">
 						<label class="text-label">Range</label>
 						<div id="range-section">
-							<input id="lower-bound">
+							<input id="lower-bound" value="">
 							<label id="tilde">~</label>
-							<input id="upper-bound">
+							<input id="upper-bound" value="">
 						</div>
 					</div>
 
@@ -63,11 +63,12 @@
 						<label class="text-label">Color</label>
 
 						<div id="color-sections">
+							<input id="color-sec0" type="text" class="color-section" value="" />
 							<input id="color-sec1" type="text" class="color-section" value="" />
 							<input id="color-sec2" type="text" class="color-section" value="" />
 							<input id="color-sec3" type="text" class="color-section" value="" />
 							<input id="color-sec4" type="text" class="color-section" value="" />
-							<input id="color-sec5" type="text" class="color-section" value="" />
+							
 						</div>
 						
 					</div>
@@ -146,7 +147,8 @@
 		<!-- 检测js -->
 		<script type="text/javascript" src="./detection.js"></script>
         <!-- 频率js -->
-        <script type="text/javascript" src="./frequency.js"></script>
+        <!-- <script type="text/javascript" src="./frequency.js"></script> -->
+		<script type="text/javascript" src="./attrEcharts.js"></script>
         <!-- 路径js -->
         <script type="text/javascript" src="./path.js"></script>
         <!-- 拓扑js -->

@@ -60,8 +60,8 @@ function init(){
     
 
     var guiTopoContainer = document.getElementById('topo-gui');
-    guiTopoContainer.appendChild(topo_gui.domElement);
-    topo_container.appendChild(guiTopoContainer);
+    // guiTopoContainer.appendChild(topo_gui.domElement);
+    // topo_container.appendChild(guiTopoContainer);
 }
 
 

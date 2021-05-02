@@ -622,7 +622,7 @@ function loadEddiesForSteps(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
-            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, ".vtk"));
+            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_3000_0_8.vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载
@@ -1301,7 +1301,7 @@ function assignColor(curLine, opt_color, num){
             console.log("color0:", opt_color);
             // 修改该范围内的点的颜色
             for(var i = 0; i<currentAttrArray.length; i++){
-                if(currentAttrArray[i]<= mid1){
+                if(currentAttrArray[i]>downValue && currentAttrArray[i]<= mid1){
                     curLine.geometry.attributes.color.array[3*i] = cColor[0];
                     curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
                     curLine.geometry.attributes.color.array[3*i+2] = cColor[2];
@@ -1345,7 +1345,7 @@ function assignColor(curLine, opt_color, num){
             console.log("color4:", opt_color);
             // 修改该范围内的点的颜色
             for(var i = 0; i<currentAttrArray.length; i++){
-                if(currentAttrArray[i]> mid4){
+                if(currentAttrArray[i]> mid4 && currentAttrArray[i]<upValue){
                     curLine.geometry.attributes.color.array[3*i] = cColor[0];
                     curLine.geometry.attributes.color.array[3*i+1] = cColor[1];
                     curLine.geometry.attributes.color.array[3*i+2] = cColor[2];

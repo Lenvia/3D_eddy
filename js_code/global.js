@@ -9,7 +9,7 @@ var tubeHeightFactor = 500;  // 控制流管高度
 
 var stepLimit = 60;  // 暂定60为最大天数
 
-var loadStepNum = 0;  // 3d流线加载多少天
+var loadStepNum = 1;  // 3d流线加载多少天
 var tex_pps_step = 60;  // 2d和pps加载天数
 
 /**
@@ -61,7 +61,6 @@ var land_2d;  // 2d
 
 // 主界面模型存放
 var whole_models = [];
-var local_models = [];
 
 // 流线界面gui
 var step_ctrl;
@@ -161,70 +160,7 @@ function loadEddyFeatures(){
     触发函数
 */
 
-function changeView(){
-    // 这个顺序不能倒
-    switchView(); 
-    flashStep();
-}
 
-function flashStep(){
-    // 直接setValue也会改变currentMainStep的值
-    var temp = currentMainStep;
-    step_ctrl.setValue(-1);
-    step_ctrl.setValue(temp);
-}
-
-function switchView(){
-    if(is3d){
-        is3d = false;  // 切换成2d
-
-    //  echarts_window.clear();
-    //  echarts_container.style.zIndex = 1;
-        topo_container.style.zIndex = 2;
-
-        if(sea!=undefined)
-            sea.visible = false;
-        if(surface!=undefined)
-            surface.visible = false;
-        if(channel!=undefined)
-            channel.visible = false;
-        if(land_2d!=undefined)
-            land_2d.visible = true;
-
-        
-
-        appearFolder.domElement.style="display:none;";
-        colorFolder.domElement.style="display:none;";
-        opaFolder.domElement.style="display:none;";
-        attrFolder.domElement.style="display:none;";
-        funcFolder.domElement.style="display:none;";
-
-    }
-    else{
-        is3d = true;
-
-    //  topo_window.clear();
-    //  echarts_container.style.zIndex = 2;
-    //  topo_container.style.zIndex = 1;
-
-        if(sea!=undefined)
-            sea.visible = true;
-        if(surface!=undefined)
-            surface.visible = true;
-        if(channel!=undefined)
-            channel.visible = true;
-        if(land_2d!=undefined)
-            land_2d.visible = false;
-        
-        
-        
-        appearFolder.domElement.style="display:";
-        colorFolder.domElement.style="display:";
-        opaFolder.domElement.style="display:";
-        attrFolder.domElement.style="display:";
-        funcFolder.domElement.style="display:";
-    }
-}
 
 
 //numberMillis 毫秒
@@ -238,45 +174,6 @@ function sleep(numberMillis) {
     }
 }
 
-function updateEcharts(attr, d){
-    if(d==-1)
-        return ;
-    // exp: ./echarts/OW/OW_0.json
-    var attr_data_path = ("./echarts/".concat(attr, "/", attr, "_", d, ".json"));
-
-    console.log(attr_data_path);
-    
-    $.ajax({
-        url: attr_data_path,//json文件位置
-        type: "GET",//请求方式为get
-        dataType: "json", //返回数据格式为json
-        async: false,  // 异步设置为否
-        success: function(res) { //请求成功完成后要执行的方法 
-            // 指定图表的配置项和数据
-            var option = {
-                title: {
-                    text: attr+"_"+d
-                },
-                tooltip: {},
-                legend: {  // 图例
-                    // data:['销量']
-                },
-                xAxis: {
-                    data: res['columns'],
-                },
-                yAxis: {},
-                series: [{
-                    // name: '属性值',
-                    type: 'bar',
-                    data: res['values']
-                }]
-            };
-
-            // 使用刚指定的配置项和数据显示图表。
-            echarts_window.setOption(option);
-        }
-    })
-}
 
 function deleteModel(mod){
     if(mod==undefined)
