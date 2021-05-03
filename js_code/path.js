@@ -1,24 +1,5 @@
 // 配置
-var path_node_map = new Map();
-var path_data = [];
-var path_edges = [];
-var path_option;
 
-var path_schema = [
-    {name: 'cx', index: 0, text:'cx'},
-    {name: 'cy', index: 1, text:'cy'},
-    {name: 'radius', index: 2, text:'radius'},
-    {name: 'circ', index: 3, text:'circ'},
-    {name: 'color', index: 4, text:'color'},
-    {name: 'name', index: 5, text:'name'},
-    {name: 'live', index: 6, text:'live'},
-];
-
-// 便于通过name来找index
-var path_field_indices = path_schema.reduce(function (obj, item) {
-    obj[item.name] = item.index;
-    return obj;
-}, {});
 
 
 

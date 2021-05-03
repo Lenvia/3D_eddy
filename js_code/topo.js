@@ -1,30 +1,4 @@
-// 配置
-var topo_node_map = new Map();
-var topo_data = [];
-var topo_edges = [];
-var topo_option;
 
-// 原始数据topo_schema，并非传递给series的数据下表
-var topo_schema = [
-    {name: 'step', index: 0, text:'step'},
-    {name: 'cx', index: 1, text:'cx'},
-    {name: 'cy', index: 2, text:'cy'},
-    {name: 'radius', index: 3, text:'radius'},
-    {name: 'eke', index: 4, text:'eke'},
-    {name: 'depth', index:5, text:'depth'},
-    {name: 'vort', index: 6, text:'vort'},
-    
-    {name: 'circ', index: 7, text:'circ'},
-    {name: 'color', index: 8, text:'color'},
-    {name: 'name', index: 9, text:'name'},
-    
-];
-
-// 便于通过name来找index
-var topo_field_indices = topo_schema.reduce(function (obj, item) {
-    obj[item.name] = item.index;
-    return obj;
-}, {});
 
 
 // gui

@@ -1,25 +1,7 @@
 // 预设变量
-var root_path = './resources/detect_pic/';
 
-// 配置
-var detection_node_map = new Map();
-var detection_data = [];
-var detection_edges = [];
-var detection_option;
 
-var detection_schema = [
-    {name: 'cx', index: 0, text:'cx'},
-    {name: 'cy', index: 1, text:'cy'},
-    {name: 'radius', index: 2, text:'radius'},
-    {name: 'circ', index: 3, text:'circ'},
-    {name: 'name', index: 4, text:'name'},
-];
 
-// 便于通过name来找index
-var detection_field_indices = detection_schema.reduce(function (obj, item) {
-    obj[item.name] = item.index;
-    return obj;
-}, {});
 
 
 
@@ -31,7 +13,7 @@ function init(){
 
     loadDectData(0);
     detection_window.setOption(detection_option = getOption(detection_data));
-    changeBackground(0);
+    // changeBackground(0);
 }
 
 
@@ -171,13 +153,3 @@ function getOption(data) {
 }
 
 
-function changeBackground(step){
-    var pic_path = root_path+'step'+String(step)+'.png';
-
-    $("#detection-container").css({
-        "background-image":"url(" + pic_path + ")",
-        "background-repeat": "no-repeat",
-        "background-size" :"100% 100%",
-	    "-moz-background-size": "100% 100%",
-    });
-}

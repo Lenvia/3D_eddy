@@ -8,9 +8,10 @@ var boxHeight = 4000*scaleHeight;  // 海底深度（默认为4000m）
 var tubeHeightFactor = 500;  // 控制流管高度
 
 var stepLimit = 60;  // 暂定60为最大天数
-
 var loadStepNum = 2;  // 3d流线加载多少天
 var tex_pps_step = 60;  // 2d和pps加载天数
+
+
 
 // 步数
 const steps = [];  // 一共60步
@@ -21,6 +22,10 @@ for (var i =0; i<=59; i++){
 }
 var eddyIndices = [];
 
+// 全局共享变量
+var currentMainStep;  // 当前时间步
+var currentMainIndex;  // 当前涡旋标签
+
 
 /**
  * 预加载变量
@@ -28,30 +33,9 @@ var eddyIndices = [];
 // 本地加载
 var depth_array;  // 深度数组，dpeth_array[i]表示第i层的高度
 var re_depth = new Map();  // 反向映射，通过高度映射第几层
-var eddyFeature;  // 涡核信息数组
-var eddyInfo;
-var eddyForwards;
-var eddyBackwards;
-var liveInfo;
 
-// 组件绑定（容器内部各自的gui自己管理）
+
 var gui_container = document.getElementById('gui');
-
-var detection_container = document.getElementById('detection-container');
-var detection_window = echarts.init(detection_container);
-
-var frequency_container = document.getElementById('frequency-container');
-var frequency_window = echarts.init(frequency_container);
-
-var path_container = document.getElementById('path-container');
-var path_window = echarts.init(path_container);
-
-var topo_container = document.getElementById('topo-container');
-var topo_window = echarts.init(topo_container);
-
-var parallel_container = document.getElementById('parallel-container');
-var parallel_window = echarts.init(parallel_container);
-
 
 
 /**
@@ -59,7 +43,7 @@ var parallel_window = echarts.init(parallel_container);
  */
 // 流线界面参数
 var dynamic = false;  // 默认不准动
-var currentMainStep;  // 当前时间步
+
 var lastStep;  // 上一日
 
 
@@ -74,29 +58,14 @@ var land_2d;  // 2d
 // 流线界面模型存放
 var whole_models = [];
 
-// 流线界面gui
-var step_ctrl;
-var appearFolder;
-var attrFolder;
-var colorFolder;
-var opaFolder;
-var funcFolder;
-
 
 /**
  * 主副窗口共享变量
  */
-var is3d = true;
 var existedEddyIndices = [];  // 场上存在的涡旋的index
 var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标【从主窗口触发】
 
-/**
- * echarts 共享变量
- */
-var cycNodeColor = "#ce5c5c";  // 气旋颜色，红色
-var anticycNodeColor = "#51689b";  // 反气旋颜色，蓝色
-var cycFlag = '气旋';
-var anticycFlag = '反气旋';
+
 
 /**
  * 更新信号
@@ -191,7 +160,7 @@ function initToolbar(){
 $("#step-selector").change(function() {
 
     lastStep = currentMainStep;
-    currentMainStep = $(this).val();
+    currentMainStep = parseInt($(this).val());
 
     // 清空index选择器
     $("#index-selector").empty();
@@ -203,8 +172,31 @@ $("#step-selector").change(function() {
 
     if(currentMainStep==-1) return ;
 
-    // 提醒流线页面刷新流线
+    // 并不能主动触发index选择器变化
+    // 手动触发
+    $("#index-selector").val(-1);
+    $("#index-selector").val(0);
+    $("#index-selector").change();
+
+    // 通知流线页面刷新流线
     switchTimeSign = true;
+
+    // 通知检测页面更新背景
+    changeBackground(currentMainStep);
+})
+
+$("#index-selector").change(function(){
+    currentMainIndex = parseInt($(this).val());
+
+    if(currentMainStep==-1 || currentMainIndex== -1) return ;
+
+    
+
+    console.log("currentMainIndex: ", currentMainIndex);
+
+    // 通知检测页面更新数据
+
+    // 通知拓扑页面更新数据
 
 })
 
@@ -392,4 +384,20 @@ function getCurCirc(d, index){
     if(temp==1)
         return cycFlag;
     else return anticycFlag;
+}
+
+
+/**
+ * 局部容器jquery触发
+ */
+
+function changeBackground(step){
+    var pic_path = root_pic_path+'step'+String(step)+'.png';
+
+    $("#detection-container").css({
+        "background-image":"url(" + pic_path + ")",
+        "background-repeat": "no-repeat",
+        "background-size" :"100% 100%",
+        "-moz-background-size": "100% 100%",
+    });
 }

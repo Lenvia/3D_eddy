@@ -205,10 +205,6 @@ function createSea(){
     sea.position.set(0,0,0);
     sea.name = "sea";
     scene.add(sea); //网格模型添加到场景中
-
-    if(!is3d){  // 如果当前模式不是3d，隐藏
-        sea.visible = false;
-    }
 }
 
 function createSeaFrame(){
@@ -332,9 +328,6 @@ function createLand(){
 
         console.log(surface.material);
 
-        if(!is3d){  // 如果当前模式不是3d，隐藏
-            surface.visible = false;
-        }
     });
 }
 
@@ -481,10 +474,6 @@ function createChannel(){
         channel = new THREE.Mesh( heightGeometry, material);
         channel.name = "channel";
         scene.add( channel );
-
-        if(!is3d){  // 如果当前模式不是3d，隐藏
-            channel.visible = false;
-        }
     })
 }
 
@@ -735,8 +724,6 @@ function updateMid(){
     mid2 = downValue+0.4*difValue;
     mid3 = downValue+0.6*difValue;
     mid4 = downValue+0.8*difValue;
-
-    console.log(downValue, mid1, mid2, mid3, mid4, upValue);
 }
 
 function parseColor(currentColor){
