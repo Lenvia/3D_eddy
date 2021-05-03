@@ -42,6 +42,9 @@ function initToolbar(){
     });
     currentMainStep = -1;
     lastStep = -1;
+
+    topo_yAxis = $("#yAxis-selector").val();
+    topo_sizeMap = $("#sizeMap-selector").val();
 }
 
 /**
@@ -97,13 +100,18 @@ $("#index-selector").change(function(){
 
     // 通知拓扑页面更新数据
     loadTopoData(currentMainName);
-    topo_window.setOption({
-        series: {
-            data: topo_data,
-            links: topo_edges,
-        }
-    })
+    flushTopo();
 
+    
+})
+
+$("#yAxis-selector").change(function(){
+    topo_yAxis = $(this).val();
+    flushTopo();
+})
+
+$("#sizeMap-selector").change(function(){
+    topo_sizeMap = $(this).val();
 })
 
 
@@ -119,5 +127,31 @@ function changeBackground(step){
         "background-repeat": "no-repeat",
         "background-size" :"100% 100%",
         "-moz-background-size": "100% 100%",
+    });
+}
+
+function flushTopo(){
+    topo_window.setOption({
+        series: {
+            data:topo_data.map(function (item, idx) {
+                return [
+                    item[0],
+                    item[topo_field_indices[topo_yAxis]],  // y轴的值
+                    // item[topo_field_indices[topo_sizeMap]],
+                    item[3],  // 舍弃sizeMap后，这个暂时用不到
+                    item[1],
+                    item[2],
+                    item[3],
+                    item[4],
+                    item[5],
+                    item[6], 
+                    item[7], 
+                    item[8],
+                    item[9],
+                    // idx
+                ];
+            }),
+            links: topo_edges,
+        }
     });
 }

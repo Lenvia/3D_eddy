@@ -40,6 +40,8 @@ var parallel_container = document.getElementById('parallel-container');
 var parallel_window = echarts.init(parallel_container);
 
 
+
+
 loadEddyFeatures();  // 加载涡核信息数组
 
 function loadEddyFeatures(){
