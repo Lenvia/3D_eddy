@@ -17,7 +17,7 @@
 	top: 50%;
 	height:80%;
 	transform:translate(0, -50%);
-	/* background-color: cornflowerblue; */
+	background-color: cornflowerblue;
 }
 
 .text-label{
@@ -52,7 +52,7 @@
 	top: 0px;
 	height: 100%;
 	width: 60%;
-    /* background-color: #1dbd17; */
+    background-color: #1dbd17;
 }
 
 #appearance-container{
@@ -61,7 +61,7 @@
 	top: 0px;
 	height: 100%;
 	width: 82%;
-    /* background-color: #1099d8; */
+    background-color: #1099d8;
 }
 
 #attribute-selector-content{

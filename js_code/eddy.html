@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<title>eddy</title>
-		<link rel="stylesheet" type="text/css" href="./eddy3.css">
+		<link rel="stylesheet" type="text/css" href="./eddy.css">
 		<link href="./libs/rgbaColorPicker.css" rel="stylesheet" />
 
 		<link rel="stylesheet" type="text/css" href="./node_modules/jquery-ui-dist/jquery-ui.min.css"/>
@@ -66,17 +66,11 @@
 							<input id="color-sec0" type="text" class="color-section" value="" />
 							<input id="color-sec1" type="text" class="color-section" value="" />
 							<input id="color-sec2" type="text" class="color-section" value="" />
-							<input id="color-sec3" type="text" class="color-section" value="" />
-							<input id="color-sec4" type="text" class="color-section" value="" />
+							<!-- <input id="color-sec3" type="text" class="color-section" value="" /> -->
+							<!-- <input id="color-sec4" type="text" class="color-section" value="" /> -->
 							
 						</div>
 					</div>
-
-					<div class="content" id="hide-content">
-						<label class="text-label">Hide</label>
-						<input id="hide" type="checkbox" value="" />
-					</div>
-
 
 					<button id="confirm-button">Confirm</button>
 					<button id="reset-button">Reset</button>
@@ -108,10 +102,16 @@
 				<div class="content" id="sizeMap-selector-content">
 					<label class="text-label">SizeMap</label>
 					<select id="sizeMap-selector">
-						<option value="radius">radius</option>
-						<option value="eke">eke</option>
+						<option value="10">10</option>
+						<option value="15">15</option>
+						<option value="20">20</option>
 					</select>
 				</div>
+
+				<div class="content" id="showLabel-content">
+						<label class="text-label">ShowLabel</label>
+						<input id="showLabel" type="checkbox" value="" checked="checked" />
+					</div>
 			</div>
 
 			<div id="global_controller-toolbar-container">

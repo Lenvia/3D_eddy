@@ -6,6 +6,7 @@ var topo_option;
 
 var topo_yAxis;
 var topo_sizeMap;
+var topo_showLabel;
 
 // 原始数据topo_schema，并非传递给series的数据下表
 var topo_schema = [
@@ -246,7 +247,7 @@ function getTopoOption(data) {
                         color : function(params) {
                             params.color = params.data[10];
                             
-                            console.log(params.color);
+                            // console.log(params.color);
                             return params.color;
                         }
                     }

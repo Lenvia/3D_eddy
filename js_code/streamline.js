@@ -28,8 +28,6 @@ var containerWidth, containerHeight;
 var curLine;  // 当前流线
 var lastLine;  // 上一条流线
 
-var textures_2d = [];
-
 // 流线界面模型存放
 var whole_models = [];
 
@@ -51,19 +49,13 @@ var lastSite;
 var currentAttr;  // 当前属性
 var upValue;  // 属性上界
 var downValue;  // 属性下界
-var difValue;  // 上下界差值
-var mid1, mid2, mid3, mid4;  // 中间点
 
-var keepValue = true;  // 保持设置
-var hideChannel = false; // 隐藏海峡
-var hideSurface = false;  // 隐藏陆地
+
 var pickMode = false;  // 选中模式（选择涡旋）
 
-var hideOutOfRange = false;  // 是否隐藏范围外的流线
-
-var currentColor0, currentColor1, currentColor2, currentColor3, currentColor4;
-var currentRGB0, currentRGB1, currentRGB2, currentRGB3, currentRGB4;
-var currentOpacity0, currentOpacity1, currentOpacity2, currentOpacity3, currentOpacity4;
+var currentColor0, currentColor1, currentColor2;
+var currentRGB0, currentRGB1, currentRGB2;
+var currentOpacity0, currentOpacity1, currentOpacity2;
 
 
 
@@ -721,15 +713,6 @@ function loadAttrArray(attr){
 
 
 
-// 根据上下界改变mid中间点
-function updateMid(){
-    difValue = upValue-downValue;
-    mid1 = downValue+0.2*difValue;
-    mid2 = downValue+0.4*difValue;
-    mid3 = downValue+0.6*difValue;
-    mid4 = downValue+0.8*difValue;
-}
-
 function parseColor(currentColor){
     if(currentColor == "") // 如果未选择，默认为白色
         return [1, 1, 1];
@@ -761,13 +744,6 @@ function setColorAndOpacity(){
 
     if(currentColor2.length==3){currentRGB2 = currentColor2; currentOpacity2 = 1.0;
     }else{currentRGB2 = currentColor2.splice(3); currentColor2 = currentColor2[3];}
-
-    if(currentColor3.length==3){currentRGB3 = currentColor3; currentOpacity3 = 1.0;
-    }else{currentRGB3 = currentColor3.splice(3); currentColor3 = currentColor3[3];}
-
-    if(currentColor4.length==3){currentRGB4 = currentColor4; currentOpacity4 = 1.0;
-    }else{currentRGB4 = currentColor4.splice(3); currentColor4 = currentColor4[3];}
-    
 }
 
 // 在图中显示涡核
@@ -817,13 +793,11 @@ function assignAllColorAndOpacity(curLine){
     var cColor0 = currentRGB0;
     var cColor1 = currentRGB1;
     var cColor2 = currentRGB2;
-    var cColor3 = currentRGB3;
-    var cColor4 = currentRGB4;
+
     var cOpa0 = currentOpacity0;
     var cOpa1 = currentOpacity1;
     var cOpa2 = currentOpacity2;
-    var cOpa3 = currentOpacity3;
-    var cOpa4 = currentOpacity4;
+
 
     var currentAttrArray = [];
     switch(currentAttr){
@@ -838,58 +812,24 @@ function assignAllColorAndOpacity(curLine){
 
     for(var i = 0; i<currentAttrArray.length; i++){
         if(currentAttrArray[i]<downValue){
-            curLine.geometry.attributes.color.array[3*i] = 1;
-            curLine.geometry.attributes.color.array[3*i+1] = 1;
-            curLine.geometry.attributes.color.array[3*i+2] = 1;
-
-            if(hideOutOfRange)
-                curLine.geometry.attributes.opacity.array[i] = 0;
-            else 
-                curLine.geometry.attributes.opacity.array[i] = 1;
-        }
-        else if(currentAttrArray[i]>=downValue && currentAttrArray[i]< mid1){
             curLine.geometry.attributes.color.array[3*i] = cColor0[0];
             curLine.geometry.attributes.color.array[3*i+1] = cColor0[1];
             curLine.geometry.attributes.color.array[3*i+2] = cColor0[2];
             curLine.geometry.attributes.opacity.array[i] = cOpa0;
         }
-        else if(currentAttrArray[i]>= mid1 && currentAttrArray[i]< mid2){
+        else if(currentAttrArray[i]>= downValue && currentAttrArray[i]<= upValue){
             curLine.geometry.attributes.color.array[3*i] = cColor1[0];
             curLine.geometry.attributes.color.array[3*i+1] = cColor1[1];
             curLine.geometry.attributes.color.array[3*i+2] = cColor1[2];
             curLine.geometry.attributes.opacity.array[i] = cOpa1;
         }
-        else if(currentAttrArray[i]>= mid2 && currentAttrArray[i]< mid3){
+        else{
             curLine.geometry.attributes.color.array[3*i] = cColor2[0];
             curLine.geometry.attributes.color.array[3*i+1] = cColor2[1];
             curLine.geometry.attributes.color.array[3*i+2] = cColor2[2];
             curLine.geometry.attributes.opacity.array[i] = cOpa2;
         }
-        else if(currentAttrArray[i]>= mid3 && currentAttrArray[i]< mid4){
-            curLine.geometry.attributes.color.array[3*i] = cColor3[0];
-            curLine.geometry.attributes.color.array[3*i+1] = cColor3[1];
-            curLine.geometry.attributes.color.array[3*i+2] = cColor3[2];
-            curLine.geometry.attributes.opacity.array[i] = cOpa3;
-        }
-        else if(currentAttrArray[i]>= mid4 && currentAttrArray[i]< upValue){
-            curLine.geometry.attributes.color.array[3*i] = cColor4[0];
-            curLine.geometry.attributes.color.array[3*i+1] = cColor4[1];
-            curLine.geometry.attributes.color.array[3*i+2] = cColor4[2];
-            curLine.geometry.attributes.opacity.array[i] = cOpa4;
-        }
-        else{
-            curLine.geometry.attributes.color.array[3*i] = 1;
-            curLine.geometry.attributes.color.array[3*i+1] = 1;
-            curLine.geometry.attributes.color.array[3*i+2] = 1;
-
-            if(hideOutOfRange)
-                curLine.geometry.attributes.opacity.array[i] = 0;
-            else 
-                curLine.geometry.attributes.opacity.array[i] = 1;
-        }
     }
-
-
 }
 
 
@@ -1134,14 +1074,11 @@ $("#confirm-button").click(
     function(){
         currentAttr = $("#attribute-selector").val();
         
-        hideOutOfRange = $("#hide").is(':checked');
 
         // 得到RGB数组orRGBA数组
         currentColor0 = parseColor($("#color-sec0").val());
         currentColor1 = parseColor($("#color-sec1").val());
         currentColor2 = parseColor($("#color-sec2").val());
-        currentColor3 = parseColor($("#color-sec3").val());
-        currentColor4 = parseColor($("#color-sec4").val());
 
         
         downValue = $("#lower-bound").val();
@@ -1162,13 +1099,8 @@ $("#confirm-button").click(
         else upValue = parseFloat(upValue);
         
 
-
-        if(currentColor0.length!=0 && currentColor1.length!=0 && currentColor2.length!=0 && currentColor3.length!=0 && currentColor4.length!=0){
-            updateMid();
-            setColorAndOpacity();
-
-            assignAllColorAndOpacity(curLine);  // 属性数组赋值
-            updateColorAndOpacity(curLine);  // 改变材质
-        }
+        setColorAndOpacity();
+        assignAllColorAndOpacity(curLine);  // 属性数组赋值
+        updateColorAndOpacity(curLine);  // 改变材质
     }
 )

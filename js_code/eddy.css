@@ -1,20 +1,350 @@
 /* id 选择器以 "#" 来定义。 */
 /* 类选择器以一个点号显示 */
 
-/* #gui{
+/* 全局变量 */
+:root{
+	/* --borderColor: #ccc; */
+	font-size:14px;
+	--guiHeight: 6vh;
+	--viewHeight: calc(100vh - var(--guiHeight));
+	--viewWidth: 100vw;
+
+	pointer-events: auto;
+}
+
+.content{
+	/* 垂直居中 */
+	top: 50%;
+	height:80%;
+	transform:translate(0, -50%);
+	background-color: cornflowerblue;
+}
+
+.text-label{
+	position:absolute; 
+	left:0; 
+	top: 50%; 
+	transform:translate(0, -50%); 
+}
+
+.color-section{
+	position: absolute;
+	width: 25%;
+	height: 75%;
+
+	/* background-color: turquoise; */
+}
+
+
+
+#gui{
     position: absolute;
 	left: 0px;
 	top: 0px;
+	height: var(--guiHeight);
+	width: 100%;
+    background-color: #b9e3fc;
+}
+
+#streamline-toolbar-container{
+	position: absolute;
+	left: 0px;
+	top: 0px;
 	height: 100%;
-	width: 15vw;
-    background-color: #654321;
-} */
+	width: var(--viewHeight);
+    background-color: #1dbd17;
+}
+
+#appearance-container{
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	height: 100%;
+	width: 82%;
+    background-color: #1099d8;
+}
+
+#attribute-selector-content{
+	position: absolute;
+	left: 2%;
+	width: 19%;
+
+}
+
+#attribute-selector{
+	position: absolute;
+	right: 0;
+	width: 55%;
+
+	top: 50%;
+	transform:translate(0, -50%);
+}
+
+#range-content{
+	position: absolute;
+	left: 23%;
+	width: 24%;
+}
+
+#range-section{
+	position: absolute;
+	right: 0;
+	width: 70%;
+	
+	/* background-color: rgb(233, 236, 8); */
+
+	height: 50%;
+	top: 50%;
+	transform:translate(0, -50%);
+}
+
+#lower-bound{
+	position: absolute;
+	left: 0;
+	width: 40%;
+	height: 80%;
+}
+
+#upper-bound{
+	position: absolute;
+	right: 0;
+	width: 40%;
+	height: 80%;
+}
+
+#tilde{
+	position: absolute;
+	text-align: center;
+	left: 40%;
+	width: 20%;
+}
+
+#color-content{
+	position: absolute;
+	left: 50%;
+	width: 28%;
+}
+
+#color-sections{
+	position: absolute;
+	right: 0;
+	width: 75%;
+	/* background-color: rgb(233, 236, 8); */
+
+	top: 50%;
+	height: 50%;
+	transform:translate(0, -50%);
+
+	text-align: center;
+	
+}
+
+#color-sec0{
+	left: 0;
+}
+
+#color-sec1{
+	left: 35%;
+}
+
+#color-sec2{
+	right:0;
+}
+
+
+
+
+#confirm-button{
+	position: absolute;
+	right: 10%;
+	width: 10%;
+	
+	top: 50%;
+	height: 50%;
+	transform:translate(0, -50%);
+
+	text-align: center;
+}
+
+#reset-button{
+	position: absolute;
+	right: 0;
+	width: 9%;
+	
+	top: 50%;
+	height: 50%;
+	transform:translate(0, -50%);
+
+	text-align: center;
+}
+
+
+
+
+
+
+
+#action-container{
+	position: absolute;
+	right: 0px;
+	top: 0px;
+	height: 100%;
+	width: 18%;
+    /* background-color: #652146; */
+}
+
+#dynamic-content{
+	position: absolute;
+	left: 5%;
+	width: 48%;
+	
+}
+
+#dynamic{
+	position: absolute;
+	right: 0;
+	/* width: 45%; */
+	
+	top: 50%;
+	transform:translate(0, -50%);
+}
+
+#pick-content{
+	position: absolute;
+	right: 5%;
+	width: 30%;
+}
+
+#pick{
+	position: absolute;
+	right: 0;
+	/* width: 45%; */
+	
+	top: 50%;
+	transform:translate(0, -50%);
+}
+
+
+
+
+
+
+#topo-toolbar-container{
+	position: absolute;
+	/* right: 20%; */
+	left: var(--viewHeight);
+	top: 0px;
+	height: 100%;
+	width: calc(80vw - var(--viewHeight));
+    background-color: #b823bd;
+}
+
+#yAxis-selector-content{
+	position: absolute;
+	left: 4%;
+	width: 30%;
+}
+
+#yAxis-selector{
+	position: absolute;
+	right: 0;
+	width: 60%;
+	
+	top: 50%;
+	transform:translate(0, -50%);
+}
+
+
+
+#sizeMap-selector-content{
+	position: absolute;
+	/* right: 5%; */
+	left: 38%;
+	top: 50%;
+	width: 33%;
+}
+
+#sizeMap-selector{
+	position: absolute;
+	right: 0;
+	width: 52%;
+	
+	top: 50%;
+	transform:translate(0, -50%);
+}
+
+
+#showLabel-content{
+	position: absolute;
+	right: 3%;
+	width: 23%;
+}
+
+#showLabel{
+	position: absolute;
+	right: 0;
+	/* width: 45%; */
+	
+	top: 50%;
+	transform:translate(0, -50%);
+}
+
+
+
+
+
+
+#global_controller-toolbar-container{
+	position: absolute;
+	right: 0px;
+	top: 0px;
+	height: 100%;
+	width: 20%;
+    background-color: #e97705;
+}
+
+#step-selector-content{
+	position: absolute;
+	left: 5%;
+	width: 42%;
+}
+
+#step-selector{
+	position: absolute;
+	right: 0;
+	width: 45%;
+	
+	top: 50%;
+	transform:translate(0, -50%);
+}
+
+
+
+#index-selector-content{
+	position: absolute;
+	right: 5%;
+	top: 50%;
+	width: 42%;
+}
+
+#index-selector{
+	position: absolute;
+	right: 0;
+	width: 45%;
+	
+	top: 50%;
+	transform:translate(0, -50%);
+}
+
+
+
+
 
 #view{
     position: absolute;
 	right: 0px;
-	top: 0px;
-	height: 100%;
+	top: var(--guiHeight);
+	height: var(--viewHeight);
 	/* width: 85vw; */
     width: 100vw;
     /* background-color: blue; */
@@ -25,7 +355,7 @@
 	left: 0px;
 	top: 0px;
 	height: 100%;
-	width: 100vh;
+	width: var(--viewHeight);
     /* background-color: blue; */
 }
 
@@ -34,8 +364,8 @@
 	right: 0px;
 	top: 0px;
 	height: 100%;
-	/* width: calc(85vw - 100vh); */
-    width: calc(100vw - 100vh);
+    width: calc(var(--viewWidth) - var(--viewHeight));
+
     /* background-color: #E95F74; */
 }
 
@@ -45,7 +375,7 @@
 	top: 0px;
 	height: 50%;
 	width: 50%;
-	/* background-color: #bfd1e5; */
+	background-color: #bfd1e5;
 }
 
 #detection-container{
@@ -55,6 +385,7 @@
 	width: 50%;
 	height: 50%;
 	/* background-color: #1b76dd; */
+
 }
 
 #frequency-container{
@@ -82,7 +413,7 @@
 
 	width: 100%;
 	height: 50%;
-	/* background-color: #fae6fa; */
+	background-color: #fae6fa;
 	/* background-color: #ADD8E6; */
 }
 
@@ -94,6 +425,10 @@
 	height: 50%;
 	/* background-color: #ffff00; */
 }
+
+
+
+
 
 #streamline-gui{
 	position: absolute;
