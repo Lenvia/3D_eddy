@@ -21,12 +21,6 @@ var path_field_indices = path_schema.reduce(function (obj, item) {
 }, {});
 
 
-// gui
-var path_gui;
-var path_gui_opt;
-var scaleFactor = 1;
-
-
 
 init();
 

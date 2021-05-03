@@ -20,19 +20,14 @@ var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
 var renderWidth, renderHeight;
 var containerWidth, containerHeight;
 
-// 步数
-const steps = [];  // 一共60步
-const exSteps = [-1]; // 扩展步数，第一个是-1
-for (var i =0; i<=59; i++){
-    steps.push(i);
-    exSteps.push(i);
-}
+
 
 /**
  * 涡旋模型
  */
 var curLine;  // 当前流线
-var curModel;  // 当前涡旋立体形状
+var lastLine;  // 上一条流线
+
 var textures_2d = [];
 var curModels = [];
 
@@ -43,13 +38,13 @@ var existedCones = [];  // 场上存在的标记
 var selected_pos = undefined;  // 被鼠标选中的pos
 var specific_color = 0xff0000;  // 被选中的指针的默认颜色
 
-/**
- * gui板块
- */
+
 var gui;
 var default_opt;  // 默认设置
 
-// gui参数
+var curSite;  // 当前涡旋流线name
+var lastSite;
+
 var currentAttr;  // 当前属性
 var upValue;  // 属性上界
 var downValue;  // 属性下界
@@ -61,19 +56,11 @@ var hideChannel = false; // 隐藏海峡
 var hideSurface = false;  // 隐藏陆地
 var pickMode = false;  // 选中模式（选择涡旋）
 
-// RGB
-var currentRGB0, currentRGB1, currentRGB2, currentRGB3, currentRGB4;
+var hideOutOfRange = false;  // 是否隐藏范围外的流线
 
 var currentColor0, currentColor1, currentColor2, currentColor3, currentColor4;
-
-//当前gui透明度面板值
+var currentRGB0, currentRGB1, currentRGB2, currentRGB3, currentRGB4;
 var currentOpacity0, currentOpacity1, currentOpacity2, currentOpacity3, currentOpacity4;
-
-// 实现双向绑定（重置面板）
-var color0_ctrl, color1_ctrl, color2_ctrl, color3_ctrl, color4_ctrl;
-var opa0_ctrl, opa1_ctrl, opa2_ctrl, opa3_ctrl, opa4_ctrl;
-var upValue_ctrl;
-var downValue_ctrl;
 
 
 
@@ -143,7 +130,7 @@ function init() {
     loadEddiesForSteps();  // 加载涡旋模型
     
     
-    setGUI();  // 设置交互面板
+    // setGUI();  // 设置交互面板
 
 
     //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
@@ -178,24 +165,6 @@ function onWindowResize() {
 
 
 
-
-// 【废弃】载入2d图片
-function loadTexture2d(){
-    for(let i=0; i<tex_pps_step; i++){
-        var str;
-        if(i<9)
-            str = '0'+String(i+1);  // 图片下标是从1开始的
-        else
-            str = String(i+1);
-        
-        var texture = THREE.ImageUtils.loadTexture('./resources/Ensemble1/Ensemble1TimeStep'+str+'.png', {}, function() {
-            render();
-        });
-
-        textures_2d[i] = texture;
-    }
-    console.log(textures_2d);
-}
 
 
 function createHelper(){
@@ -736,8 +705,7 @@ function loadOneAttrArray(attr, path, d){
             if(d==loadStepNum-1){
                 console.log(attr+"值设置完毕");
 
-                curLine = findModel("step0");
-                scene.add(curLine);
+                // curLine = findModel("step0");
             }
         })
     });
@@ -765,46 +733,6 @@ function loadAttrArray(attr){
 function setGUI(){
     gui = new dat.GUI({ autoPlace: false });
 
-    default_opt = new function(){
-        this.currentMainStep = -1;  // 初始时间为第0步
-        this.currentAttr = 'OW'; // 初始展示属性为OW
-        this.upValue = 1; // 属性的下界
-        this.downValue = -1;  // 属性的上界
-        this.keepValue = true; // 保持设置
-        this.hideChannel = false;  // 是否隐藏海峡地形
-        this.hideSurface = false; // 是否隐藏陆地
-        this.pickMode = false;  // 选中模式
-        this.dynamic = false;  // 是否让全局涡旋运动
-        this.color0 = [255, 255, 255]; // RGB array
-        this.color1 = [255, 255, 255]; // RGB array
-        this.color2 = [255, 255, 255]; // RGB array
-        this.color3 = [255, 255, 255]; // RGB array
-        this.color4 = [255, 255, 255]; // RGB array
-        this.opacity0 = 1.0;
-        this.opacity1 = 1.0;
-        this.opacity2 = 1.0;
-        this.opacity3 = 1.0;
-        this.opacity4 = 1.0;
-    };
-
-    /* 
-        一些默认的属性
-    */
-
-    // 日期相关
-    currentMainStep = -1;
-    lastStep = -1;
-    var lastLine;  // 当前显示的线，上次显示的线
-    var site, last_site;
-    // 默认属性值
-    currentAttr = 'OW';
-
-    // 属性值上下界
-    upValue = default_opt.upValue;
-    downValue = default_opt.downValue;
-    updateMid();
-
-
     // 切换日期
     step_ctrl = gui.add(default_opt, 'currentMainStep', exSteps).onChange(function(){
         currentMainStep = default_opt.currentMainStep;
@@ -819,54 +747,11 @@ function setGUI(){
         }
         curModels.length = 0;
 
-        if(is3d){ // 3d视图
-            if(lastStep!=-1){  // 清除上次的显示
-                last_site = "step"+String(lastStep);
-                lastLine = scene.getObjectByName(last_site);
-                if(lastLine!=undefined)  // 这个判断不加也行
-                    scene.remove(lastLine);
-            }
-            site = "step"+String(currentMainStep);
-            
-            curLine = findModel(site);
-            scene.add(curLine);
-
-            // 更新当步当前属性的echarts
-            updateEcharts(currentAttr, currentMainStep);
-
-            if(curLine!=undefined){
-                if(keepValue){  // 更换日期，但属性设置不变
-                    keepValue_update(curLine);
-                }
-                else{
-                    resetCtrl();
-                    resetMaterial(curLine);
-                }
-                console.log(curLine.name);
-            }
-            lastStep = currentMainStep;
-
-        }
-        else{  // 2d视图
-            if(curLine!=undefined)  // 去除3d视图显示的流线
-                scene.remove(curLine);
-            // land_2d.material.map = textures_2d[currentMainStep];
-
-            loadEddyModel(currentMainStep);
-        }
-
+    
         removePointers();
         if(currentMainStep!=-1){
             showPointers();  // 显示当日涡核指示器
         }
-        
-        // console.log(restrainUpdateSign);
-        if(!restrainUpdateSign)  // 如果没有被抑制（即主窗口自己更新的日期，就会带动局部窗口更新）
-            switchUpdateSign = true; //向局部窗口发送信号该更新了
-        else{  // 局部窗口抑制主窗口改变局部窗口
-            restrainUpdateSign = false;  // 清空
-        }
-        
         
     });
 
@@ -884,6 +769,11 @@ function updateMid(){
 }
 
 function parseColor(currentColor){
+    // console.log(currentColor);
+    if(currentColor == "") // 如果未选择，默认为白色
+        return [1, 1, 1];
+    
+
     if(currentColor.substr(0,1) == "#"){  // 16进制rgb
         let RGB = new THREE.Color(currentColor).toArray();  // 每个元素范围是0~1
         // console.log(RGB);
@@ -892,8 +782,8 @@ function parseColor(currentColor){
     else{
         let RGBA = currentColor.match(/[\d.]+/g);
 
-        if(RGBA == null)
-            return []
+        // if(RGBA == null)
+        //     return []
         
         RGBA[0] = parseFloat(RGBA[0])/255;
         RGBA[1] = parseFloat(RGBA[1])/255;
@@ -997,7 +887,11 @@ function assignAllColorAndOpacity(curLine){
             curLine.geometry.attributes.color.array[3*i] = 1;
             curLine.geometry.attributes.color.array[3*i+1] = 1;
             curLine.geometry.attributes.color.array[3*i+2] = 1;
-            curLine.geometry.attributes.opacity.array[i] = 0;
+
+            if(hideOutOfRange)
+                curLine.geometry.attributes.opacity.array[i] = 0;
+            else 
+                curLine.geometry.attributes.opacity.array[i] = 1;
         }
         else if(currentAttrArray[i]>=downValue && currentAttrArray[i]< mid1){
             curLine.geometry.attributes.color.array[3*i] = cColor0[0];
@@ -1033,7 +927,11 @@ function assignAllColorAndOpacity(curLine){
             curLine.geometry.attributes.color.array[3*i] = 1;
             curLine.geometry.attributes.color.array[3*i+1] = 1;
             curLine.geometry.attributes.color.array[3*i+2] = 1;
-            curLine.geometry.attributes.opacity.array[i] = 0;
+
+            if(hideOutOfRange)
+                curLine.geometry.attributes.opacity.array[i] = 0;
+            else 
+                curLine.geometry.attributes.opacity.array[i] = 1;
         }
     }
 
@@ -1214,6 +1112,32 @@ function changePointer(index, hex){
     });
 }
 
+function updateStreamline(){
+    if(lastStep!=-1){  // 清除上次的显示
+        lastSite = "step"+String(lastStep);
+        lastLine = scene.getObjectByName(lastSite);
+
+        if(lastLine!=undefined)  // 这个判断不加也行
+            scene.remove(lastLine);
+    }
+
+    curSite = "step"+String(currentMainStep);
+    
+    curLine = findModel(curSite);
+    scene.add(curLine);
+
+    // 更新当步当前属性的echarts
+    // updateEcharts(currentAttr, currentMainStep);
+    
+    if(curLine!=undefined){
+        $("#confirm-button").click();  // 模拟一次点击
+    }
+
+
+
+    lastStep = currentMainStep;
+}
+
 
 function setRenderSize() {
     containerWidth = String(getStyle(container, "width"));
@@ -1230,14 +1154,20 @@ function setRenderSize() {
 
 function animate() {
 
-    if(dynamic)  // 只有dynamic为true时才渲染
-        DyChange(0.5);
+    // if(dynamic)  // 只有dynamic为true时才渲染
+    //     DyChange(0.5);
 
-    if(dyeSign){  // 收到染色信号
-        dyeSign = false;  // 取消染色信号
-        for(let i=0; i<existedEddyIndices.length; i++){
-            changePointer(existedEddyIndices[i], specific_color);
-        }
+    // if(dyeSign){  // 收到染色信号
+    //     dyeSign = false;  // 取消染色信号
+    //     for(let i=0; i<existedEddyIndices.length; i++){
+    //         changePointer(existedEddyIndices[i], specific_color);
+    //     }
+    // }
+
+    if(switchTimeSign){  // 时间改变了，更新流线
+        switchTimeSign = false;
+
+        updateStreamline();
     }
     
     stats.update();
@@ -1258,8 +1188,8 @@ function render() {
 $("#confirm-button").click(
     function(){
         currentAttr = $("#attribute-selector").val();
-        downValue = parseFloat($("#lower-bound").val());
-        upValue = parseFloat($("#upper-bound").val());
+        
+        hideOutOfRange = $("#hide").is(':checked');
 
         // 得到RGB数组orRGBA数组
         currentColor0 = parseColor($("#color-sec0").val());
@@ -1268,7 +1198,27 @@ $("#confirm-button").click(
         currentColor3 = parseColor($("#color-sec3").val());
         currentColor4 = parseColor($("#color-sec4").val());
 
-        if(downValue!=undefined && upValue!=undefined && currentColor0.length!=0 && currentColor1.length!=0 && currentColor2.length!=0 && currentColor3.length!=0 && currentColor4.length!=0){
+        
+        downValue = $("#lower-bound").val();
+
+        if(downValue==""){
+            downValue = 0;
+            $("#lower-bound").val(0);
+        }
+        else downValue = parseFloat(downValue);
+        
+
+        upValue = $("#upper-bound").val();
+
+        if(upValue==""){
+            upValue = 0;
+            $("#upper-bound").val(0);
+        }
+        else upValue = parseFloat(upValue);
+        
+
+
+        if(currentColor0.length!=0 && currentColor1.length!=0 && currentColor2.length!=0 && currentColor3.length!=0 && currentColor4.length!=0){
             updateMid();
             setColorAndOpacity();
 

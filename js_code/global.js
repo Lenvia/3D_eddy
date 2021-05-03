@@ -9,8 +9,18 @@ var tubeHeightFactor = 500;  // 控制流管高度
 
 var stepLimit = 60;  // 暂定60为最大天数
 
-var loadStepNum = 1;  // 3d流线加载多少天
+var loadStepNum = 2;  // 3d流线加载多少天
 var tex_pps_step = 60;  // 2d和pps加载天数
+
+// 步数
+const steps = [];  // 一共60步
+const exSteps = [-1]; // 扩展步数，第一个是-1
+for (var i =0; i<=59; i++){
+    steps.push(i);
+    exSteps.push(i);
+}
+var eddyIndices = [];
+
 
 /**
  * 预加载变量
@@ -45,21 +55,23 @@ var parallel_window = echarts.init(parallel_container);
 
 
 /**
- * 主界面变量
+ * 流线界面变量
  */
-// 主界面参数
+// 流线界面参数
 var dynamic = false;  // 默认不准动
-var currentMainStep;  // （主面板）当前日期
-var lastStep;  // （主面板）上一日
+var currentMainStep;  // 当前时间步
+var lastStep;  // 上一日
 
-// 主界面模型
+
+
+// 流线界面模型
 var sea;  // 海
 var seaFrame;  // 海框架
 var channel;  // 峡谷地形
 var surface;  // 表面陆地
 var land_2d;  // 2d
 
-// 主界面模型存放
+// 流线界面模型存放
 var whole_models = [];
 
 // 流线界面gui
@@ -91,9 +103,12 @@ var anticycFlag = '反气旋';
  */
 // 主窗口触发
 var pickUpdateSign = false;  // 主窗口选择涡旋了
-var switchUpdateSign = false;  // 如果为true，表示主界面切换日期而引起局部涡旋的更新
+
+var switchTimeSign = false;  // 如果为true，表示时间已改变
+
+
 // 局部窗口触发
-var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的日期，这里不能再反过来清除局部窗口的元素
+var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的时间步，这里不能再反过来清除局部窗口的元素
 var dyeSign = false;  // 提醒主窗口去染色
 // DOM组件绑定函数信号
 var topoClickSign = false;  // 鼠标点击了拓扑图节点
@@ -103,7 +118,10 @@ var topoClickSign = false;  // 鼠标点击了拓扑图节点
 
 loadDepth();  // 加载深度数组
 loadEddyFeatures();  // 加载涡核信息数组
- 
+
+initToolbar();
+
+
 /*
     预加载
 */
@@ -156,11 +174,42 @@ function loadEddyFeatures(){
     })
 }
  
+function initToolbar(){
+    
+    exSteps.forEach(function(item, index){
+        $("#step-selector").append("<option value='"+String(item)+"'>"+String(item)+"</option>");
+    });
+    currentMainStep = -1;
+    lastStep = -1;
+}
+
+/**
+ * 全局触发
+ */
+
+// 时间步长选择器触发
+$("#step-selector").change(function() {
+
+    lastStep = currentMainStep;
+    currentMainStep = $(this).val();
+
+    // 清空index选择器
+    $("#index-selector").empty();
+    // 从info中添加index
+    for(let i=0; i<eddyInfo[currentMainStep].length; i++){
+        eddyIndices.push(i);
+        $("#index-selector").append("<option value='"+String(i)+"'>"+String(i)+"</option>");
+    }
+
+    // 提醒流线页面刷新流线
+    switchTimeSign = true;
+
+})
+
+
 /*
-    触发函数
+    辅助函数
 */
-
-
 
 
 //numberMillis 毫秒
