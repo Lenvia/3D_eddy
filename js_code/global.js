@@ -201,6 +201,8 @@ $("#step-selector").change(function() {
         $("#index-selector").append("<option value='"+String(i)+"'>"+String(i)+"</option>");
     }
 
+    if(currentMainStep==-1) return ;
+
     // 提醒流线页面刷新流线
     switchTimeSign = true;
 
@@ -353,9 +355,9 @@ function pxy2xy(px, py){
 // 获得DOM的style
 function getStyle(obj,attr){
     if(obj.currentStyle){//兼容IE
-            return obj.currentStyle[attr];
+        return obj.currentStyle[attr];
     }else{
-            return getComputedStyle(obj,false)[attr];
+        return getComputedStyle(obj,false)[attr];
     }
 }
 

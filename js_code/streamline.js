@@ -29,7 +29,6 @@ var curLine;  // 当前流线
 var lastLine;  // 上一条流线
 
 var textures_2d = [];
-var curModels = [];
 
 /**
  * 涡旋位置指示器
@@ -727,35 +726,7 @@ function loadAttrArray(attr){
 }
 
 
-/*
-    设置交互GUI
-*/
-function setGUI(){
-    gui = new dat.GUI({ autoPlace: false });
 
-    // 切换日期
-    step_ctrl = gui.add(default_opt, 'currentMainStep', exSteps).onChange(function(){
-        currentMainStep = default_opt.currentMainStep;
-        currentMainStep = parseInt(currentMainStep);
-        console.log("currentMainStep:", currentMainStep);
-        // console.log(is3d);
-
-        // console.log(curModels);
-        for(let i=0; i<curModels.length; i++){
-            deleteModel(curModels[i]);
-            scene.remove(curModels[i]);
-        }
-        curModels.length = 0;
-
-    
-        removePointers();
-        if(currentMainStep!=-1){
-            showPointers();  // 显示当日涡核指示器
-        }
-        
-    });
-
-}
 
 // 根据上下界改变mid中间点
 function updateMid(){
@@ -769,7 +740,6 @@ function updateMid(){
 }
 
 function parseColor(currentColor){
-    // console.log(currentColor);
     if(currentColor == "") // 如果未选择，默认为白色
         return [1, 1, 1];
     
@@ -781,16 +751,11 @@ function parseColor(currentColor){
     }
     else{
         let RGBA = currentColor.match(/[\d.]+/g);
-
-        // if(RGBA == null)
-        //     return []
         
         RGBA[0] = parseFloat(RGBA[0])/255;
         RGBA[1] = parseFloat(RGBA[1])/255;
         RGBA[2] = parseFloat(RGBA[2])/255;
         RGBA[3] = parseFloat(RGBA[3]);
-
-        // console.log(RGBA);
 
         return RGBA;
     }
@@ -839,8 +804,6 @@ function showPointers(){
         scene.add( cone );
         
         existedCones.push(cone);
-
-        // console.log(sphere);
     }
 }
 
@@ -969,6 +932,7 @@ function resetMaterial(cur){
     }
     cur.geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( cur.geometry.attributes.startNum.array, 1 ));
 }
+
 // 把所有线条颜色都变成白色，透明度变为0，并且最大透明度数组恢复
 function resetMaterial0(cur){
     if(cur==undefined)
@@ -980,19 +944,6 @@ function resetMaterial0(cur){
     cur.geometry.setAttribute( 'mOpaIndex', new THREE.Float32BufferAttribute( cur.geometry.attributes.startNum.array, 1 ));
 }
 
-
-// 保持交互面板属性不变，按照当前属性渲染新的线条
-function keepValue_update(curLine){
-    // resetMaterial(curLine);
-
-    getCurrentValue();  // 更新current
-
-    assignAllColor(curLine);
-    assignAllOpacity(curLine);
-
-    updateColor(curLine);
-    updateOpacity(curLine);
-}
 
 
 // 根据模型名从数组中找到模型
@@ -1133,7 +1084,10 @@ function updateStreamline(){
         $("#confirm-button").click();  // 模拟一次点击
     }
 
-
+    removePointers();
+    if(currentMainStep!=-1){
+        showPointers();  // 显示涡核指示器
+    }
 
     lastStep = currentMainStep;
 }
