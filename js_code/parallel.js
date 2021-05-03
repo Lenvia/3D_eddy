@@ -1,4 +1,32 @@
+// 配置
+var parallel_data = [];
+var parallel_option;
 
+var parallel_schema = [
+    {name: 'cx', index: 0, text: 'cx'},
+    {name: 'cy', index: 1, text: 'cy'},
+    {name: 'radius', index: 2, text: 'radius'},
+    {name: 'eke', index: 3, text: 'eke'},
+    {name: 'ave_eke', index: 4, text: 'ave_eke'},
+    {name: 'vort', index: 5, text: 'vort'},
+    {name: 'circ', index: 6, text: 'circ'},
+
+    {name: 'live', index: 7, text:'live'},
+    {name: 'start_step', index: 8, text:'start_step'},
+    {name: 'end_step', index: 9, text:'end_step'},
+
+    {name: 'max_radius', index: 10, text: 'max_radius'},
+    {name: 'max_eke', index: 11, text: 'max_eke'},
+    {name: 'max_ave_eke', index: 12, text: 'max_ave_eke'},
+    
+    {name: 'name', index: 13, text: 'name'},
+];
+
+// 便于通过name来找index
+var parallel_field_indices = parallel_schema.reduce(function (obj, item) {
+    obj[item.name] = item.index;
+    return obj;
+}, {});
 
 
 var CATEGORY_DIM = 11;  // 不是生数据的，是series中map后的数据
@@ -7,12 +35,12 @@ var NAME_DIM = 12; // 同
 
 
 
-init();
+parallelInit();
 
 
-function init(){
+function parallelInit(){
     loadParallelData();
-    parallel_window.setOption(parallel_option = getOption(parallel_data));
+    parallel_window.setOption(parallel_option = getParallelOption(parallel_data));
 }
 
 
@@ -69,7 +97,7 @@ function loadParallelData(){
 
 
 
-function getOption(data){
+function getParallelOption(data){
     var option = {
         animation: false,
         brush: {

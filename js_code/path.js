@@ -1,19 +1,33 @@
 // 配置
+var path_node_map = new Map();
+var path_data = [];
+var path_edges = [];
+var path_option;
+
+var path_schema = [
+    {name: 'cx', index: 0, text:'cx'},
+    {name: 'cy', index: 1, text:'cy'},
+    {name: 'radius', index: 2, text:'radius'},
+    {name: 'circ', index: 3, text:'circ'},
+    {name: 'color', index: 4, text:'color'},
+    {name: 'name', index: 5, text:'name'},
+    {name: 'live', index: 6, text:'live'},
+];
+
+// 便于通过name来找index
+var path_field_indices = path_schema.reduce(function (obj, item) {
+    obj[item.name] = item.index;
+    return obj;
+}, {});
 
 
 
+pathInit();
 
-init();
-
-function init(){
-
-
+function pathInit(){
     loadPathData();
-
-    path_window.setOption(path_option = getOption(path_data));
+    path_window.setOption(path_option = getPathOption(path_data));
 }
-
-
 
 
 
@@ -204,36 +218,8 @@ function loadSinglePath(firstName){
 
 
 
-function getCurCirc(d, index){
-    var temp = eddyInfo[d][index][6];  // 气旋方向
-    if(temp==1)
-        return cycFlag;
-    else return anticycFlag;
-}
 
-function getCurColor(d, index){
-    var temp = eddyInfo[d][index][6];  // 气旋方向
-    if(temp==1)
-        return cycNodeColor;
-    else return anticycNodeColor;
-}
-
-function getCurColorByLive(live){
-    var color = '#ff' + live2Hex(live) + '00';
-    // console.log(color);
-    return color;
-}
-
-function live2Hex(live){
-    live = parseInt(256 - live*256/60);
-    if(live<16){
-        return '0' + live.toString(16);
-    }
-    else return live.toString(16);
-}
-
-
-function getOption(data) {
+function getPathOption(data) {
     
     return {
         backgroundColor: new echarts.graphic.RadialGradient(0.3, 0.3, 0.8, [{

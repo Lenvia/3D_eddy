@@ -30,6 +30,10 @@ var lastLine;  // 上一条流线
 
 var textures_2d = [];
 
+// 流线界面模型存放
+var whole_models = [];
+
+
 /**
  * 涡旋位置指示器
  */

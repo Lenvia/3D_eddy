@@ -1,19 +1,31 @@
-// 预设变量
+// 配置
+var detection_node_map = new Map();
+var detection_data = [];
+var detection_edges = [];
+var detection_option;
+
+var detection_schema = [
+    {name: 'cx', index: 0, text:'cx'},
+    {name: 'cy', index: 1, text:'cy'},
+    {name: 'radius', index: 2, text:'radius'},
+    {name: 'circ', index: 3, text:'circ'},
+    {name: 'name', index: 4, text:'name'},
+];
+
+// 便于通过name来找index
+var detection_field_indices = detection_schema.reduce(function (obj, item) {
+    obj[item.name] = item.index;
+    return obj;
+}, {});
 
 
 
+detectionInit();
 
-
-
-init();
-
-function init(){
-
-    
+function detectionInit(){
 
     loadDectData(0);
-    detection_window.setOption(detection_option = getOption(detection_data));
-    // changeBackground(0);
+    detection_window.setOption(detection_option = getDetectionOption(detection_data));
 }
 
 
@@ -47,16 +59,7 @@ function loadDectData(step){
 }
 
 
-
-function getCurCirc(d, index){
-    var temp = eddyInfo[d][index][6];  // 气旋方向
-    if(temp==1)
-        return cycFlag;
-    else return anticycFlag;
-}
-
-
-function getOption(data) {
+function getDetectionOption(data) {
     return {
 
         // backgroundColor: 'transparent',

@@ -1,4 +1,30 @@
+// 配置
+var topo_node_map = new Map();
+var topo_data = [];
+var topo_edges = [];
+var topo_option;
 
+// 原始数据topo_schema，并非传递给series的数据下表
+var topo_schema = [
+    {name: 'step', index: 0, text:'step'},
+    {name: 'cx', index: 1, text:'cx'},
+    {name: 'cy', index: 2, text:'cy'},
+    {name: 'radius', index: 3, text:'radius'},
+    {name: 'eke', index: 4, text:'eke'},
+    {name: 'depth', index:5, text:'depth'},
+    {name: 'vort', index: 6, text:'vort'},
+    
+    {name: 'circ', index: 7, text:'circ'},
+    {name: 'color', index: 8, text:'color'},
+    {name: 'name', index: 9, text:'name'},
+    
+];
+
+// 便于通过name来找index
+var topo_field_indices = topo_schema.reduce(function (obj, item) {
+    obj[item.name] = item.index;
+    return obj;
+}, {});
 
 
 // gui
@@ -12,28 +38,27 @@ for(let i=0; i<40; i++){
     index_arr.push(i);
 }
 
-var xAxisData = [];
+var topoXAxisData = [];
 for(let i=0; i<tex_pps_step; i++){
-    xAxisData.push(i);
+    topoXAxisData.push(i);
 }
 
 
 
 
 
-init();
+topoInit();
 
-function init(){
+function topoInit(){
 
     loadTopoData('0-0');
-    setTopoGUI();
+    // setTopoGUI();
+
+    topo_window.setOption(topo_option = getTopoOption(topo_data));
 
     
-    topo_window.setOption(topo_option = getOption(topo_data));
 
-    
-
-    var guiTopoContainer = document.getElementById('topo-gui');
+    // var guiTopoContainer = document.getElementById('topo-gui');
     // guiTopoContainer.appendChild(topo_gui.domElement);
     // topo_container.appendChild(guiTopoContainer);
 }
@@ -135,22 +160,10 @@ function loadTopoData(firstName){
 
 
 
-function getCurCirc(d, index){
-    var temp = eddyInfo[d][index][6];  // 气旋方向
-    if(temp==1)
-        return cycFlag;
-    else return anticycFlag;
-}
-
-function getCurColor(d, index){
-    var temp = eddyInfo[d][index][6];  // 气旋方向
-    if(temp==1)
-        return cycNodeColor;
-    else return anticycNodeColor;
-}
 
 
-function getOption(data) {
+
+function getTopoOption(data) {
     return {
         backgroundColor: new echarts.graphic.RadialGradient(0.3, 0.3, 0.8, [{
             offset: 0,
@@ -183,7 +196,7 @@ function getOption(data) {
         xAxis: {
             type: 'category',
             // boundaryGap: false,
-            data: xAxisData,
+            data: topoXAxisData,
         },
         yAxis: {
             name: 'eke',
@@ -270,7 +283,7 @@ function setTopoGUI(){
         this.scaleFactor = 1;
     };
 
-    topo_gui.add(topo_gui_opt, 'step', xAxisData).onChange(function(){
+    topo_gui.add(topo_gui_opt, 'step', topoXAxisData).onChange(function(){
         // 如果改变了日期，index默认回归0
         loadTopoData(String(topo_gui_opt.step)+'-'+'0');
         indexCtrl.setValue(0);

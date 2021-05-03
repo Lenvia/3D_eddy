@@ -108,7 +108,7 @@
 				</div>
 			</div>
 
-			<div id="global-toolbar-container">
+			<div id="global_controller-toolbar-container">
 
 				<!-- <div id="step-selector-container"> -->
 					<div class="content" id="step-selector-content">
@@ -133,10 +133,27 @@
         
         
 		
-		<!-- 全局 -->
-		<script type="text/javascript" src="./echarts_handler.js"></script>
+		<!-- 顺序不能乱 -->
+		<script type="text/javascript" src="./global_definer.js"></script>
+		
+		<script type="text/javascript" src="./echarts_preloader.js"></script>
+		<script type="text/javascript" src="./utils.js"></script>
 
-		<script type="text/javascript" src="./global.js"></script>
+
+		<!-- 检测js -->
+		<script type="text/javascript" src="./detection.js"></script>
+        <!-- 频率js -->
+        <!-- <script type="text/javascript" src="./frequency.js"></script> -->
+		<script type="text/javascript" src="./attrEcharts.js"></script>
+        <!-- 路径js -->
+        <script type="text/javascript" src="./path.js"></script>
+        <!-- 拓扑js -->
+        <script type="text/javascript" src="./topo.js"></script>
+        <!-- 平行js -->
+        <script type="text/javascript" src="./parallel.js"></script>
+
+		<!-- 全局控制器 -->
+		<script type="text/javascript" src="./global_controller.js"></script>
 
 		
 	</head>
@@ -150,17 +167,7 @@
 
 		<!-- 流线js -->
 		<script type="module" src="./streamline.js"></script>
-		<!-- 检测js -->
-		<script type="text/javascript" src="./detection.js"></script>
-        <!-- 频率js -->
-        <!-- <script type="text/javascript" src="./frequency.js"></script> -->
-		<script type="text/javascript" src="./attrEcharts.js"></script>
-        <!-- 路径js -->
-        <script type="text/javascript" src="./path.js"></script>
-        <!-- 拓扑js -->
-        <script type="text/javascript" src="./topo.js"></script>
-        <!-- 平行js -->
-        <script type="text/javascript" src="./parallel.js"></script>
+		
 		
 	</body>
 </html>
