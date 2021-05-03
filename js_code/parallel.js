@@ -35,7 +35,7 @@ var NAME_DIM = 12; // 同
 
 
 
-parallelInit();
+
 
 
 function parallelInit(){

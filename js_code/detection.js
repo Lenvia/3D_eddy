@@ -20,7 +20,7 @@ var detection_field_indices = detection_schema.reduce(function (obj, item) {
 
 
 
-detectionInit();
+
 
 function detectionInit(){
 

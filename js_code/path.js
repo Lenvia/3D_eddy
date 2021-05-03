@@ -22,7 +22,7 @@ var path_field_indices = path_schema.reduce(function (obj, item) {
 
 
 
-pathInit();
+
 
 function pathInit(){
     loadPathData();

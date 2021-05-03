@@ -25,7 +25,16 @@ var land_2d;  // 2d
 var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标【从主窗口触发】
 
 
-initToolbar();  // 初始化工具栏
+init();
+
+function init(){
+    initToolbar();  // 初始化工具栏
+    topoInit();
+    pathInit();
+    parallelInit();
+    detectionInit();
+}
+
  
 function initToolbar(){
     exSteps.forEach(function(item, index){
@@ -61,11 +70,17 @@ $("#step-selector").change(function() {
     $("#index-selector").val(0);
     $("#index-selector").change();
 
-    // 通知流线页面刷新流线
+    // 流线页面刷新流线
     switchTimeSign = true;
 
-    // 通知检测页面更新背景
+    // 检测页面更新背景
     changeBackground(currentMainStep);
+
+    // 检测页面更新数据（可能会有冲突）
+    loadDectData(currentMainStep);
+    detection_window.setOption({
+        series: {data: detection_data}
+    })
 })
 
 $("#index-selector").change(function(){
@@ -73,13 +88,21 @@ $("#index-selector").change(function(){
 
     if(currentMainStep==-1 || currentMainIndex== -1) return ;
 
-    
+    currentMainName = String(currentMainStep) + '-' + String(currentMainIndex);
 
-    console.log("currentMainIndex: ", currentMainIndex);
+
+    console.log("currentMainName: ", currentMainName);
 
     // 通知检测页面更新数据
 
     // 通知拓扑页面更新数据
+    loadTopoData(currentMainName);
+    topo_window.setOption({
+        series: {
+            data: topo_data,
+            links: topo_edges,
+        }
+    })
 
 })
 

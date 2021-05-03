@@ -47,12 +47,10 @@ for(let i=0; i<tex_pps_step; i++){
 
 
 
-topoInit();
-
 function topoInit(){
 
-    loadTopoData('0-0');
-    // setTopoGUI();
+    loadTopoData('7-19');
+    setTopoGUI();
 
     topo_window.setOption(topo_option = getTopoOption(topo_data));
 
@@ -261,9 +259,10 @@ function getTopoOption(data) {
             }
         ],
         grid: {
-            // left: '8%',
-            // right: '0',
-           bottom: '8%',
+            top: '2%',
+            left: '2%',
+            right: '2%',
+           bottom: '2%',
            containLabel: true
         },
         animationEasingUpdate: 'cubicInOut',
