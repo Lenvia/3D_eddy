@@ -111,7 +111,7 @@ $("#yAxis-selector").change(function(){
 
 $("#sizeMap-selector").change(function(){
     topo_sizeMap = parseFloat($(this).val());
-    console.log(topo_sizeMap);
+    // console.log(topo_sizeMap);
     flushTopo();
 })
 
@@ -120,6 +120,63 @@ $("#showLabel").change(function(){
     flushTopo();
 })
 
+/**
+ * 隐藏组件绑定js变量触发
+ */
+
+ $("#detectionClickSign").change(function(){
+    if($("#detectionClickSign").val()=="0")
+        return ;
+    
+    // 刷新两个窗口
+    var step = parseInt(currentMainName.split('-')[0]);
+    var index = parseInt(currentMainName.split('-')[1]);
+
+    $("#step-selector").val(step);
+    $("#step-selector").change();
+
+    $("#index-selector").val(index);
+    $("#index-selector").change();
+    
+
+    detection_data[index][detection_field_indices['selected']] = 1;
+
+    // 将detction窗口对应节点染色，再次刷新
+    detection_window.setOption({
+        series: {data: detection_data}
+    })
+
+    detectionClickSign = 0;
+    $("#detectionClickSign").val(0);
+    $("#detectionClickSign").change();
+})
+
+$("#topoClickSign").change(function(){
+    if($("#topoClickSign").val()=="0")
+        return ;
+    
+    // 刷新两个窗口
+    var step = parseInt(currentMainName.split('-')[0]);
+    var index = parseInt(currentMainName.split('-')[1]);
+
+    $("#step-selector").val(step);
+    $("#step-selector").change();
+
+    $("#index-selector").val(index);
+    $("#index-selector").change();
+    
+
+
+    detection_data[index][detection_field_indices['selected']] = 1;
+    // 将detction窗口对应节点染色，再次刷新
+    detection_window.setOption({
+        series: {data: detection_data}
+    })
+
+    topoClickSign = 0;
+    $("#topoClickSign").val(0);
+    $("#topoClickSign").change();
+})
 
 /**
  * 局部容器jquery触发

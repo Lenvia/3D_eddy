@@ -39,6 +39,14 @@ var topo_window = echarts.init(topo_container);
 var parallel_container = document.getElementById('parallel-container');
 var parallel_window = echarts.init(parallel_container);
 
+/**
+ * 
+ */
+// 监听信号
+
+var topoClickSign = 0;  // 鼠标点击了拓扑图节点
+var detectionClickSign = 0;  // 鼠标点击了检测图节点
+
 
 
 

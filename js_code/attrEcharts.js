@@ -12,7 +12,7 @@ function updateEcharts(){
             // 指定图表的配置项和数据
             var option = {
                 title: {
-                    text: 'ECharts 实例'
+                    // text: 'ECharts 实例'
                 },
                 tooltip: {},
                 legend: {  // 图例

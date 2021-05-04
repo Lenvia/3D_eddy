@@ -995,6 +995,9 @@ function changePointer(index, hex){
 }
 
 function updateStreamline(){
+    if(currentMainStep == lastStep)  // 天数没变不用刷新
+        return ;
+
     if(lastStep!=-1){  // 清除上次的显示
         lastSite = "step"+String(lastStep);
         lastLine = scene.getObjectByName(lastSite);

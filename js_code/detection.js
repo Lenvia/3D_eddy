@@ -10,6 +10,7 @@ var detection_schema = [
     {name: 'radius', index: 2, text:'radius'},
     {name: 'circ', index: 3, text:'circ'},
     {name: 'name', index: 4, text:'name'},
+    {name: 'selected', index:5, text:'selected'},
 ];
 
 // 便于通过name来找index
@@ -26,6 +27,18 @@ function detectionInit(){
 
     loadDectData(0);
     detection_window.setOption(detection_option = getDetectionOption(detection_data));
+
+    detection_window.on('click',  function(param) {
+        
+        currentMainName = param.data[4];
+
+        // 发送信号
+        detectionClickSign = 1;
+        $("#detectionClickSign").val(1);
+        $("#detectionClickSign").change();
+
+
+    });
 }
 
 
@@ -52,7 +65,7 @@ function loadDectData(step){
 
 
         // 把当前节点放到nodes中
-        row = [curX, curY, curRadius, curCirc, curName];
+        row = [curX, curY, curRadius, curCirc, curName, 0];
         detection_data.push(row);
     }   
     // console.log(detection_data); 
@@ -89,17 +102,17 @@ function getDetectionOption(data) {
         },
         visualMap: {
             type: 'piecewise',
-            categories: [anticycFlag, cycFlag],
-            dimension: 3,
+            categories: [0, 1],
+            dimension: 5,
             orient: 'horizontal',
             top: 0,
             left: 'center',
             inRange: {
-                // color: ['#51689b', '#ce5c5c']
-                color: '#ffff00',
+                color: ['#ffff00', '#66ffff']
+                // color: '#ffff00',
             },
             outOfRange: {
-                color: '#ddd'
+                // color: '#ddd'
             },
             seriesIndex: [0],
             show: false,

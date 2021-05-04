@@ -51,8 +51,7 @@ var switchTimeSign = false;  // 如果为true，表示时间已改变
 
 // 局部窗口触发
 var dyeSign = false;  // 提醒主窗口去染色
-// DOM组件绑定函数信号
-var topoClickSign = false;  // 鼠标点击了拓扑图节点
+
 
 
 loadDepth();  // 加载深度数组

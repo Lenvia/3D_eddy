@@ -49,16 +49,20 @@ for(let i=0; i<tex_pps_step; i++){
 
 function topoInit(){
 
-    loadTopoData('7-19');
-    setTopoGUI();
+    loadTopoData('0-0');
+    // setTopoGUI();
 
     topo_window.setOption(topo_option = getTopoOption(topo_data));
 
-    
+    topo_window.on('click',  function(param) {
+        
+        currentMainName = param.data[11];
 
-    // var guiTopoContainer = document.getElementById('topo-gui');
-    // guiTopoContainer.appendChild(topo_gui.domElement);
-    // topo_container.appendChild(guiTopoContainer);
+        // 发送信号表示点击了拓扑图
+        topoClickSign = 1;
+        $("#topoClickSign").val(1);
+        $("#topoClickSign").change();
+    });
 }
 
 
@@ -276,30 +280,4 @@ function getTopoOption(data) {
         animationEasingUpdate: 'cubicInOut',
         animationDurationUpdate: 2000
     };
-}
-
-function setTopoGUI(){
-
-    topo_gui = new dat.GUI({ autoPlace: false });
-
-    topo_gui_opt = new function(){
-        this.yAxis = 'eke';
-        this.symbolSize = 'radius';
-        this.scaleFactor = 1;
-    };
-
-    // 结点缩放映射
-    topo_gui.add(topo_gui_opt, 'scaleFactor', [0.01, 0.1, 0.2, 0.33, 0.5, 1, 2, 3, 5, 10, 100]).onChange(function(){
-        if (topo_data) {
-            scaleFactor = topo_gui_opt.scaleFactor;
-            topo_window.setOption({
-                series: {
-                    symbolSize:(rawValue, params) => {
-                        params.symbolSize = scaleFactor*Math.sqrt(params.data[2]);
-                        return (params.symbolSize);
-                    },
-                }
-            });
-        }
-    });
 }
