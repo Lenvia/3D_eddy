@@ -178,26 +178,28 @@ function getTopoOption(data) {
         tooltip: {
             backgroundColor: ['rgba(255,255,255,0.7)'],
             formatter: function (obj) {
-                var value = obj.value;
-                
-                // console.log(value);
-
-                var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
-                + '编号：'+ value[9+bias]+ '</div>';
-
-                
-                
-                // 加上y轴意义、大小的意义、类型
-                returnStr = returnStr
-                    + topo_schema[1].name + '：' + value[1+bias] + '<br>'
-                    + topo_schema[2].name + '：' + value[2+bias] + '<br>'
-                    + topo_schema[3].name + '：' + value[3+bias] + '<br>'
-                    + topo_schema[4].name + '：' + value[4+bias] + '<br>'
-                    + topo_schema[5].name + '：' + value[5+bias] + '<br>'
-                    + topo_schema[6].name + '：' + value[6+bias] + '<br>'
-                    + topo_schema[7].name + '：' + value[7+bias] + '<br>';
+                if(obj.value!=undefined){
+                    var value = obj.value;
                     
-                return returnStr;
+                    // console.log(value);
+
+                    var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
+                    + '编号：'+ value[9+bias]+ '</div>';
+
+                    
+                    
+                    // 加上y轴意义、大小的意义、类型
+                    returnStr = returnStr
+                        + topo_schema[1].name + '：' + value[1+bias] + '<br>'
+                        + topo_schema[2].name + '：' + value[2+bias] + '<br>'
+                        + topo_schema[3].name + '：' + value[3+bias] + '<br>'
+                        + topo_schema[4].name + '：' + value[4+bias] + '<br>'
+                        + topo_schema[5].name + '：' + value[5+bias] + '<br>'
+                        + topo_schema[6].name + '：' + value[6+bias] + '<br>'
+                        + topo_schema[7].name + '：' + value[7+bias] + '<br>';
+                        
+                    return returnStr;
+                }
             }
         },
         xAxis: {
@@ -216,6 +218,27 @@ function getTopoOption(data) {
             type: 'value',
             scale: true,
         },
+
+        dataZoom: [
+            {
+                show: true,
+                realtime: true,
+                filterMode: 'filter',
+                start: 0,
+                end: 100,
+                xAxisIndex: 0,
+                orient:"horizontal",
+            },
+            {
+                type: 'inside',
+                realtime: true,
+                start: 0,
+                end: 100,
+                xAxisIndex: 0,
+                zoomOnMouseWheel:true,
+                moveOnMouseMove:true,
+            }
+        ],
        
         series: [
             {

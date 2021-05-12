@@ -49,7 +49,7 @@ function loadPathData(){
 
     for(var num=0; num<liveInfo.length; num++){
         firstName = liveInfo[num]['name'];
-        live = liveInfo[num]['live'];
+        live = parseInt(liveInfo[num]['live']);
 
         queue.push(firstName);  // 把当前涡旋的名称放进去
         idQueue.push(nextId);
@@ -236,25 +236,38 @@ function getPathOption(data) {
             backgroundColor: ['rgba(255,255,255,0.7)'],
             
             formatter: function (obj) {
+                if(obj.value!=undefined){  // 可能会点到线上，这时value为undefined，会卡死
+                    var value = obj.value;
 
-                var value = obj.value;
-
-                var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
-                + '编号：'+ value[path_field_indices['name']]+ '</div>';
-                
-                // // 加上y轴意义、大小的意义、类型
-                // returnStr = returnStr
-                //     + path_schema[path_field_indices[path_gui_opt.yAxis]].name + '：' + value[1] + '<br>'
-                //     + path_schema[path_field_indices[path_gui_opt.symbolSize]].name + '：' + value[2] + '<br>'
-                //     + path_schema[1].name + '：' + value[3] + '<br>'
-                //     + path_schema[2].name + '：' + value[4] + '<br>'
-                //     + path_schema[5].name + '：' + value[5] + '<br>'
-                //     + path_schema[6].name + '：' + value[6] + '<br>'
-                //     + path_schema[7].name + '：' + value[7] + '<br>';
+                    var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
+                    + '编号：'+ value[path_field_indices['name']]+ '</div>';
                     
-                return returnStr;
+                    // // 加上y轴意义、大小的意义、类型
+                    // returnStr = returnStr
+                    //     + path_schema[path_field_indices[path_gui_opt.yAxis]].name + '：' + value[1] + '<br>'
+                    //     + path_schema[path_field_indices[path_gui_opt.symbolSize]].name + '：' + value[2] + '<br>'
+                    //     + path_schema[1].name + '：' + value[3] + '<br>'
+                    //     + path_schema[2].name + '：' + value[4] + '<br>'
+                    //     + path_schema[5].name + '：' + value[5] + '<br>'
+                    //     + path_schema[6].name + '：' + value[6] + '<br>'
+                    //     + path_schema[7].name + '：' + value[7] + '<br>';
+                        
+                    return returnStr;
+                }
+                
+            },
+        },
+        toolbox: {
+            feature: {
+                dataZoom: {
+                    xAxisIndex: 0,
+                    yAxisIndex: 0,
+                },
+                restore: {},
+                saveAsImage: {}
             }
         },
+
         xAxis: {
             show: false,
             type: 'value',

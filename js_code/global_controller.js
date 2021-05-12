@@ -42,6 +42,7 @@ function initToolbar(){
     });
     currentMainStep = -1;
     lastStep = -1;
+    currentAttr = "OW";
 
     topo_yAxis = $("#yAxis-selector").val();
     topo_sizeMap = $("#sizeMap-selector").val();
@@ -85,6 +86,9 @@ $("#step-selector").change(function() {
     detection_window.setOption({
         series: {data: detection_data}
     })
+
+    // 属性频率统计图更新
+    updateAttrFrequency();
 })
 
 $("#index-selector").change(function(){
@@ -103,6 +107,12 @@ $("#index-selector").change(function(){
     loadTopoData(currentMainName);
     flushTopo();
 })
+
+$("#attribute-selector").change(function(){
+    currentAttr = $(this).val();
+    updateAttrFrequency();
+})
+
 
 $("#yAxis-selector").change(function(){
     topo_yAxis = $(this).val();

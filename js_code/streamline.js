@@ -46,7 +46,7 @@ var default_opt;  // 默认设置
 var curSite;  // 当前涡旋流线name
 var lastSite;
 
-var currentAttr;  // 当前属性
+
 var upValue;  // 属性上界
 var downValue;  // 属性下界
 
@@ -737,13 +737,13 @@ function parseColor(currentColor){
 
 function setColorAndOpacity(){
     if(currentColor0.length==3){currentRGB0 = currentColor0; currentOpacity0 = 1.0;
-    }else{currentRGB0 = currentColor0.splice(3); currentColor0 = currentColor0[3];}
+    }else{currentRGB0 = currentColor0.splice(3); currentOpacity0 = currentColor0[3];}
 
     if(currentColor1.length==3){currentRGB1 = currentColor1; currentOpacity1 = 1.0;
-    }else{currentRGB1 = currentColor1.splice(3); currentColor1 = currentColor1[3];}
+    }else{currentRGB1 = currentColor1.splice(3); currentOpacity1 = currentColor1[3];}
 
     if(currentColor2.length==3){currentRGB2 = currentColor2; currentOpacity2 = 1.0;
-    }else{currentRGB2 = currentColor2.splice(3); currentColor2 = currentColor2[3];}
+    }else{currentRGB2 = currentColor2.splice(3); currentOpacity2 = currentColor2[3];}
 }
 
 // 在图中显示涡核
@@ -1083,6 +1083,8 @@ $("#confirm-button").click(
         currentColor1 = parseColor($("#color-sec1").val());
         currentColor2 = parseColor($("#color-sec2").val());
 
+        console.log(currentColor0, currentColor1, currentColor2);
+
         
         downValue = $("#lower-bound").val();
 
@@ -1090,7 +1092,7 @@ $("#confirm-button").click(
             downValue = 0;
             $("#lower-bound").val(0);
         }
-        else downValue = parseFloat(downValue);
+        else downValue = eval(downValue);
         
 
         upValue = $("#upper-bound").val();
@@ -1099,7 +1101,7 @@ $("#confirm-button").click(
             upValue = 0;
             $("#upper-bound").val(0);
         }
-        else upValue = parseFloat(upValue);
+        else upValue = eval(upValue);
         
 
         setColorAndOpacity();

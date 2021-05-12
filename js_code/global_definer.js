@@ -28,7 +28,7 @@ var lastStep;  // 上一时间步
 var currentMainIndex;  // 当前涡旋标签
 var existedEddyIndices = [];  // 场上存在的涡旋的index
 var currentMainName;  // 当前被选中的涡旋编号（currentMainStep与currentMainIndex的结合）
-
+var currentAttr;  // 当前属性
 
 /**
  * 预加载变量
