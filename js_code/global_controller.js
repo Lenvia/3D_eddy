@@ -81,7 +81,6 @@ $("#step-selector").change(function() {
     // 检测页面更新背景
     changeBackground(currentMainStep);
 
-    
 
     // 属性频率统计图更新
     updateAttrFrequency();
@@ -157,15 +156,7 @@ $("#pick").change(function(){
 
     highightNode(index);
 
-
-    // 在流线视图中移动相机
-    pickInfo = [index, eddyInfo[step][index][0], eddyInfo[step][index][1]];
-    requirePick = true;
-
-
-    detectionClickSign = 0;
-    $("#detectionClickSign").val(0);
-    $("#detectionClickSign").change();
+    // $("#step-selector").change() 会让streamline视图加载，加载完毕后触发更新
 })
 
 $("#topoClickSign").change(function(){
@@ -184,15 +175,7 @@ $("#topoClickSign").change(function(){
     
 
     highightNode(index);
-    
 
-    // 在流线视图中移动相机
-    pickInfo = [index, eddyInfo[step][index][0], eddyInfo[step][index][1]];
-    requirePick = true;
-
-    topoClickSign = 0;
-    $("#topoClickSign").val(0);
-    $("#topoClickSign").change();
 })
 
 $("#streamlineClickSign").change(function(){
@@ -212,6 +195,32 @@ $("#streamlineClickSign").change(function(){
     $("#streamlineClickSign").val(0);
     $("#streamlineClickSign").change();
 
+})
+
+$("#loadFinished").change(function(){
+    if($("#loadFinished").val()=="0")
+        return;
+
+    if(topoClickSign==1 || detectionClickSign ==1){
+        // 刷新两个窗口
+        var step = parseInt(currentMainName.split('-')[0]);
+        var index = parseInt(currentMainName.split('-')[1]);
+        // 在流线视图中移动相机
+        pickInfo = [index, eddyInfo[step][index][0], eddyInfo[step][index][1]];
+        requirePick = true;
+
+
+        topoClickSign = 0;
+        $("#topoClickSign").val(0);
+        $("#topoClickSign").change();
+        detectionClickSign = 0;
+        $("#detectionClickSign").val(0);
+        $("#detectionClickSign").change();
+    }
+    
+
+    $("#loadFinished").val(0);
+    $("#loadFinished").change();
 })
 
 /**

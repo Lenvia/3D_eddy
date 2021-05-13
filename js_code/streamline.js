@@ -997,8 +997,12 @@ function changePointer(index, hex){
 }
 
 function updateStreamline(){
-    if(currentMainStep == lastStep)  // 天数没变不用刷新
+    if(currentMainStep == lastStep){  // 天数没变不用刷新
+        $("#loadFinished").val(1);
+        $("#loadFinished").change();
+
         return ;
+    }
 
     if(lastStep!=-1){  // 清除上次的显示
         lastSite = "step"+String(lastStep);
@@ -1009,23 +1013,32 @@ function updateStreamline(){
     }
 
     curSite = "step"+String(currentMainStep);
+
+    var promise = new Promise(function(resolve){
+        curLine = findModel(curSite);
+        scene.add(curLine);
     
-    curLine = findModel(curSite);
-    scene.add(curLine);
-
-    // 更新当步当前属性的echarts
-    // updateEcharts(currentAttr, currentMainStep);
+        // 更新当步当前属性的echarts
+        // updateEcharts(currentAttr, currentMainStep);
+        
+        if(curLine!=undefined){
+            $("#confirm-button").click();  // 模拟一次点击
+        }
     
-    if(curLine!=undefined){
-        $("#confirm-button").click();  // 模拟一次点击
-    }
+        removePointers();
+        if(currentMainStep!=-1){
+            showPointers();  // 显示涡核指示器
+        }
+    
+        lastStep = currentMainStep;
 
-    removePointers();
-    if(currentMainStep!=-1){
-        showPointers();  // 显示涡核指示器
-    }
+        resolve(1);
+    })
 
-    lastStep = currentMainStep;
+    promise.then(v=>{
+        $("#loadFinished").val(1);
+        $("#loadFinished").change();
+    })
 }
 
 
@@ -1043,17 +1056,6 @@ function setRenderSize() {
 
 
 function animate() {
-
-    // if(dynamic)  // 只有dynamic为true时才渲染
-    //     DyChange(0.5);
-
-    // if(dyeSign){  // 收到染色信号
-    //     dyeSign = false;  // 取消染色信号
-    //     for(let i=0; i<existedEddyIndices.length; i++){
-    //         changePointer(existedEddyIndices[i], specific_color);
-    //     }
-    // }
-
     if(requirePick){
         requirePick = false;
         if(pickInfo[0]!=undefined){

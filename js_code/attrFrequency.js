@@ -2,6 +2,7 @@
 
 function updateAttrFrequency(){
     var attr_data_path = ("./echarts/".concat(currentAttr, "/", currentAttr, "_", currentMainStep, ".json"));
+    console.log(attr_data_path);
     
     $.ajax({
         url: attr_data_path,//json文件位置
