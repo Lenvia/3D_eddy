@@ -12,6 +12,7 @@ THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);  // 设置Z轴向上
  */
 var container, stats;  // 容器，状态监控器
 var camera, controls, scene, renderer;  // 相机，控制，画面，渲染器
+var camera2;
 
 /**
  * 预设变量
@@ -50,9 +51,6 @@ var lastSite;
 var upValue;  // 属性上界
 var downValue;  // 属性下界
 
-
-var pickMode = false;  // 选中模式（选择涡旋）
-
 var currentColor0, currentColor1, currentColor2;
 var currentRGB0, currentRGB1, currentRGB2;
 var currentOpacity0, currentOpacity1, currentOpacity2;
@@ -90,9 +88,12 @@ function init() {
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
     camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );
-    camera.position.z = 4000;
+    camera.position.z = cameraHeight;
     camera.position.x = edgeLen*0;
     camera.position.y = edgeWid*0;
+    camera.up.x = 0;//相机以哪个方向为上方
+    camera.up.y = 0;
+    camera.up.z = 1;
 
 
     controls = new OrbitControls( camera, renderer.domElement );
@@ -125,7 +126,6 @@ function init() {
     loadEddiesForSteps();  // 加载涡旋模型
     
     
-    // setGUI();  // 设置交互面板
 
 
     //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
@@ -138,12 +138,6 @@ function init() {
     stats = new Stats();
     // container.appendChild( stats.dom );
 
-    var guiContainer1 = document.getElementById('streamline-gui');
-    // guiContainer1.appendChild(gui.domElement);
-    // container.appendChild(guiContainer1);
-
-    // var exContainer = document.getElementById('ex23d');
-    // container.appendChild(exContainer);
 
     // 窗口缩放时触发
     window.addEventListener( 'resize', onWindowResize, false );
@@ -598,7 +592,7 @@ function loadEddiesForSteps(){
         console.log("模型加载完毕");
         // 设置属性
         loadAttrArray("OW");
-        // loadAttrArray("VORTICITY");
+        loadAttrArray("vorticity");
     })
 }
 
@@ -714,6 +708,9 @@ function loadAttrArray(attr){
 
 
 function parseColor(currentColor){
+    if(currentColor == "transparent")
+        return [0, 0, 0, 0];  // 透明
+
     if(currentColor == "") // 如果未选择，默认为白色
         return [1, 1, 1];
     
@@ -755,18 +752,17 @@ function showPointers(){
         var cpx = info[i][0];  // cpx指的是在panel上的cx
         var cpy = info[i][1];
 
-        var cxy = pxy2xy(cpx, cpy);
+        var cxy = pxy2xy(cpx, cpy);  // 映射到三维坐标系
 
         // 在涡核处显示标记
-        // var geometryCone = new THREE.ConeGeometry( 20, 100, 3 );
-        var geometryCone = new THREE.ConeGeometry( 30, 150, 3 );
+        var geometryCone = new THREE.ConeGeometry( 20, 150, 3 );
         geometryCone.rotateX( -Math.PI / 2 );
         // 直接setPosition好像不行，还是平移吧
         geometryCone.translate(cxy[0], cxy[1], 75);
         
         var cone = new THREE.Mesh( geometryCone, new THREE.MeshNormalMaterial({
             transparent: true,
-            opacity: 0.7
+            opacity: 0.5
         }));
         scene.add( cone );
         
@@ -805,7 +801,7 @@ function assignAllColorAndOpacity(curLine){
             currentAttrArray = curLine.geometry.attributes.OW.array;
             break;
         case "vorticity":
-            currentAttrArray = curLine.geometry.attributes.VORTICITY.array;
+            currentAttrArray = curLine.geometry.attributes.vorticity.array;
             break;
     }
 
@@ -914,10 +910,17 @@ function DyChange(k){
 }
 
 
+
 function onMouseMove( event ) {
 }
 
 function onMouseClick(event){
+    if(pickMode == false)
+        return ;
+
+    $("#pick").prop('checked', false);  // 退出pickMode
+    $("#pick").change();
+
 
     // console.log(event);
     // 将鼠标位置归一化为设备坐标。x 和 y 方向的取值范围是 (-1 to +1)
@@ -937,6 +940,8 @@ function onMouseClick(event){
     // 查看相机发出的光线是否击中了我们的网格物体之一（计算物体和射线的焦点）
     // 检查射线和物体之间的所有交叉点，交叉点返回按距离排序，最接近的为第一个。 返回一个交叉点对象数组。
 
+    // console.log(mouse);
+
     var intersects;
 
     intersects = raycaster.intersectObject( sea);
@@ -944,29 +949,26 @@ function onMouseClick(event){
         intersects = raycaster.intersectObject( surface);  // 点到陆地上了
     }
 
+
     if(intersects!=undefined && intersects.length>0){
         var curObj = intersects[0];  // 目标物体（海水/陆地）
-        if(pickMode == true){
-            selected_pos = curObj.point;
 
-            // 恢复所有指示器的material
-            for(let i=0; i<existedCones.length; i++){
-                recoverPointer(i);
-            }
+        selected_pos = curObj.point;
 
-            // 鼠标mx my转换为panel的px py，再从json中找最近的涡旋
-            var pxy = mxy2pxy(selected_pos.x, selected_pos.y);
-            tarArr = getNearestEddy(pxy[0], pxy[1]);  // 得到最近的涡旋的下标、中心坐标
 
-            if(tarArr[0]!=undefined){
-                // 因为原来的材质是MeshNormalMaterial，是不能改变颜色的
-                // 这里换成普通的MeshLambertMaterial
-                changePointer(tarArr[0], specific_color)
-                pickUpdateSign = true;  // 向局部板块释放涡旋更新信号
-            }
-            
-        }
-    }   
+        // 鼠标mx my转换为panel的px py，再从json中找最近的涡旋
+        var pxy = mxy2pxy(selected_pos.x, selected_pos.y);
+
+        // 根据pxy坐标定位最近的涡旋，改变指示器颜色并移动相机
+        pickInfo = getNearestEddy(pxy[0], pxy[1]);  // 得到最近的涡旋的下标、中心坐标
+        requirePick = true;
+
+        currentMainName = String(currentMainStep) + '-' + String(pickInfo[0]);
+        
+        streamlineClickSign = 1;
+        $("#streamlineClickSign").val(1);
+        $("#streamlineClickSign").change();
+    }
 }
 
 function getMouseXY(event){
@@ -1052,6 +1054,30 @@ function animate() {
     //     }
     // }
 
+    if(requirePick){
+        requirePick = false;
+        if(pickInfo[0]!=undefined){
+            // 恢复所有指示器的material
+            for(let i=0; i<existedCones.length; i++){
+                recoverPointer(i);
+            }
+
+            // 因为原来的材质是MeshNormalMaterial，是不能改变颜色的
+            // 这里换成普通的MeshLambertMaterial
+            changePointer(pickInfo[0], specific_color)
+
+            var xy = pxy2xy(pickInfo[1], pickInfo[2]);
+            
+
+            camera.position.x = xy[0];
+            camera.position.y = xy[1];
+            camera.position.z = 500;
+
+            controls.target.x = xy[0];
+            controls.target.y = xy[1];
+        }
+    }
+
     if(switchTimeSign){  // 时间改变了，更新流线
         switchTimeSign = false;
 
@@ -1083,7 +1109,7 @@ $("#confirm-button").click(
         currentColor1 = parseColor($("#color-sec1").val());
         currentColor2 = parseColor($("#color-sec2").val());
 
-        console.log(currentColor0, currentColor1, currentColor2);
+        // console.log(currentColor0, currentColor1, currentColor2);
 
         
         downValue = $("#lower-bound").val();

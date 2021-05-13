@@ -22,7 +22,7 @@ var land_2d;  // 2d
  * 主副窗口共享变量
  */
 
-var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标【从主窗口触发】
+var pickInfo = [];  // 鼠标最近的涡旋的下标、中心坐标
 
 
 init();
@@ -81,11 +81,7 @@ $("#step-selector").change(function() {
     // 检测页面更新背景
     changeBackground(currentMainStep);
 
-    // 检测页面更新数据（可能会有冲突）
-    loadDectData(currentMainStep);
-    detection_window.setOption({
-        series: {data: detection_data}
-    })
+    
 
     // 属性频率统计图更新
     updateAttrFrequency();
@@ -102,6 +98,11 @@ $("#index-selector").change(function(){
     console.log("currentMainName: ", currentMainName);
 
     // 通知检测页面更新数据
+    // 检测页面更新数据（可能会有冲突）
+    loadDectData(currentMainStep);
+    detection_window.setOption({
+        series: {data: detection_data}
+    })
 
     // 通知拓扑页面更新数据
     loadTopoData(currentMainName);
@@ -130,6 +131,11 @@ $("#showLabel").change(function(){
     flushTopo();
 })
 
+$("#pick").change(function(){
+    pickMode = $('#pick').is(':checked');
+    console.log(pickMode);
+})
+
 /**
  * 隐藏组件绑定js变量触发
  */
@@ -149,12 +155,13 @@ $("#showLabel").change(function(){
     $("#index-selector").change();
     
 
-    detection_data[index][detection_field_indices['selected']] = 1;
+    highightNode(index);
 
-    // 将detction窗口对应节点染色，再次刷新
-    detection_window.setOption({
-        series: {data: detection_data}
-    })
+
+    // 在流线视图中移动相机
+    pickInfo = [index, eddyInfo[step][index][0], eddyInfo[step][index][1]];
+    requirePick = true;
+
 
     detectionClickSign = 0;
     $("#detectionClickSign").val(0);
@@ -176,16 +183,35 @@ $("#topoClickSign").change(function(){
     $("#index-selector").change();
     
 
+    highightNode(index);
+    
 
-    detection_data[index][detection_field_indices['selected']] = 1;
-    // 将detction窗口对应节点染色，再次刷新
-    detection_window.setOption({
-        series: {data: detection_data}
-    })
+    // 在流线视图中移动相机
+    pickInfo = [index, eddyInfo[step][index][0], eddyInfo[step][index][1]];
+    requirePick = true;
 
     topoClickSign = 0;
     $("#topoClickSign").val(0);
     $("#topoClickSign").change();
+})
+
+$("#streamlineClickSign").change(function(){
+    if($("#streamlineClickSign").val()=="0")
+        return ;
+    
+    // 刷新两个窗口
+    var step = parseInt(currentMainName.split('-')[0]);
+    var index = parseInt(currentMainName.split('-')[1]);
+
+    $("#index-selector").val(index);
+    $("#index-selector").change();
+
+    highightNode(index);
+
+    streamlineClickSign = 0;
+    $("#streamlineClickSign").val(0);
+    $("#streamlineClickSign").change();
+
 })
 
 /**
@@ -231,4 +257,13 @@ function flushTopo(){
             symbolSize: topo_sizeMap,
         }
     });
+}
+
+
+function highightNode(index){
+    detection_data[index][detection_field_indices['selected']] = 1;
+    // 将detction窗口对应节点染色，再次刷新
+    detection_window.setOption({
+        series: {data: detection_data}
+    })
 }

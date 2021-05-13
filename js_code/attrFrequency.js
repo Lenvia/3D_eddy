@@ -36,6 +36,16 @@ function updateAttrFrequency(){
                         xAxisIndex: 0,
                         orient:"horizontal",
                     },
+                    {
+                        type: 'inside',
+                        show: true,
+                        realtime: true,
+                        filterMode: 'filter',
+                        start: 0,
+                        end: 100,
+                        xAxisIndex: 0,
+                        orient:"horizontal",
+                    },
                 ],
 
                 legend: {  // 图例
