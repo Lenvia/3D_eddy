@@ -3,6 +3,7 @@
  */
 const edgeLen = 3000;  // 地形（海水、山脉）长度
 const edgeWid = edgeLen;  // 地形宽度
+const cameraHeight = 3000;  // 相机高度
 const scaleHeight = 20*edgeLen/200000; //高度缩放倍数
 var boxHeight = 4000*scaleHeight;  // 海底深度（默认为4000m）
 var tubeHeightFactor = 500;  // 控制流管高度
@@ -44,12 +45,16 @@ var gui_container = document.getElementById('gui');
  * 更新信号
  */
 // 主窗口触发
-var pickUpdateSign = false;  // 主窗口选择涡旋了
-
+var pickMode = false;  // 主窗口进入选择模式
+var streamlineClickSign = 0;  // 主窗口选择涡旋
 var switchTimeSign = false;  // 如果为true，表示时间已改变
+
+var loadFinished = 0;  // 主窗口流线加载完毕
 
 
 // 局部窗口触发
+var requirePick = false;  // 请求流线视图移动相机和染色指示器
+
 var dyeSign = false;  // 提醒主窗口去染色
 
 

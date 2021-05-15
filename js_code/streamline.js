@@ -514,7 +514,7 @@ function loadEddiesForSteps(){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一步的形状
             var d = i;
-            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, "_3000_0_8.vtk"));
+            var vtk_path = ("./resources/whole_vtk_folder".concat("/vtk", d, ".vtk"));
             var loader = new VTKLoader();
             console.log("loading", vtk_path);
             loader.load( vtk_path, function ( geometry ) {  // 异步加载

@@ -37,6 +37,16 @@
 
 
 
+#std-label{
+	position: absolute;
+	top: 5%;
+	left: 50%;
+	transform:translate(-50%, 0);
+	/* background-color: yellow; */
+	z-index: 100;
+	display: block;
+}
+
 #gui{
     position: absolute;
 	left: 0px;

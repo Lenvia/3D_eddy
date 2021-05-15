@@ -84,6 +84,9 @@ $("#step-selector").change(function() {
 
     // 属性频率统计图更新
     updateAttrFrequency();
+    // OW_std刷新
+    let std = OW_std[currentMainStep].toExponential(6);
+    $("#std-label").html("OW_std: "+ String(std));
 })
 
 $("#index-selector").change(function(){

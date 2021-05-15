@@ -16,6 +16,8 @@ var eddyForwards;
 var eddyBackwards;
 var liveInfo;
 
+var OW_std;
+
 // 预设路径
 var root_pic_path = './resources/detect_pic/';  // detection背景根路径
 
@@ -29,6 +31,8 @@ var detection_window = echarts.init(detection_container);
 
 var frequency_container = document.getElementById('frequency-container');
 var frequency_window = echarts.init(frequency_container);
+var std_label = document.getElementById( 'std-label' );
+frequency_container.appendChild(std_label)
 
 var path_container = document.getElementById('path-container');
 var path_window = echarts.init(path_container);
@@ -51,6 +55,7 @@ var detectionClickSign = 0;  // 鼠标点击了检测图节点
 
 
 loadEddyFeatures();  // 加载涡核信息数组
+loadOWStd();
 
 function loadEddyFeatures(){
     var eddies_feature_path = ("./resources/features/features.json");
@@ -76,6 +81,20 @@ function loadEddyFeatures(){
         async: false,  // 异步设置为否
         success: function(res) { //请求成功完成后要执行的方法 
             liveInfo = res;
+        }
+    })
+}
+
+function loadOWStd(){
+    var OW_std_path = ("./resources/OW_std.json");
+     
+    $.ajax({
+        url: OW_std_path,//json文件位置
+        type: "GET",//请求方式为get
+        dataType: "json", //返回数据格式为json
+        async: false,  // 异步设置为否
+        success: function(res) { //请求成功完成后要执行的方法 
+            OW_std = res['OW_std'];
         }
     })
 }
