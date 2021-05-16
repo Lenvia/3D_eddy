@@ -1018,6 +1018,8 @@ function updateStreamline(){
     var promise = new Promise(function(resolve){
         curLine = findModel(curSite);
         scene.add(curLine);
+
+        console.log(curLine);
     
         // 更新当步当前属性的echarts
         // updateEcharts(currentAttr, currentMainStep);

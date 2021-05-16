@@ -302,7 +302,7 @@ function getTopoOption(data) {
             top: '10%',
             left: '2%',
             right: '2%',
-           bottom: '2%',
+            bottom: '14%',
            containLabel: true
         },
         animationEasingUpdate: 'cubicInOut',

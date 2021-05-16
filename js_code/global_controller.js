@@ -132,6 +132,9 @@ $("#attribute-selector").change(function(){
     else{
         document.getElementById("std-label").style.display="none";//不可见
     }
+
+    $("#lower-bound").val(0);
+    $("#upper-bound").val(0);
 })
 
 

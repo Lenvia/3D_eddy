@@ -20,7 +20,8 @@ function updateAttrFrequency(){
                     formatter: function (obj) {
                         obj = obj[0];  // 返回的是个数组，取出来元素
                         if(obj.value!=undefined){
-                            var returnStr = "value: "+ obj.axisValue + '<br>'+"frequency: " + obj.value.toExponential(4);
+                            // console.log(obj)
+                            var returnStr = "value: "+ parseFloat(obj.axisValue).toExponential(4) + '<br>'+"frequency: " + obj.value.toExponential(4);
             
                             return returnStr;
                         }
@@ -63,7 +64,15 @@ function updateAttrFrequency(){
                     // name: '属性值',
                     type: 'bar',
                     data: res['frequency']
-                }]
+                }],
+
+                grid: {
+
+                    left: '3%',
+                    right: '3%',
+                    bottom: '14%',
+                    containLabel: true
+                },
             };
 
             // 使用刚指定的配置项和数据显示图表。
