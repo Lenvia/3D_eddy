@@ -457,7 +457,7 @@
 	left: 0px;
 	top: var(--headerHeight);
 	width: 100%;
-	height: calc(var(--pathShellHeight) - var(--pathHeight));
+	height: calc(var(--pathShellHeight) - var(--headerHeight));
 }
 
 
