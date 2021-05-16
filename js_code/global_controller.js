@@ -84,9 +84,17 @@ $("#step-selector").change(function() {
 
     // 属性频率统计图更新
     updateAttrFrequency();
-    // OW_std刷新
+
     let std = OW_std[currentMainStep].toExponential(6);
     $("#std-label").html("OW_std: "+ String(std));
+    // OW_std刷新
+    if(currentAttr=="OW"){
+        document.getElementById("std-label").style.display="block";
+    }
+    else{
+        document.getElementById("std-label").style.display="none";//不可见
+    }
+    
 })
 
 $("#index-selector").change(function(){
@@ -114,6 +122,16 @@ $("#index-selector").change(function(){
 $("#attribute-selector").change(function(){
     currentAttr = $(this).val();
     updateAttrFrequency();
+
+    let std = OW_std[currentMainStep].toExponential(6);
+    $("#std-label").html("OW_std: "+ String(std));
+    // OW_std刷新
+    if(currentAttr=="OW"){
+        document.getElementById("std-label").style.display="block";
+    }
+    else{
+        document.getElementById("std-label").style.display="none";//不可见
+    }
 })
 
 
@@ -243,6 +261,9 @@ function changeBackground(step){
 
 function flushTopo(){
     topo_window.setOption({
+        yAxis: {
+            name: topo_yAxis,
+        },
         series: {
             label: {
                 show: topo_showLabel,
@@ -262,7 +283,8 @@ function flushTopo(){
                     item[7], 
                     item[8],
                     item[9],
-                    // idx
+                    item[10], 
+                    item[11]
                 ];
             }),
             links: topo_edges,

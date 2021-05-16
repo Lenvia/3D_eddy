@@ -27,6 +27,16 @@ var path_field_indices = path_schema.reduce(function (obj, item) {
 function pathInit(){
     loadPathData();
     path_window.setOption(path_option = getPathOption(path_data));
+
+    var bg_path = './resources/seaSurface.png';
+    // 设置背景
+    $("#path-container").css({
+        "background-image":"url(" + bg_path + ")",
+        "background-repeat": "no-repeat",
+        "background-size" :"100% 100%",
+        "-moz-background-size": "100% 100%",
+    });
+
 }
 
 
@@ -220,19 +230,15 @@ function loadSinglePath(firstName){
 
 
 function getPathOption(data) {
-    
     return {
-        backgroundColor: new echarts.graphic.RadialGradient(0.3, 0.3, 0.8, [{
-            offset: 0,
-            color: '#f7f8fa'
-        }, 
-
-        ]),
+        // backgroundColor: new echarts.graphic.RadialGradient(0.3, 0.3, 0.8, [{
+        //     offset: 0,
+        //     color: '#f7f8fa'
+        // }, 
+        // ]),
+        
         tooltip: {
-            // padding: 10,
-            // backgroundColor: '#5fb7fd',
-            // borderColor: '#777',
-            // borderWidth: 1,
+ 
             backgroundColor: ['rgba(255,255,255,0.7)'],
             
             formatter: function (obj) {
@@ -240,7 +246,7 @@ function getPathOption(data) {
                     var value = obj.value;
 
                     var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
-                    + '编号：'+ value[path_field_indices['name']]+ '</div>';
+                    + 'identifier：'+ value[path_field_indices['name']]+ '</div>';
                     
                     // // 加上y轴意义、大小的意义、类型
                     // returnStr = returnStr

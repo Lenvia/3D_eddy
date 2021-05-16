@@ -9,7 +9,7 @@ var boxHeight = 4000*scaleHeight;  // 海底深度（默认为4000m）
 var tubeHeightFactor = 500;  // 控制流管高度
 
 var stepLimit = 60;  // 暂定60为最大天数
-var loadStepNum = 0;  // 3d流线加载多少天
+var loadStepNum = 1;  // 3d流线加载多少天
 var tex_pps_step = 60;  // 2d和pps加载天数
 
 

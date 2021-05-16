@@ -3,8 +3,8 @@
  */
 var cycNodeColor = "#ce5c5c";  // 气旋颜色，红色
 var anticycNodeColor = "#51689b";  // 反气旋颜色，蓝色
-var cycFlag = '气旋';
-var anticycFlag = '反气旋';
+var cycFlag = 'cyclone';
+var anticycFlag = 'anticyclone';
 
 /**
  * 预加载共享数组

@@ -84,7 +84,8 @@ function init() {
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0x215362 );  // 蓝绿色
-    // scene.background = new THREE.Color(0x7daae6);
+    // scene.background = new THREE.Color( 0xbfd1e5 );
+    
 
     // PerspectiveCamera( fov, aspect, near, far )  视场、长宽比、渲染开始距离、结束距离
     camera = new THREE.PerspectiveCamera( 60, renderWidth / renderHeight, 50, 20000 );

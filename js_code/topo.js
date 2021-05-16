@@ -21,6 +21,9 @@ var topo_schema = [
     {name: 'circ', index: 7, text:'circ'},
     {name: 'color', index: 8, text:'color'},
     {name: 'name', index: 9, text:'name'},
+
+    {name: 'longitude', index: 10, text:'longitude'},
+    {name: 'latitude', index: 11, text:'latitude'},
     
 ];
 
@@ -80,6 +83,8 @@ function loadTopoData(firstName){
 
     // 从json数组中追踪
     var curId, curName, curX, curY, curRadius, curEke, curAveEke, curVort,  curCirc, curColor, curFontColor;
+    var curLon, curLat;
+    
     var nextId = 0;
 
     queue.push(firstName);  // 把当前涡旋的名称放进去
@@ -110,8 +115,10 @@ function loadTopoData(firstName){
         curCirc = getCurCirc(d, index);
         curColor = getCurColor(d, index);
 
+        [curLon, curLat] = pxy2ll(curX, curY);
+
         // 把当前节点放到nodes中
-        row = [d,  curX, curY, curRadius, curEke, curAveEke, curVort, curCirc, curColor, curName];
+        row = [d,  curX, curY, curRadius, curEke, curAveEke, curVort, curCirc, curColor, curName, curLon, curLat];
         topo_data.push(row);
 
 
@@ -172,9 +179,7 @@ function getTopoOption(data) {
         backgroundColor: new echarts.graphic.RadialGradient(0.3, 0.3, 0.8, [{
             offset: 0,
             color: '#f7f8fa'
-        }, 
-
-        ]),
+        }, ]),
         tooltip: {
             backgroundColor: ['rgba(255,255,255,0.7)'],
             formatter: function (obj) {
@@ -184,14 +189,14 @@ function getTopoOption(data) {
                     // console.log(value);
 
                     var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
-                    + '编号：'+ value[9+bias]+ '</div>';
+                    + 'identifier：'+ value[9+bias]+ '</div>';
 
                     
                     
                     // 加上y轴意义、大小的意义、类型
                     returnStr = returnStr
-                        + topo_schema[1].name + '：' + value[1+bias] + '<br>'
-                        + topo_schema[2].name + '：' + value[2+bias] + '<br>'
+                        + topo_schema[10].name + '：' + value[10+bias] + '<br>'
+                        + topo_schema[11].name + '：' + value[11+bias] + '<br>'
                         + topo_schema[3].name + '：' + value[3+bias] + '<br>'
                         + topo_schema[4].name + '：' + value[4+bias] + '<br>'
                         + topo_schema[5].name + '：' + value[5+bias] + '<br>'
@@ -248,7 +253,7 @@ function getTopoOption(data) {
                 coordinateSystem: 'cartesian2d',
                 label: {
                     show: true,
-                    formatter: function (params) {  // 显示文字
+                    formatter: function (params) {  // 显示标签
                         return params.data[11];
                     }
                 },
@@ -256,7 +261,7 @@ function getTopoOption(data) {
                     // 第0位固定时间，第1位和第2位看情况。
                     // 然后把所有属性再重新放一遍
                     // [step, eke(yAxis), radius(symbolSize), cx, cy, radius, eke, ave_eke, vort,  circ, color, name]
-                    return [item[0], item[4], item[3], item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8], item[9]];
+                    return [item[0], item[4], item[3], item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8], item[9], item[10], item[11]];
                 }),
 
                 // data: fakeData,

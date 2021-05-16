@@ -85,7 +85,7 @@ function getDetectionOption(data) {
                 var value = obj.value;
 
                 var returnStr = '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">'
-                + '编号：'+ value[detection_field_indices['name']]+ '</div>';
+                + 'identifier：'+ value[detection_field_indices['name']]+ '</div>';
                 
                 // // 加上y轴意义、大小的意义、类型
                 // returnStr = returnStr

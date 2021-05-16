@@ -99,6 +99,11 @@ function loadParallelData(){
 
 function getParallelOption(data){
     var option = {
+
+        backgroundColor: new echarts.graphic.RadialGradient(0.3, 0.3, 0.8, [{
+            offset: 0,
+            color: '#f7f8fa'
+        }, ]),
         animation: false,
         brush: {
             brushLink: 'all',

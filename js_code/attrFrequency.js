@@ -53,9 +53,12 @@ function updateAttrFrequency(){
                     // data:['销量']
                 },
                 xAxis: {
+                    name: 'value',
                     data: res['columns'],
                 },
-                yAxis: {},
+                yAxis: {
+                    name: 'frequency',
+                },
                 series: [{
                     // name: '属性值',
                     type: 'bar',
