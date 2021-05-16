@@ -150,20 +150,17 @@ function getParallelOption(data){
     
             {dim: 3, name: parallel_schema[parallel_field_indices['radius']].text},
             {dim: 4, name: parallel_schema[parallel_field_indices['eke']].text},
-            {dim: 5, name: parallel_schema[parallel_field_indices['ave_eke']].text},
+            // {dim: 5, name: parallel_schema[parallel_field_indices['ave_eke']].text},
 
             {dim: 6, name: parallel_schema[parallel_field_indices['max_radius']].text},
             {dim: 7, name: parallel_schema[parallel_field_indices['max_eke']].text},
-            {dim: 8, name: parallel_schema[parallel_field_indices['max_ave_eke']].text},
-    
-            // {dim: 7, name: parallel_schema[parallel_field_indices['cx']].text},
-            // {dim: 8, name: parallel_schema[parallel_field_indices['cy']].text},
+            // {dim: 8, name: parallel_schema[parallel_field_indices['max_ave_eke']].text},
     
         ],
         parallel: {
             // top: '25%',
-            bottom: '15%',
-            left: '8%',
+            bottom: '12%',
+            left: '9%',
             height: '60%',
             width: '80%',
             parallelAxisDefault: {
