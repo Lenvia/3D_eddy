@@ -60,6 +60,7 @@ function topoInit(){
     topo_window.on('click',  function(param) {
         
         currentMainName = param.data[11];
+        console.log(currentMainName);
 
         // 发送信号表示点击了拓扑图
         topoClickSign = 1;

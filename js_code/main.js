@@ -618,7 +618,7 @@ function hideProgressModal(){
 */
 function loadEddiesForSteps(){
     let arr = []; //promise返回值的数组
-    for (let i = 0; i<loadStepNum; i++){
+    for (let i = 0; i<tempEnd; i++){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一天的形状
             var d = i;
@@ -788,7 +788,7 @@ function loadOneAttrArray(attr, path, d){
         Promise.all(flag1).then((res)=>{
             linesG.geometry.setAttribute( attr, new THREE.Float32BufferAttribute( attrArray, 1 ));
             // console.log(attrArray);
-            if(d==loadStepNum-1){
+            if(d==tempEnd-1){
                 console.log(attr+"值设置完毕");
                 // animate();
 
@@ -801,7 +801,7 @@ function loadOneAttrArray(attr, path, d){
 
 function loadAttrArray(attr){
     let flag0 = []; //promise数组
-    for(var i =0; i<loadStepNum; i++){
+    for(var i =0; i<tempEnd; i++){
         flag0[i] = new Promise((resolve, reject)=>{
             var d = i;
             var path = ("./resources/whole_attributes_txt_file/".concat(attr,"/",attr,"_", String(d), ".txt"));
@@ -1756,13 +1756,13 @@ function onMouseClick(event){
 
             // 鼠标mx my转换为panel的px py，再从json中找最近的涡旋
             var pxy = mxy2pxy(selected_pos.x, selected_pos.y);
-            tarArr = getNearestEddy(pxy[0], pxy[1]);  // 得到最近的涡旋的下标、中心坐标
+            pickInfo = getNearestEddy(pxy[0], pxy[1]);  // 得到最近的涡旋的下标、中心坐标
 
-            if(tarArr[0]!=undefined){
+            if(pickInfo[0]!=undefined){
                 // 因为原来的材质是MeshNormalMaterial，是不能改变颜色的
                 // 这里换成普通的MeshLambertMaterial
-                changePointer(tarArr[0], specific_color)
-                pickUpdateSign = true;  // 向局部板块释放涡旋更新信号
+                changePointer(pickInfo[0], specific_color)
+                streamlineClickSign = true;  // 向局部板块释放涡旋更新信号
             }
             
         }
@@ -1810,7 +1810,7 @@ $('#draggable-point').draggable({
         var offset = $(this).offset();
         var percent = (100 * parseFloat($(this).css("left"))) / (parseFloat($(this).parent().css("width")));
         var xPos = percent + "%";
-        play_start_day = Math.round(percent/100*(loadStepNum+1));  // 实际上拉不到头，所以多加个1
+        play_start_day = Math.round(percent/100*(tempEnd+1));  // 实际上拉不到头，所以多加个1
 
         // 更新文字和进度条
         div_start_time.innerHTML = play_start_day;  
@@ -2010,11 +2010,11 @@ function back_up_playAction(){
     Timer = setInterval(function(){
         // console.log(i+1);
         i++;
-        if(i<loadStepNum){
+        if(i<tempEnd){
             // 进度条
-            audio_progress_bar.style.width = i/(loadStepNum-1)*100 + "%";
+            audio_progress_bar.style.width = i/(tempEnd-1)*100 + "%";
             // 原点
-            draggable_point.style.left = i/(loadStepNum-1)*100 + "%";
+            draggable_point.style.left = i/(tempEnd-1)*100 + "%";
             step_ctrl.setValue(i);
         }
         else{

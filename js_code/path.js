@@ -11,7 +11,7 @@ var path_schema = [
     {name: 'circ', index: 3, text:'circ'},
     {name: 'color', index: 4, text:'color'},
     {name: 'name', index: 5, text:'name'},
-    {name: 'live', index: 6, text:'live'},
+    {name: 'live', index: 6, text:'livespan'},
 ];
 
 // 便于通过name来找index
@@ -249,13 +249,13 @@ function getPathOption(data) {
                     + 'identifier：'+ value[path_field_indices['name']]+ '</div>';
                     
                     // // 加上y轴意义、大小的意义、类型
-                    // returnStr = returnStr
+                    returnStr = returnStr
                     //     + path_schema[path_field_indices[path_gui_opt.yAxis]].name + '：' + value[1] + '<br>'
                     //     + path_schema[path_field_indices[path_gui_opt.symbolSize]].name + '：' + value[2] + '<br>'
                     //     + path_schema[1].name + '：' + value[3] + '<br>'
                     //     + path_schema[2].name + '：' + value[4] + '<br>'
                     //     + path_schema[5].name + '：' + value[5] + '<br>'
-                    //     + path_schema[6].name + '：' + value[6] + '<br>'
+                        + path_schema[6].text + '：' + value[6] + '<br>'
                     //     + path_schema[7].name + '：' + value[7] + '<br>';
                         
                     return returnStr;

@@ -16,10 +16,10 @@
 	--streamlineShellWidth: calc(0.3 *(var(--viewWidth)));
 	
 	
-	--topoShellWidth: calc(0.43 *(var(--viewWidth)));
+	--topoShellWidth: calc(0.44 *(var(--viewWidth)));
 	--topoShellHeight: calc(0.5 *(var(--viewHeight)));
 
-	--parallelShellWidth: calc(0.43 *(var(--viewWidth)));
+	--parallelShellWidth: calc(0.44 *(var(--viewWidth)));
 	--parallelShellHeight: calc(0.5 *(var(--viewHeight)));
 
 
@@ -399,7 +399,7 @@
 
 #detection-shell{
     position: absolute;
-	left: 31%;
+	left: 30.5%;
 	top: 0px;
 	height: var(--detectionShellHeight);
 	width: var(--detectionShellWidth);
@@ -417,7 +417,7 @@
 
 #path-shell{
     position: absolute;
-	left: 31%;
+	left: 30.5%;
 	bottom: 0;
 	height: var(--pathShellHeight);
 	width: var(--pathShellWidth);

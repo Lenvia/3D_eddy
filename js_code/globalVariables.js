@@ -9,7 +9,7 @@ var tubeHeightFactor = 500;  // 控制流管高度
 
 var dayLimit = 60;  // 暂定60为最大天数
 var play_start_day = 0;  // 播放器起点（默认为0）
-var loadStepNum = 1;  // 3d流线加载多少天
+var tempEnd = 1;  // 3d流线加载多少天
 var tex_pps_step = 60;  // 2d和pps加载天数
 
 /**
@@ -70,13 +70,13 @@ var network;  // 拓扑图
  */
 var is3d = true;
 var existedEddyIndices = [];  // 场上存在的涡旋的index
-var tarArr = [];  // 鼠标最近的涡旋的下标、中心坐标【从主窗口触发】
+var pickInfo = [];  // 鼠标最近的涡旋的下标、中心坐标【从主窗口触发】
 
 /**
  * 更新信号
  */
 // 主窗口触发
-var pickUpdateSign = false;  // 主窗口选择涡旋了
+var streamlineClickSign = false;  // 主窗口选择涡旋了
 var switchTimeSign = false;  // 如果为true，表示主界面切换日期而引起局部涡旋的更新
 // 局部窗口触发
 var restrainUpdateSign = false;  // 如果为true，说明是由局部窗口改变的日期，这里不能再反过来清除局部窗口的元素

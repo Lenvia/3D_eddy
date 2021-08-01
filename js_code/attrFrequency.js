@@ -12,6 +12,10 @@ function updateAttrFrequency(){
         success: function(res) { //请求成功完成后要执行的方法 
             // 指定图表的配置项和数据
             var option = {
+                backgroundColor: new echarts.graphic.RadialGradient(0.3, 0.3, 0.8, [{
+                    offset: 0,
+                    color: '#f7f8fa'
+                }, ]),
                 title: {
                     // text: 'ECharts 实例'
                 },
@@ -54,7 +58,7 @@ function updateAttrFrequency(){
                     // data:['销量']
                 },
                 xAxis: {
-                    name: 'value',
+                    // name: 'value',
                     data: res['columns'],
                 },
                 yAxis: {
@@ -68,8 +72,8 @@ function updateAttrFrequency(){
 
                 grid: {
 
-                    left: '3%',
-                    right: '3%',
+                    left: '4%',
+                    right: '6%',
                     bottom: '14%',
                     containLabel: true
                 },

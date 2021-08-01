@@ -85,15 +85,15 @@ $("#step-selector").change(function() {
     // 属性频率统计图更新
     updateAttrFrequency();
 
-    let std = OW_std[currentMainStep].toExponential(6);
-    $("#std-label").html("OW_std: "+ String(std));
-    // OW_std刷新
-    if(currentAttr=="OW"){
-        document.getElementById("std-label").style.display="block";
-    }
-    else{
-        document.getElementById("std-label").style.display="none";//不可见
-    }
+    // let std = OW_std[currentMainStep].toExponential(6);
+    // $("#std-label").html("OW_std: "+ String(std));
+    // // OW_std刷新
+    // if(currentAttr=="OW"){
+    //     document.getElementById("std-label").style.display="block";
+    // }
+    // else{
+    //     document.getElementById("std-label").style.display="none";//不可见
+    // }
     
 })
 
@@ -178,7 +178,7 @@ $("#pick").change(function(){
     $("#index-selector").change();
     
 
-    highightNode(index);
+    highlightNode(index);
 
     // $("#step-selector").change() 会让streamline视图加载，加载完毕后触发更新
 })
@@ -198,7 +198,7 @@ $("#topoClickSign").change(function(){
     $("#index-selector").change();
     
 
-    highightNode(index);
+    highlightNode(index);
 
 })
 
@@ -213,7 +213,7 @@ $("#streamlineClickSign").change(function(){
     $("#index-selector").val(index);
     $("#index-selector").change();
 
-    highightNode(index);
+    highlightNode(index);
 
     streamlineClickSign = 0;
     $("#streamlineClickSign").val(0);
@@ -297,7 +297,7 @@ function flushTopo(){
 }
 
 
-function highightNode(index){
+function highlightNode(index){
     detection_data[index][detection_field_indices['selected']] = 1;
     // 将detction窗口对应节点染色，再次刷新
     detection_window.setOption({

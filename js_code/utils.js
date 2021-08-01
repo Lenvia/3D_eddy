@@ -155,3 +155,12 @@ function pxy2xy(px, py){
     var y = (py/500 - 0.5)*edgeWid;
     return new Array(x,y);
 }
+
+
+// panel中的px, py到经纬度的映射
+function pxy2ll(px, py){
+    var lon = 30.2072 + 20* px/500;
+    var lat = 10.0271 + 20* py/500;
+
+    return new Array(lon, lat);
+}

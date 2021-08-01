@@ -126,7 +126,8 @@ function init() {
     
     loadEddiesForSteps();  // 加载涡旋模型
     
-    
+    demo4();
+    demo5();
 
 
     //环境光    环境光颜色与网格模型的颜色进行RGB进行乘法运算
@@ -511,7 +512,7 @@ function loadChannel(){
 */
 function loadEddiesForSteps(){
     let arr = []; //promise返回值的数组
-    for (let i = 0; i<loadStepNum; i++){
+    for (let i = tempStart; i<tempEnd; i++){
         arr[i] = new Promise((resolve, reject)=>{
             // 加载一步的形状
             var d = i;
@@ -592,8 +593,8 @@ function loadEddiesForSteps(){
     Promise.all(arr).then((res)=>{
         console.log("模型加载完毕");
         // 设置属性
-        loadAttrArray("OW");
-        loadAttrArray("vorticity");
+        // loadAttrArray("OW");
+        // loadAttrArray("vorticity");
     })
 }
 
@@ -681,7 +682,7 @@ function loadOneAttrArray(attr, path, d){
         Promise.all(flag1).then((res)=>{
             linesG.geometry.setAttribute( attr, new THREE.Float32BufferAttribute( attrArray, 1 ));
             // console.log(attrArray);
-            if(d==loadStepNum-1){
+            if(d==tempEnd-1){
                 console.log(attr+"值设置完毕");
 
                 // curLine = findModel("step0");
@@ -692,7 +693,7 @@ function loadOneAttrArray(attr, path, d){
 
 function loadAttrArray(attr){
     let flag0 = []; //promise数组
-    for(var i =0; i<loadStepNum; i++){
+    for(var i =tempStart; i<tempEnd; i++){
         flag0[i] = new Promise((resolve, reject)=>{
             var d = i;
             var path = ("./resources/whole_attributes_txt_file/".concat(attr,"/",attr,"_", String(d), ".txt"));
@@ -735,13 +736,18 @@ function parseColor(currentColor){
 
 function setColorAndOpacity(){
     if(currentColor0.length==3){currentRGB0 = currentColor0; currentOpacity0 = 1.0;
-    }else{currentRGB0 = currentColor0.splice(3); currentOpacity0 = currentColor0[3];}
+    }else{currentOpacity0 = currentColor0[3]; currentRGB0 = [currentColor0[0], currentColor0[1], currentColor0[2]];}
 
     if(currentColor1.length==3){currentRGB1 = currentColor1; currentOpacity1 = 1.0;
-    }else{currentRGB1 = currentColor1.splice(3); currentOpacity1 = currentColor1[3];}
+    }else{currentOpacity1 = currentColor1[3]; currentRGB1 = [currentColor1[0], currentColor1[1], currentColor1[2]];}
 
-    if(currentColor2.length==3){currentRGB2 = currentColor2; currentOpacity2 = 1.0;
-    }else{currentRGB2 = currentColor2.splice(3); currentOpacity2 = currentColor2[3];}
+    if(currentColor2.length==3){
+        currentRGB2 = currentColor2; currentOpacity2 = 1.0;
+    }
+    else{
+        currentOpacity2 = currentColor2[3];
+        currentRGB2 = [currentColor2[0], currentColor2[1], currentColor2[2]];
+    }
 }
 
 // 在图中显示涡核
@@ -795,6 +801,9 @@ function assignAllColorAndOpacity(curLine){
     var cOpa1 = currentOpacity1;
     var cOpa2 = currentOpacity2;
 
+    console.log(cColor0, cColor1, cColor2)
+    console.log(cOpa0, cOpa1, cOpa2)
+
 
     var currentAttrArray = [];
     switch(currentAttr){
@@ -845,6 +854,7 @@ function updateColorAndOpacity(curLine){
 
         curLine.material[i].opacity = Math.min(curLine.geometry.attributes.opacity.array[2*i], curLine.geometry.attributes.opacity.array[2*i+1]);
         
+        // console.log(curLine.material[i].opacity)
     }
 }
 
@@ -988,12 +998,13 @@ function getMouseXY(event){
 function recoverPointer(index){
     existedCones[index].material = new THREE.MeshNormalMaterial({
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.5,
     });
 }
 function changePointer(index, hex){
     existedCones[index].material = new THREE.MeshPhongMaterial({
-        color: hex,
+        // color: hex,
+        opacity: 1,
     });
 }
 
@@ -1028,9 +1039,9 @@ function updateStreamline(){
             $("#confirm-button").click();  // 模拟一次点击
         }
     
-        removePointers();
+        // removePointers();
         if(currentMainStep!=-1){
-            showPointers();  // 显示涡核指示器
+            // showPointers();  // 显示涡核指示器
         }
     
         lastStep = currentMainStep;
@@ -1063,23 +1074,23 @@ function animate() {
         requirePick = false;
         if(pickInfo[0]!=undefined){
             // 恢复所有指示器的material
-            for(let i=0; i<existedCones.length; i++){
-                recoverPointer(i);
-            }
+            // for(let i=0; i<existedCones.length; i++){
+            //     recoverPointer(i);
+            // }
 
             // 因为原来的材质是MeshNormalMaterial，是不能改变颜色的
             // 这里换成普通的MeshLambertMaterial
-            changePointer(pickInfo[0], specific_color)
+            // changePointer(pickInfo[0], specific_color)
 
-            var xy = pxy2xy(pickInfo[1], pickInfo[2]);
+            // var xy = pxy2xy(pickInfo[1], pickInfo[2]);
             
 
-            camera.position.x = xy[0];
-            camera.position.y = xy[1];
-            camera.position.z = 500;
+            // camera.position.x = xy[0];
+            // camera.position.y = xy[1];
+            // camera.position.z = 500;
 
-            controls.target.x = xy[0];
-            controls.target.y = xy[1];
+            // controls.target.x = xy[0];
+            // controls.target.y = xy[1];
         }
     }
 
@@ -1114,7 +1125,7 @@ $("#confirm-button").click(
         currentColor1 = parseColor($("#color-sec1").val());
         currentColor2 = parseColor($("#color-sec2").val());
 
-        // console.log(currentColor0, currentColor1, currentColor2);
+        console.log(currentColor0, currentColor1, currentColor2);
 
         
         downValue = $("#lower-bound").val();
@@ -1140,3 +1151,80 @@ $("#confirm-button").click(
         updateColorAndOpacity(curLine);  // 改变材质
     }
 )
+
+
+function demo4(){
+    // 加载一步的形状
+    var d = i;
+    var vtk_path = ("./tube2829.vtk");
+    var loader = new VTKLoader();
+    console.log("loading", vtk_path);
+    loader.load( vtk_path, function ( geometry ) {  // 异步加载
+        
+        geometry.translate(-0.5, -0.5, 0);
+
+        // 不应该翻下去！！！！！！！！！！ 而是z值变负
+        var positions = geometry.attributes.position.array;
+        // 改变顶点高度值
+        var biasZ = [];
+        
+        var tubeHeightFactor = 100;
+        for ( let j = 0;  j < positions.length; j += 3 ) {
+            var realLayer = positions[j+2]*50;
+            var apprLayer = Math.round(realLayer);
+            biasZ.push(realLayer-apprLayer);
+
+            // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
+            positions[j+2] = -depth_array[apprLayer]+biasZ[j/3]*tubeHeightFactor;
+        }
+        
+        geometry.scale(edgeLen, edgeWid, scaleHeight);
+
+        let material = new THREE.LineBasicMaterial({
+            vertexColors: false,
+            color: 0xDC143C,
+            transparent: true, // 可定义透明度
+            opacity: 1,
+            depthWrite: false, 
+        });
+        
+        var linesG = new THREE.LineSegments(geometry, material);
+
+        scene.add(linesG);
+    });
+}
+
+function demo5(){
+    // 加载一步的形状
+    var d = i;
+    var vtk_path = ("./glyph2829.vtk");
+    var loader = new VTKLoader();
+    console.log("loading", vtk_path);
+    loader.load( vtk_path, function ( geometry ) {  // 异步加载
+        
+        geometry.translate(-0.5, -0.5, 0);
+
+        // 不应该翻下去！！！！！！！！！！ 而是z值变负
+        var positions = geometry.attributes.position.array;
+        // 改变顶点高度值
+        
+        for ( let j = 0;  j < positions.length; j += 3 ) {
+            // position[k]是0~1，先乘50并四舍五入确定层，再对应到深度数组，再取负
+            positions[j+2] = -depth_array[Math.round(positions[j+2]*50)];
+        }
+        
+        geometry.scale(edgeLen, edgeWid, scaleHeight);
+
+        let material = new THREE.MeshBasicMaterial({
+            vertexColors: false,
+            color: 0x0000ff,
+            transparent: true, // 可定义透明度
+            opacity: 1,
+            depthWrite: false, 
+        });
+        
+        var linesG = new THREE.Mesh(geometry, material);
+
+        scene.add(linesG);
+    });
+}
